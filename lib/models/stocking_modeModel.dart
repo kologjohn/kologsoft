@@ -4,6 +4,7 @@ class stockingModeModel {
   String id;
   DateTime date;
   String companyid;
+  String company;
 
   stockingModeModel({
     required this.name,
@@ -11,6 +12,7 @@ class stockingModeModel {
     required this.id,
     required this.date,
     required this.companyid,
+    required this.company,
   });
 
 
@@ -22,6 +24,7 @@ class stockingModeModel {
       'date': date.toIso8601String(),
       'created_at': DateTime.now(),
       'companyid': companyid,
+      'company': company,
     };
   }
 }

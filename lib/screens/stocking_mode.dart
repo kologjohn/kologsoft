@@ -112,16 +112,17 @@ class _StockingModeState extends State<StockingMode> {
                                   ),
                                   onPressed: () async {
                                     String name = _nameController.text.trim();
-                                    String docid = value.normalizeAndSanitize("ks001${name}");
+                                    String docid = value.normalizeAndSanitize("${value.companyid}${name}");
                                     if (_formKey.currentState!.validate()) {
                                       try {
 
                                         stockingModeModel newMode = stockingModeModel(
                                           name: name,
-                                          staff: "kologsoft",
+                                          staff: value.staff,
                                           id:docid,
                                           date: DateTime.now(),
-                                          companyid: 'ks001',
+                                          companyid: value.companyid,
+                                          company:value.company,
                                         );
                                         await _firestore
                                             .collection('stockingmode')
