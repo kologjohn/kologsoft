@@ -29,7 +29,7 @@ class Datafeed extends ChangeNotifier {
     Navigator.pushNamedAndRemoveUntil(context, Routes.login, (route) => false);
   }
   String normalizeAndSanitize(dynamic value) {
-    if (value == null) return "n_a";
+    if (value == null) return "na";
 
     String result = value.toString().trim();
 
