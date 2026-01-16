@@ -23,7 +23,7 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Registered Stocking Modes"),
+        title: const Text("Registered Stocking Mode"),
         backgroundColor: const Color(0xFF1B263B),
         actions: [
           IconButton(
