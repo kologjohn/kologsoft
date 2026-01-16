@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/routes.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -209,13 +211,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   setState(
                                                     () => _loading = true,
                                                   );
-                                                  await value.login(
-                                                    _emailController.text
-                                                        .trim(),
-                                                    _passwordController.text
-                                                        .trim(),
-                                                    context,
-                                                  );
+                                                  // await value.login(
+                                                  //   _emailController.text
+                                                  //       .trim(),
+                                                  //   _passwordController.text
+                                                  //       .trim(),
+                                                  //   context,
+                                                  // );
+                                                  Navigator.pushNamed(context, Routes.home);
                                                 } catch (e) {
                                                   ScaffoldMessenger.of(
                                                     context,
