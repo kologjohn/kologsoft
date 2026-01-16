@@ -107,65 +107,29 @@ class Sidebar extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.white),
-                    title: const Text(
-                      'Workspace Class ',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: (){
-                      Navigator.pushNamed(context, Routes.workspaceclass);
-
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.white),
-                    title: const Text(
-                      'Workspace Category ',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: (){
-                      Navigator.pushNamed(context, Routes.workspacecategory);
-
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.white),
-                    title: const Text(
-                      'Billing Setup',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: (){
-                      Navigator.pushNamed(context, Routes.billingsetup);
-
-                    },
-                  ),
-
-
 
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
-                      'Revenue registration',
+                      'Stocking Mode ',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.revenue);
+                      Navigator.pushNamed(context, Routes.stockingmode);
 
                     },
                   ),
-
                   ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.white),
+                    leading: const Icon(Icons.person_add, color: Colors.white),
                     title: const Text(
-                      'Billing Type ',
+                      'Supplier Registration',
                       style: TextStyle(color: Colors.white),
                     ),
-                    onTap: (){
-                      Navigator.pushNamed(context, Routes.billingtype);
-
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.supplierreg);
                     },
                   ),
+
 
                 ],
               ),

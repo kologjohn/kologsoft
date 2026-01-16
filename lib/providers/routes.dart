@@ -3,6 +3,8 @@ import 'package:kologsoft/screens/branch_reg.dart';
 import 'package:kologsoft/screens/login_screen.dart';
 
 import '../screens/home_dashboard.dart';
+import '../screens/stocking_mode.dart';
+import '../screens/supplierscreen.dart';
 
 
 class Routes {
@@ -21,11 +23,13 @@ class Routes {
   static const String adminsurvey = '/adminsurvey';
   static const String usersurvey = '/usersurvey';
   static const String branchreg = '/branchreg';
-  // static const String homedashboard = '/homedashboard';
+  static const String supplierreg = '/supplierreg';
+  static const String stockingmode = '/stockingmode';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
   Routes.login: (context) => const LoginScreen(),
   Routes.branchreg: (context) => const BranchRegistration(),
-
+  Routes.supplierreg: (context) => const SupplierRegistration(),
+  Routes.stockingmode: (context) => const StockingMode(),
 };
