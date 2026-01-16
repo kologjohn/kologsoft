@@ -1,14 +1,16 @@
-class bilingtypeModel {
+class stockingModeModel {
   String name;
   String staff;
   String id;
   DateTime date;
+  String companyid;
 
-  bilingtypeModel({
+  stockingModeModel({
     required this.name,
     required this.staff,
     required this.id,
     required this.date,
+    required this.companyid,
   });
 
 
@@ -19,6 +21,7 @@ class bilingtypeModel {
       'staff': staff,
       'date': date.toIso8601String(),
       'created_at': DateTime.now(),
+      'companyid': companyid,
     };
   }
 }

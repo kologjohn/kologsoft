@@ -2,6 +2,7 @@
 import 'package:kologsoft/screens/login_screen.dart';
 
 import '../screens/home_dashboard.dart';
+import '../screens/stocking_mode.dart';
 
 
 class Routes {
@@ -19,10 +20,11 @@ class Routes {
   static const String cert = '/cert';
   static const String adminsurvey = '/adminsurvey';
   static const String usersurvey = '/usersurvey';
-  // static const String homedashboard = '/homedashboard';
+  static const String stockingmode = '/stockingmode';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
   Routes.login: (context) => const LoginScreen(),
+  Routes.stockingmode: (context) => const StockingMode(),
 
 };

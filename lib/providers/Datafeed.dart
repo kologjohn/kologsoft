@@ -30,6 +30,23 @@ class Datafeed extends ChangeNotifier {
     notifyListeners();
     Navigator.pushNamedAndRemoveUntil(context, Routes.login, (route) => false);
   }
+  String normalizeAndSanitize(dynamic value) {
+    if (value == null) return "n_a";
+
+    String result = value.toString().trim();
+
+    if (result.isEmpty)
+      return "n_a";
+
+    result = result
+        .replaceAll('/', '')
+        .replaceAll(' ', '')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '');
+
+    result = result.toLowerCase();
+
+    return result.isNotEmpty ? result : "n_a";
+  }
 
   Future<void> forgotPassword(String email, BuildContext context) async {
     try {

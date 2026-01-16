@@ -31,9 +31,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => Survey()),
       ],
       child: MaterialApp(
-        initialRoute: Routes.login,
+        initialRoute: Routes.home,
         routes: pages,
-        title: 'POS - Digital Factories & H&S Compliance',
+        title: 'KOLOGSOFT POS',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.light,
