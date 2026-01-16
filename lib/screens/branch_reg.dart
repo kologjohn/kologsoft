@@ -162,9 +162,7 @@ class _BranchRegistrationState extends State<BranchRegistration> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
-                                    onPressed: () {
-
-                                    },
+                                    onPressed: () { },
                                     child: Text("Add", style: TextStyle(color: Colors.white),),
                                   ),
                                 ),
