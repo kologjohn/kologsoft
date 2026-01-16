@@ -104,53 +104,76 @@ class _SupplierRegistrationState extends State<SupplierRegistration> {
                         const SizedBox(height: 20),
               
                         // Submit button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(
-                                0xFF415A77,
-                              ), // normal color
-                              disabledBackgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            // Save button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(
+                                    0xFF415A77,
+                                  ), // normal color
+                                  disabledBackgroundColor: Colors.grey,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: _isSubmitting ? null : () async {
+                                  if (!_formKey.currentState!.validate() || _isSubmitting) return;
+                                  setState(() => _isSubmitting = true);
+                                  final user = FirebaseAuth.instance.currentUser?.displayName;
+                                  final id = '${value.companyid}_${_nameController.text}'.trim()
+                                      .toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '')
+                                      .replaceAll(RegExp(r'\s+'), '_');
+                                  final supplier = Supplier(
+                                    id: id,
+                                    name: _nameController.text.trim(),
+                                    supplier: _supplierController.text.trim(),
+                                    contact: _contactController.text.trim(),
+                                    company: value.company,
+                                    companyid: value.companyid,
+                                    datecreated: Timestamp.now(),
+                                    staff: value.staff,
+                                  );
+
+                                  // Add to Firestore with auto ID
+                                  await FirebaseFirestore.instance.collection('suppliers').doc(id).set(supplier.toMap());
+                                  setState(() {
+                                    _isSubmitting = false;
+                                    _nameController.clear();
+                                    _supplierController.clear();
+                                    _contactController.clear();
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Supplier saved successfully')),
+                                  );
+                                },
+                                child: _isSubmitting
+                                    ? const CircularProgressIndicator()
+                                    : const Text('Save Supplier'),
                               ),
                             ),
-                            onPressed: _isSubmitting ? null : () async {
-                              if (!_formKey.currentState!.validate() || _isSubmitting) return;
-                              setState(() => _isSubmitting = true);
-                              final user = FirebaseAuth.instance.currentUser?.displayName;
-                              final id = '${value.companyid}_${_nameController.text}'.trim()
-                                  .toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '')
-                                  .replaceAll(RegExp(r'\s+'), '_');
-                              final supplier = Supplier(
-                                id: id,
-                                name: _nameController.text.trim(),
-                                supplier: _supplierController.text.trim(),
-                                contact: _contactController.text.trim(),
-                                company: value.company,
-                                companyid: value.companyid,
-                                datecreated: Timestamp.now(),
-                                staff: value.staff,
-                              );
-              
-                              // Add to Firestore with auto ID
-                              await FirebaseFirestore.instance.collection('suppliers').doc(id).set(supplier.toMap());
-                              setState(() {
-                                _isSubmitting = false;
-                                _nameController.clear();
-                                _supplierController.clear();
-                                _contactController.clear();
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Supplier saved successfully')),
-                              );
-                            },
-                            child: _isSubmitting
-                                ? const CircularProgressIndicator()
-                                : const Text('Save Supplier'),
-                          ),
+                            SizedBox(
+                              width: 200,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.white70),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.view_list, color: Colors.white70),
+                                label: const Text("View", style: TextStyle(color: Colors.white70)),
+                                onPressed: () {},
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
