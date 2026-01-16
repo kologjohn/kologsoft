@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/branch.dart';
+
 
 class Datafeed extends ChangeNotifier {
   final auth = FirebaseAuth.instance;
@@ -44,6 +46,14 @@ class Datafeed extends ChangeNotifier {
     result = result.toLowerCase();
 
     return result.isNotEmpty ? result : "n_a";
+  }
+
+  Future<void> addBranch(BranchModel branch) async {
+    final docRef = db.collection('branches').doc();
+
+    branch.id = docRef.id; // assign generated ID
+
+    await docRef.set(branch.toMap());
   }
 
   Future<void> forgotPassword(String email, BuildContext context) async {
