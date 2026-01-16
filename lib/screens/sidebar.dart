@@ -139,6 +139,26 @@ class Sidebar extends StatelessWidget {
                       Navigator.pushNamed(context, Routes.branchreg);
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white),
+                    title: const Text(
+                      'Branch Registration',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.branchreg);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white),
+                    title: const Text(
+                      'Warehouse Registration',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.warehousereg);
+                    },
+                  ),
                 ],
               ),
               const Divider(color: Colors.white24),

@@ -1,18 +1,17 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kologsoft/screens/stocking_mode.dart';
+import 'package:kologsoft/screens/warehousereg.dart';
 
-class StockingModeListPage extends StatefulWidget {
+class WarehouseListPage extends StatefulWidget {
   @override
-  _StockingModeListPageState createState() => _StockingModeListPageState();
+  _WarehouseListPageState createState() => _WarehouseListPageState();
 }
 
-class _StockingModeListPageState extends State<StockingModeListPage> {
+class _WarehouseListPageState extends State<WarehouseListPage> {
   final FirebaseFirestore db = FirebaseFirestore.instance;
 
-  Future<List<QueryDocumentSnapshot>> _getWorkspaces() async {
-    QuerySnapshot snapshot = await db.collection('stockingmode').get();
+  Future<List<QueryDocumentSnapshot>> _getWarehouses() async {
+    final snapshot = await db.collection('warehouse').get();
     return snapshot.docs;
   }
 
@@ -22,9 +21,8 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
     final cardWidth = screenWidth > 900 ? screenWidth * 0.6 : screenWidth * 0.95;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF101624),
       appBar: AppBar(
-        title: const Text("Registered Stocking Mode"),
+        title: const Text("Registered Warehouses"),
         backgroundColor: const Color(0xFF1B263B),
         actions: [
           IconButton(
@@ -34,7 +32,7 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
         ],
       ),
       body: FutureBuilder<List<QueryDocumentSnapshot>>(
-        future: _getWorkspaces(),
+        future: _getWarehouses(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting)
             return const Center(child: CircularProgressIndicator());
@@ -42,8 +40,11 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
             return Center(child: Text("Error: ${snapshot.error}"));
           if (!snapshot.hasData || snapshot.data!.isEmpty)
             return const Center(
-                child: Text("No stocking mode registered yet.",
-                    style: TextStyle(color: Colors.white70, fontSize: 16)));
+              child: Text(
+                "No warehouses registered yet.",
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            );
 
           final docs = snapshot.data!;
 
@@ -58,8 +59,8 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                   final data = doc.data() as Map<String, dynamic>;
 
                   String createdAtStr = "";
-                  if (data['date'] != null && data['date'] is Timestamp) {
-                    DateTime dt = (data['date'] as Timestamp).toDate();
+                  if (data['date'] != null && data['date'] is String) {
+                    final dt = DateTime.parse(data['date']);
                     createdAtStr =
                     "${dt.weekdayName()} ${dt.day} ${dt.monthName()} ${dt.year} at ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
                   }
@@ -105,7 +106,7 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => StockingMode(
+                                builder: (_) => WarehouseRegistration(
                                   docId: doc.id,
                                   data: data,
                                 ),
@@ -119,9 +120,9 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (_) => AlertDialog(
-                                title: const Text("Delete mode"),
+                                title: const Text("Delete Warehouse"),
                                 content: const Text(
-                                    "Are you sure you want to delete this mode?"),
+                                    "Are you sure you want to delete this warehouse?"),
                                 actions: [
                                   TextButton(
                                       onPressed: () =>
@@ -136,9 +137,10 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                             );
 
                             if (confirm == true) {
-                              await db.collection('stockingmode').doc(doc.id).delete();
+                              await db.collection('warehouse').doc(doc.id).delete();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("stocking mode deleted")));
+                                  const SnackBar(
+                                      content: Text("Warehouse deleted")));
                               setState(() {}); // refresh after delete
                             }
                           },
@@ -163,6 +165,7 @@ extension DateTimeExt on DateTime {
     ];
     return weekdays[this.weekday-1];
   }
+
   String monthName() {
     const months = [
       'January','February','March','April','May','June','July','August','September','October','November','December'
