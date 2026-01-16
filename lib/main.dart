@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         initialRoute: Routes.login,
         routes: pages,
-        title: 'NWC SMS - Digital Factories & H&S Compliance',
+        title: 'POS - Digital Factories & H&S Compliance',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.light,
