@@ -70,10 +70,20 @@ class Sidebar extends StatelessWidget {
                 collapsedIconColor: Colors.white,
                 leading: const Icon(Icons.people, color: Colors.white),
                 title: const Text(
-                  'User Management',
+                  'Primary  Registration',
                   style: TextStyle(color: Colors.white),
                 ),
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white),
+                    title: const Text(
+                      'Supplier Registration',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.supplierreg);
+                    },
+                  ),
                   ListTile(
                     leading: const Icon(Icons.person_add, color: Colors.white),
                     title: const Text(
@@ -81,7 +91,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      Navigator.pushNamed(context, Routes.adduser);
+                    //  Navigator.pushNamed(context, Routes.adduser);
                     },
                   ),
                   ListTile(
@@ -110,11 +120,11 @@ class Sidebar extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
-                      'Stocking Mode',
+                      'Workspace Class ',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.stockingmode);
+                     // Navigator.pushNamed(context, Routes.workspaceclass);
 
                     },
                   ),
@@ -125,7 +135,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.workspacecategory);
+                    //  Navigator.pushNamed(context, Routes.workspacecategory);
 
                     },
                   ),
@@ -136,7 +146,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.billingsetup);
+                     // Navigator.pushNamed(context, Routes.billingsetup);
 
                     },
                   ),
@@ -150,7 +160,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.revenue);
+                    //  Navigator.pushNamed(context, Routes.revenue);
 
                     },
                   ),
@@ -162,7 +172,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.billingtype);
+                     // Navigator.pushNamed(context, Routes.billingtype);
 
                     },
                   ),
@@ -186,7 +196,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.adminsurvey);
+                    //  Navigator.pushNamed(context, Routes.adminsurvey);
                     },
                   ),
                   ListTile(
@@ -196,7 +206,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.usersurvey);
+                    //  Navigator.pushNamed(context, Routes.usersurvey);
                     },
                   ),
 
@@ -234,7 +244,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.cert);
+                    //  Navigator.pushNamed(context, Routes.cert);
 
                     },
                   ),
