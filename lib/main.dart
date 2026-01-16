@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => Survey()),
       ],
       child: MaterialApp(
-        initialRoute: Routes.login,
+        initialRoute: Routes.supplierreg,
         routes: pages,
         title: 'NWC SMS - Digital Factories & H&S Compliance',
         debugShowCheckedModeBanner: false,
