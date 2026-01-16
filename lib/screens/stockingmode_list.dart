@@ -22,6 +22,7 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
     final cardWidth = screenWidth > 900 ? screenWidth * 0.6 : screenWidth * 0.95;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF101624),
       appBar: AppBar(
         title: const Text("Registered Stocking Mode"),
         backgroundColor: const Color(0xFF1B263B),
