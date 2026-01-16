@@ -120,11 +120,11 @@ class Sidebar extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
-                      'Workspace Class ',
+                      'Stocking Mode ',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                     // Navigator.pushNamed(context, Routes.workspaceclass);
+                      Navigator.pushNamed(context, Routes.stockingmode);
 
                     },
                   ),
