@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "112167499905",
+    "project_id": "kologsoft-68317",
+    "storage_bucket": "kologsoft-68317.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:112167499905:android:313f8ac257f9bd015d7580",
+        "android_client_info": {
+          "package_name": "com.kpos.kologsoft"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg9OZ9Jz7ttV4RKtx8C_x6q6l1dcjiG5U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
