@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../models/suppliermodel.dart';
 
+
+
 class SupplierRegistration extends StatefulWidget {
   const SupplierRegistration({super.key});
 
@@ -106,8 +108,10 @@ class _SupplierRegistrationState extends State<SupplierRegistration> {
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E88E5), // normal color
-                              disabledBackgroundColor: Colors.grey,     // when _isSubmitting = true
+                              backgroundColor: const Color(
+                                0xFF415A77,
+                              ), // normal color
+                              disabledBackgroundColor: Colors.grey,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
