@@ -118,9 +118,9 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (_) => AlertDialog(
-                                title: const Text("Delete Workspace"),
+                                title: const Text("Delete mode"),
                                 content: const Text(
-                                    "Are you sure you want to delete this workspace?"),
+                                    "Are you sure you want to delete this mode?"),
                                 actions: [
                                   TextButton(
                                       onPressed: () =>
@@ -135,9 +135,9 @@ class _StockingModeListPageState extends State<StockingModeListPage> {
                             );
 
                             if (confirm == true) {
-                              await db.collection('workspaceclass').doc(doc.id).delete();
+                              await db.collection('stockingmode').doc(doc.id).delete();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Workspace deleted")));
+                                  const SnackBar(content: Text("stocking mode deleted")));
                               setState(() {}); // refresh after delete
                             }
                           },
