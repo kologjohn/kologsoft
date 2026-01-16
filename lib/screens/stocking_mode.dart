@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kologsoft/screens/stockingmode_list.dart';
 import 'package:provider/provider.dart';
 import '../models/stocking_modeModel.dart';
 import '../providers/Datafeed.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class StockingMode extends StatefulWidget {
-  const StockingMode({Key? key}) : super(key: key);
+  final String? docId;
+  final Map<String, dynamic>? data;
+  const StockingMode({Key? key,this.docId, this.data}) : super(key: key);
 
   @override
   State<StockingMode> createState() => _StockingModeState();
@@ -16,22 +19,28 @@ class _StockingModeState extends State<StockingMode> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+  bool _isLoading = false;
   @override
 
   initState() {
     super.initState();
-
+    if (widget.data != null) {
+      _nameController.text = widget.data!['name'] ?? '';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<Datafeed>(
       builder: (BuildContext context, Datafeed value, Widget? child) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final formWidth = screenWidth > 900 ? screenWidth * 0.6 : screenWidth * 0.95;
+
         return Scaffold(
+
           backgroundColor: const Color(0xFF101A23),
           appBar: AppBar(
-            title: const Text('Register Stocking Mode'),
+              title: Text(widget.docId != null ? "Edit Stocking Mode" : "Register Stocking Mode"),
             backgroundColor: const Color(0xFF0D1A26),
             foregroundColor: Colors.white,
             elevation: 2,
@@ -93,69 +102,102 @@ class _StockingModeState extends State<StockingMode> {
                               const SizedBox(height: 16),
 
                               const SizedBox(height: 32),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade700,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 18,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    elevation: 4,
-                                    textStyle: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  SizedBox(
+                                    width: (formWidth - 10) / 2,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF415A77),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () async {
+                                        if (!_formKey.currentState!.validate()) return;
+                                        setState(() => _isLoading = true);
+                                        final name = _nameController.text.trim();
+                                        String docid = value.normalizeAndSanitize("${value.companyid}${name}");
+                                        final id = widget.docId ?? docid;
+
+
+                                        try {
+                                          stockingModeModel newMode = stockingModeModel(
+                                            name: name,
+                                            staff: value.staff,
+                                            id:id,
+                                            date: DateTime.now(),
+                                            companyid: value.companyid,
+                                            company:value.company,
+                                          );
+
+                                          await _firestore
+                                              .collection('stockingmode')
+                                              .doc(id)
+                                              .set(newMode.toMap());
+
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(widget.docId != null
+                                                  ? "Stocking mode updated successfully"
+                                                  : "Stocking mode saved successfully"),
+                                            ),
+                                          );
+
+                                          _formKey.currentState!.reset();
+                                          _nameController.clear();
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text("Error: ${e.toString()}")),
+                                          );
+                                        } finally {
+                                          setState(() => _isLoading = false);
+                                        }
+                                      },
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                          AlwaysStoppedAnimation(Colors.white),
+                                        ),
+                                      )
+                                          : Text(
+                                        widget.docId != null ? "UPDATE" : "REGISTER",
+                                        style: const TextStyle(
+                                            fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
                                     ),
                                   ),
-                                  onPressed: () async {
-                                    String name = _nameController.text.trim();
-                                    String docid = value.normalizeAndSanitize("${value.companyid}${name}");
-                                    if (_formKey.currentState!.validate()) {
-                                      try {
-
-                                        stockingModeModel newMode = stockingModeModel(
-                                          name: name,
-                                          staff: value.staff,
-                                          id:docid,
-                                          date: DateTime.now(),
-                                          companyid: value.companyid,
-                                          company:value.company,
+                                  SizedBox(
+                                    width: (formWidth - 10) / 2,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.white70),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                      icon: const Icon(Icons.view_list, color: Colors.white70),
+                                      label: const Text("View Stocking Modes",
+                                          style: TextStyle(color: Colors.white70)),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) => StockingModeListPage()),
                                         );
-                                        await _firestore
-                                            .collection('stockingmode')
-                                            .doc(docid)
-                                            .set(newMode.toMap());
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Stocking mode created successfully!',
-                                            ),
-                                          ),
-                                        );
-                                        _formKey.currentState!.reset();
-                                        _nameController.clear();
-
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to create stocking mode: \${e.toString()}',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Text(
-                                    'Save Stocking Mode',
-                                    style: TextStyle(color: Colors.white),
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ),
+                                ],
+                              )
 
                               // ...existing region dropdown and other fields...
                             ],
