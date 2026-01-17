@@ -3,8 +3,12 @@ import 'package:kologsoft/models/customerreg_model.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
 
+import 'customerlist.dart';
+
 class CustomerRegistration extends StatefulWidget {
-  const CustomerRegistration({super.key});
+  final String? docId;
+  final Map<String, dynamic>? data;
+  const CustomerRegistration({super.key,this.docId, this.data});
 
   @override
   State<CustomerRegistration> createState() => _CustomerRegistrationState();
@@ -18,9 +22,24 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
 
   String? _selectedCustomerType;
   String? _selectedpaymentduration;
-  final List<String> _customerTypes = ['Cash', 'Credit'];
-  final List<String> paymentduration = ['Short term', 'Long term'];
+
+  late List<String> _customerTypes = ['Cash', 'Credit'];
+  late List<String> paymentduration = ['Short term', 'Long term'];
+
   bool get isCreditCustomer => _selectedCustomerType == 'Credit';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.data != null) {
+      final customadata = widget.data!;
+      _nameController.text = customadata['name'] ?? '';
+      _contactController.text = customadata['contact'] ?? '';
+
+      _selectedCustomerType = customadata['customertype'];
+      _selectedpaymentduration = customadata['paymentduration'];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +320,13 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                           ),
                                           icon: const Icon(Icons.view_list, color: Colors.white70),
                                           label: const Text("View", style: TextStyle(color: Colors.white70)),
-                                          onPressed: () {},
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) => CustomerListPage()),
+                                            );
+                                          },
                                         ),
                                       ),
                                     ],

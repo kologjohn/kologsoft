@@ -36,6 +36,7 @@ class CustomerRegModel {
       'id': id,
       'branchName': branchname,
       'branchId': branchid,
+      'name': name,
       'contact': contact,
       'customertype': customertype,
       'creditlimit': creditlimit,
