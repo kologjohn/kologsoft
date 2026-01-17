@@ -87,7 +87,8 @@ class CustomerListPage extends StatelessWidget {
                             "Type: ${data['customertype']}\n"
                                 "Credit Limit: ${double.tryParse(data['creditlimit']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}\n"
                                 "Payment Duration: ${data['paymentduration']}\n"
-                                "Contact: ${data['contact']}\n",
+                                "Contact: ${data['contact']}\n"
+                                "Branch: ${data['branchName']}\n",
                             style: const TextStyle(
                               color: Colors.white70,
                               height: 1.4,
@@ -95,7 +96,8 @@ class CustomerListPage extends StatelessWidget {
                           )
                               : Text(
                             "Type: ${data['customertype']}\n"
-                                "Contact: ${data['contact']}\n",
+                                "Contact: ${data['contact']}\n"
+                                "Branch: ${data['branchName']}\n",
                             style: const TextStyle(
                               color: Colors.white70,
                               height: 1.4,

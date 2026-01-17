@@ -21,7 +21,27 @@ class Datafeed extends ChangeNotifier {
   String companyphone = "0553354349";
   String staff = "Yinbey";
   List<WarehouseModel> warehouses = [];
+  List<BranchModel> branches = [];
   bool loadingWarehouses = false;
+  BranchModel? selectedBranch;
+
+   fetchBranches() async {
+    try { final snap = await db.collection('branches').where("companyId",isEqualTo: companyid).get();
+    final fetchedBranches = snap.docs.map((doc) {
+       return BranchModel.fromJson(doc.data());
+     }).toList();
+ // Add hardcoded "All" branch at the top
+    branches = [ BranchModel(id: "$companyid${'all'}", branchname: 'All'), ...fetchedBranches, ];
+     notifyListeners();
+    } catch (e) {
+      debugPrint("Error fetching branches: $e"); }
+  }
+   selectBranch(String branchId)
+  {
+    selectedBranch = branches.firstWhere( (branch) => branch.id == branchId,
+      orElse: () => BranchModel(), );
+    notifyListeners();
+  }
 
   Future<void> fetchWarehouses() async {
     try {
@@ -40,6 +60,7 @@ class Datafeed extends ChangeNotifier {
     loadingWarehouses = false;
     notifyListeners();
   }
+
   Future<void> logout(BuildContext context) async {
     final spref = await SharedPreferences.getInstance();
     await spref.clear();
