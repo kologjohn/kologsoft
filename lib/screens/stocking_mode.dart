@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 
 import '../models/stocking_modeModel.dart';
 import '../providers/Datafeed.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class StockingMode extends StatefulWidget {
   final String? docId;
@@ -19,7 +18,6 @@ class StockingMode extends StatefulWidget {
 class _StockingModeState extends State<StockingMode> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
   @override
 
@@ -136,7 +134,7 @@ class _StockingModeState extends State<StockingMode> {
                                             company:value.company,
                                           );
 
-                                          await _firestore
+                                          await value.db
                                               .collection('stockingmode')
                                               .doc(id)
                                               .set(newMode.toMap());

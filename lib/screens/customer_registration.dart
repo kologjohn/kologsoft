@@ -22,6 +22,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
 
   String? _selectedCustomerType;
   String? _selectedpaymentduration;
+  bool _loading=false;
 
   late List<String> _customerTypes = ['Cash', 'Credit'];
   late List<String> paymentduration = ['Short term', 'Long term'];
@@ -35,9 +36,11 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       final customadata = widget.data!;
       _nameController.text = customadata['name'] ?? '';
       _contactController.text = customadata['contact'] ?? '';
-
-      _selectedCustomerType = customadata['customertype'];
-      _selectedpaymentduration = customadata['paymentduration'];
+      _creditlimitController.text = customadata['creditlimit'] ?? '';
+      final customerType = customadata['customertype'];
+      if (_customerTypes.contains(customerType)) { _selectedCustomerType = customerType; }
+      final paymentDuration = customadata['paymentduration'];
+      if (paymentduration.contains(paymentDuration)) { _selectedpaymentduration = paymentDuration; }
     }
   }
 
@@ -48,7 +51,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
           return Scaffold(
             backgroundColor: const Color(0xFF101A23),
             appBar: AppBar(
-              title: const Text('CUSTOMER REGISTRATION'),
+              title: Text(widget.docId != null ? "EDIT CUSTOMER REGISTRATION" : "CUSTOMER REGISTRATION"),
               backgroundColor: const Color(0xFF0D1A26),
               foregroundColor: Colors.white,
               elevation: 2,
@@ -254,58 +257,91 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                     runSpacing: 10,
                                     children: [
                                       // Save button
+
                                       SizedBox(
                                         width: 200,
                                         child: ElevatedButton(
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.blue,
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            backgroundColor: const Color(0xFF415A77),
+                                            padding:
+                                            const EdgeInsets.symmetric(vertical: 14),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(14),
+                                              borderRadius: BorderRadius.circular(12),
                                             ),
                                           ),
-                                          onPressed: () async {
-                                            if (!_formKey.currentState!.validate()) return;
-                                                String name= _nameController.text.trim();
-                                                String contact= _contactController.text.trim();
-                                                String customertype= _selectedCustomerType!;
-                                                String creditlimit = isCreditCustomer ? _creditlimitController.text.trim() : '';
-                                                String paymentduration = isCreditCustomer ? _selectedpaymentduration ?? '' : '';
+                                          onPressed: _loading
+                                              ? null
+                                              : () async {
+                                            if (!_formKey.currentState!.validate())
+                                              return;
 
+                                            setState(() => _loading = true);
+                                            String name= _nameController.text.trim();
+                                            String contact= _contactController.text.trim();
+                                            String customertype= _selectedCustomerType!;
+                                            String creditlimit = isCreditCustomer ? _creditlimitController.text.trim() : '';
+                                            String paymentduration = isCreditCustomer ? _selectedpaymentduration ?? '' : '';
                                             String docid=value.normalizeAndSanitize("${value.companyid}${contact}");
+
+
                                             try {
-                                              final newCustomer = CustomerRegModel(id: docid, branchname: '', branchid: '', name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now()
+                                              if (widget.docId != null) {
+                                                final id = widget.docId!;
+                                                final newCustomer = CustomerRegModel(id: id, branchname: '', branchid: '', name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(),updatedby: value.staff, updatedat: DateTime.now(), deletedat: null
 
-                                              );
+                                                );
 
-                                              await value.db
-                                                  .collection('customers')
-                                                  .doc(docid)
-                                                  .set(newCustomer.toMap());
+                                                await value.db
+                                                    .collection('customers')
+                                                    .doc(id)
+                                                    .set(newCustomer.toMap());
+                                                _nameController.clear();
+                                                _contactController.clear();
+                                                setState(() => _selectedCustomerType = null);
+                                              }
 
-                                              // ✅ Clear form
-                                              _nameController.clear();
-                                              _contactController.clear();
-                                              setState(() => _selectedCustomerType = null);
+                                              else {
+                                                final newCustomer = CustomerRegModel(id: docid, branchname: '', branchid: '', name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(), updatedat: null, deletedat: null
 
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Customer saved successfully'),
-                                                  backgroundColor: Colors.green,
+                                                );
+
+                                                await value.db
+                                                    .collection('customers')
+                                                    .doc(docid)
+                                                    .set(newCustomer.toMap());
+                                                _nameController.clear();
+                                                _contactController.clear();
+                                                setState(() => _selectedCustomerType = null);
+
+                                              }
+
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(widget.docId == null
+                                                      ? "Customer Registered Successfully"
+                                                      : "Customer Updated Successfully"),
                                                 ),
                                               );
 
                                             } catch (e) {
                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Failed to save branch: $e'),
-                                                  backgroundColor: Colors.red,
-                                                ),
+                                                SnackBar(content: Text(e.toString())),
                                               );
                                             }
-                                          },
 
-                                          child: Text("Add", style: TextStyle(color: Colors.white),),
+                                            setState(() => _loading = false);
+                                          },
+                                          child: _loading
+                                              ? const CircularProgressIndicator(
+                                              color: Colors.white)
+                                              : Text(
+                                            widget.docId == null
+                                                ? "Register"
+                                                : "Update",
+                                            style: const TextStyle(
+                                                color: Colors.white70),
+                                          ),
                                         ),
                                       ),
                                       SizedBox(
@@ -329,6 +365,8 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                           },
                                         ),
                                       ),
+
+
                                     ],
                                   ),
                                 ],

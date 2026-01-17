@@ -21,7 +21,7 @@ class CustomerListPage extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const CompanyRegPage()),
+            MaterialPageRoute(builder: (_) => const CustomerRegistration()),
           );
         },
       ),
@@ -82,14 +82,27 @@ class CustomerListPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-
-                                "Type: ${data['customertype']}\n"
-                                "Contact: ${data['contact']}\n"
-                                    "Branch: ${data['branchName']}\n",
+                         data['customertype'] == "Credit"
+                              ? Text(
+                            "Type: ${data['customertype']}\n"
+                                "Credit Limit: ${data['creditlimit']}\n"
+                                "Payment Duration: ${data['paymentduration']}\n"
+                                "Contact: ${data['contact']}\n",
                             style: const TextStyle(
-                                color: Colors.white70, height: 1.4),
+                              color: Colors.white70,
+                              height: 1.4,
+                            ),
+                          )
+                              : Text(
+                            "Type: ${data['customertype']}\n"
+                                "Contact: ${data['contact']}\n",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              height: 1.4,
+                            ),
                           ),
+
+
                         ],
                       ),
                     ),

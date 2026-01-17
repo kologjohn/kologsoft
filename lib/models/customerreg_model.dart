@@ -10,7 +10,9 @@ class CustomerRegModel {
   String companyid;
   DateTime date;
   String? updatedby;
+  DateTime? updatedat;
   String? deletedby;
+  DateTime? deletedat;
   String staff;
 
   CustomerRegModel({
@@ -27,6 +29,8 @@ class CustomerRegModel {
     this.updatedby,
     this.deletedby,
     required this.staff,
+    required this.updatedat,
+    required this.deletedat,
 
 
   });
@@ -44,7 +48,9 @@ class CustomerRegModel {
       'companyId': companyid,
       'date': date.toIso8601String(),
       'updatedby': updatedby,
+      'updatedat': updatedat,
       'deletedby': deletedby,
+      'deletedat': deletedat,
       'staff': staff,
       'created_at': DateTime.now(),
     };
@@ -62,7 +68,9 @@ class CustomerRegModel {
       companyid: json['companyId'] ?? '',
       date: json['date'],
       updatedby: json['updatedby'] ?? '',
+      updatedat: json['updatedat'] ?? '',
       deletedby: json['deletedby'] ?? '',
+      deletedat: json['deletedat'] ?? '',
       staff: json['staff'] ?? '',
     );
   }
