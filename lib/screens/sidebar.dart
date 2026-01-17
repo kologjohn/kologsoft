@@ -211,6 +211,42 @@ class Sidebar extends StatelessWidget {
               ExpansionTile(
                 iconColor: Colors.white,
                 collapsedIconColor: Colors.white,
+                leading: const Icon(Icons.people, color: Colors.white),
+                title: const Text(
+                  'Item',
+                  style: TextStyle(color: Colors.white),
+                ),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add_business, color: Colors.white),
+                    title: const Text(
+                      'Register Item ',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                        Navigator.pushNamed(context, Routes.itemreg);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.add_business, color: Colors.white),
+                    title: const Text(
+                      'view',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                        Navigator.pushNamed(context, Routes.itemlist);
+                    },
+                  ),
+
+
+
+
+                ],
+              ),
+              const Divider(color: Colors.white24),
+              ExpansionTile(
+                iconColor: Colors.white,
+                collapsedIconColor: Colors.white,
                 leading: const Icon(Icons.business, color: Colors.white),
                 title: const Text(
                   'Workspace',
