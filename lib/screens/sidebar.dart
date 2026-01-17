@@ -170,6 +170,16 @@ class Sidebar extends StatelessWidget {
                       Navigator.pushNamed(context, Routes.productcatereg);
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white),
+                    title: const Text(
+                      'Payment Duration',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.paymentdurationreg);
+                    },
+                  ),
                 ],
               ),
               const Divider(color: Colors.white24),

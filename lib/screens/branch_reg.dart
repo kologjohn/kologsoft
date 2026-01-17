@@ -40,7 +40,6 @@ class _BranchRegistrationState extends State<BranchRegistration> {
             backgroundColor: const Color(0xFF101A23),
             appBar: AppBar(
               title: Text(widget.branch != null ? "EDIT BRANCH" : "BRANCH REGISTRATION"),
-              //title: const Text('BRANCH REGISTRATION'),
               backgroundColor: const Color(0xFF0D1A26),
               foregroundColor: Colors.white,
               elevation: 2,

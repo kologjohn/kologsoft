@@ -33,6 +33,16 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+     final provider= Provider.of<Datafeed>(context, listen: false);
+     provider.fetchBranches();
+     if (widget.data != null)
+     {
+       final customadata = widget.data!;
+       final branchId = customadata['branchId'];
+       if (branchId != null && branchId.isNotEmpty) { provider.selectBranch(branchId); }
+     }
+    });
     if (widget.data != null) {
       final customadata = widget.data!;
       _nameController.text = customadata['name'] ?? '';
@@ -264,6 +274,43 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       },
                                     ),
                                   ],
+                                  SizedBox(height: 14),
+                                   DropdownButtonFormField<String>(
+                                        value: value.selectedBranch?.id, // must be one of branch.id
+                                        dropdownColor: const Color(0xFF22304A),
+                                        style: const TextStyle(color: Colors.white),
+                                        decoration: InputDecoration(
+                                          labelText: 'Branch',
+                                          labelStyle: const TextStyle(color: Colors.white70),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: Colors.white24),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: Colors.blue),
+                                          ),
+                                          fillColor: const Color(0xFF22304A),
+                                          filled: true,
+                                        ),
+                                        items: value.branches.map((branch) {
+                                          return DropdownMenuItem<String>(
+                                            value: branch.id,
+                                            child: Text(branch.branchname),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            value.selectBranch(val); // call provider method
+                                          }
+                                        },
+                                        validator: (val) =>
+                                        val == null ? 'Please select branch' : null,
+                                      ),
+
 
                                   const SizedBox(height: 30),
                                   Wrap(
@@ -296,12 +343,13 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                             String creditlimit = isCreditCustomer ? _creditlimitController.text.trim() : '';
                                             String paymentduration = isCreditCustomer ? _selectedpaymentduration ?? '' : '';
                                             String docid=value.normalizeAndSanitize("${value.companyid}${contact}");
-
+                                            final branchId = value.selectedBranch?.id ?? '';
+                                            final branchName = value.selectedBranch?.branchname ?? '';
 
                                             try {
                                               if (widget.docId != null) {
                                                 final id = widget.docId!;
-                                                final newCustomer = CustomerRegModel(id: id, branchname: '', branchid: '', name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(),updatedby: value.staff, updatedat: DateTime.now(), deletedat: null
+                                                final newCustomer = CustomerRegModel(id: id, branchname:branchName, branchid: branchId, name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(),updatedby: value.staff, updatedat: DateTime.now(), deletedat: null
 
                                                 );
 
@@ -315,7 +363,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                               }
 
                                               else {
-                                                final newCustomer = CustomerRegModel(id: docid, branchname: '', branchid: '', name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(), updatedat: null, deletedat: null
+                                                final newCustomer = CustomerRegModel(id: docid, branchname:branchName, branchid:branchId, name: name, contact: contact, customertype: customertype,creditlimit: creditlimit,paymentduration: paymentduration, companyid: value.companyid, staff: value.staff, date: DateTime.now(), updatedat: null, deletedat: null
 
                                                 );
 
