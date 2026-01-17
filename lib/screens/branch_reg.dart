@@ -3,8 +3,11 @@ import 'package:kologsoft/models/branch.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/routes.dart';
+
 class BranchRegistration extends StatefulWidget {
-  const BranchRegistration({super.key});
+  final BranchModel? branch;
+  const BranchRegistration({super.key, this.branch});
 
   @override
   State<BranchRegistration> createState() => _BranchRegistrationState();
@@ -19,13 +22,24 @@ class _BranchRegistrationState extends State<BranchRegistration> {
   final List<String> _branchTypes = ['Product', 'Service'];
 
   @override
+  void initState() {
+    super.initState();
+
+    if (widget.branch != null) {
+      _branchnameController.text = widget.branch!.branchname;
+      _branchcontactController.text = widget.branch!.branchcontact;
+      _selectedBranchType = widget.branch!.branchtype;
+    }
+  }
+
   Widget build(BuildContext context) {
     return Consumer<Datafeed>(
         builder: (BuildContext context, Datafeed value, Widget? child){
           return Scaffold(
             backgroundColor: const Color(0xFF101A23),
             appBar: AppBar(
-              title: const Text('BRANCH REGISTRATION'),
+              title: Text(widget.branch != null ? "EDIT BRANCH" : "BRANCH REGISTRATION"),
+              //title: const Text('BRANCH REGISTRATION'),
               backgroundColor: const Color(0xFF0D1A26),
               foregroundColor: Colors.white,
               elevation: 2,
@@ -172,40 +186,50 @@ class _BranchRegistrationState extends State<BranchRegistration> {
 
                                             try {
                                               final branch = BranchModel(
+                                                id: widget.branch?.id ?? '',
                                                 branchname: _branchnameController.text.trim(),
-                                                branchtype: _selectedBranchType!, // ✅ dropdown value
+                                                branchtype: _selectedBranchType!,
                                                 branchcontact: _branchcontactController.text.trim(),
                                                 staff: '',
-                                                companyid: '',      // you can fill later
-                                                companyemail: '',   // you can fill later
+                                                companyid: value.companyid,
+                                                companyemail: value.companyemail,
                                                 date: DateTime.now(),
+                                                updatedat: DateTime.now(),
+                                                updatedby: '',
                                               );
 
-                                              await value.addBranch(branch); // 🔥 Save to Firebase
+                                              await value.addOrUpdateBranch(branch);
 
-                                              // ✅ Clear form
+                                              if (widget.branch != null) {
+                                                Navigator.pop(context);
+                                              }
+
                                               _branchnameController.clear();
                                               _branchcontactController.clear();
                                               setState(() => _selectedBranchType = null);
 
                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Branch saved successfully'),
+                                                SnackBar(
+                                                  content: Text(widget.branch != null
+                                                      ? 'Branch updated successfully'
+                                                      : 'Branch saved successfully'),
                                                   backgroundColor: Colors.green,
                                                 ),
                                               );
-
                                             } catch (e) {
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
-                                                  content: Text('Failed to save branch: $e'),
+                                                  content: Text('Operation failed: $e'),
                                                   backgroundColor: Colors.red,
                                                 ),
                                               );
                                             }
                                           },
 
-                                          child: Text("Add", style: TextStyle(color: Colors.white),),
+
+                                          child: Text(
+                                            widget.branch != null ? "Update" : "Add",
+                                            style: TextStyle(color: Colors.white),),
                                         ),
                                       ),
                                       SizedBox(
@@ -220,7 +244,9 @@ class _BranchRegistrationState extends State<BranchRegistration> {
                                           ),
                                           icon: const Icon(Icons.view_list, color: Colors.white70),
                                           label: const Text("View", style: TextStyle(color: Colors.white70)),
-                                          onPressed: () {},
+                                          onPressed: () {
+                                            Navigator.pushNamed(context, Routes.branchview);
+                                          },
                                         ),
                                       ),
                                     ],

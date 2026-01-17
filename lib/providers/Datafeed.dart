@@ -48,13 +48,33 @@ class Datafeed extends ChangeNotifier {
     return result.isNotEmpty ? result : "n_a";
   }
 
-  Future<void> addBranch(BranchModel branch) async {
-    final docRef = db.collection('branches').doc();
+  Future<void> addOrUpdateBranch(BranchModel branch) async {
+    String docId;
 
-    branch.id = docRef.id; // assign generated ID
+    if (branch.id.isNotEmpty) {
+      docId = branch.id;
+    }
 
-    await docRef.set(branch.toMap());
+    else {
+      docId = "${branch.companyid}${branch.branchname}"
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s+'), '_');
+
+      branch.id = docId;
+    }
+
+    await db
+        .collection('branches')
+        .doc(docId)
+        .set(branch.toMap(), SetOptions(merge: true));
   }
+
+
+  Future<void> deleteBranch(String id) async {
+    final db = FirebaseFirestore.instance;
+    await db.collection('branches').doc(id).delete();
+  }
+
 
   Future<void> forgotPassword(String email, BuildContext context) async {
     try {
