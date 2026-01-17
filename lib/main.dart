@@ -7,7 +7,6 @@ import 'package:kologsoft/screens/home_dashboard.dart';
 import 'package:kologsoft/services/storage_service.dart';
 import 'package:provider/provider.dart';
 
-
 import 'firebase_options.dart';
 
 void main() async {
@@ -19,21 +18,19 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-
         ChangeNotifierProvider(create: (_) => Datafeed()),
         ChangeNotifierProvider(create: (_) => Survey()),
       ],
       child: MaterialApp(
         initialRoute: Routes.home,
         routes: pages,
-        title: 'Kologsoft POS',
+        title: 'KologSoft POS',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.light,

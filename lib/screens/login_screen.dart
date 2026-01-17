@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     // ...existing code (remove logo from here)
                                     const SizedBox(height: 24),
                                     Text(
-                                      'NWC SMS',
+                                      'KologSoft POS',
                                       style: TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,

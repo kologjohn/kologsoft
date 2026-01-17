@@ -129,7 +129,5 @@ class Datafeed extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchAndCacheStaff(String) async {
-    final staffSnapshot = await db.collection('staff').get();
-  }
+
 }
