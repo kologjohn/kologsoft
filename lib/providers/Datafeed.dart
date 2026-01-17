@@ -6,8 +6,8 @@ import 'package:kologsoft/models/paymentdurationmodel.dart';
 import 'package:kologsoft/models/productcategorymodel.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/branch.dart';
+import '../models/suppliermodel.dart';
 import '../models/warehousemodel.dart';
 
 
@@ -22,27 +22,69 @@ class Datafeed extends ChangeNotifier {
   String companyphone = "0553354349";
   String staff = "Yinbey";
   List<WarehouseModel> warehouses = [];
+  bool loadingproductcategory = false;
+  List<Productcategorymodel> productcategory = [];
   List<BranchModel> branches = [];
+  List<Supplier> suppliers = [];
   bool loadingWarehouses = false;
   BranchModel? selectedBranch;
+  Supplier? selectedSupplier;
 
    fetchBranches() async {
     try { final snap = await db.collection('branches').where("companyId",isEqualTo: companyid).get();
     final fetchedBranches = snap.docs.map((doc) {
        return BranchModel.fromJson(doc.data());
      }).toList();
- // Add hardcoded "All" branch at the top
     branches = [ BranchModel(id: "$companyid${'all'}", branchname: 'All'), ...fetchedBranches, ];
      notifyListeners();
     } catch (e) {
       debugPrint("Error fetching branches: $e"); }
   }
+
+  fetchSuppliers() async {
+    try { final snap = await db.collection('suppliers').where("companyid",isEqualTo: companyid).get();
+    suppliers = snap.docs.map((doc) {
+      return Supplier.fromMap(doc.data());
+    }).toList();
+    notifyListeners();
+    } catch (e) {
+      debugPrint("Error fetching branches: $e"); }
+  }
+  Future<void> fetchproductcategory() async {
+    loadingproductcategory = true;
+    notifyListeners();
+
+    try {
+      final snap = await db
+          .collection('productcategoryreg')
+          .where('companyId', isEqualTo: companyid)
+          .get();
+
+      productcategory = snap.docs
+          .map((e) => Productcategorymodel.fromJson(e.data()))
+          .toList();
+
+    } catch (e) {
+      debugPrint("fetch product category error: $e");
+    }
+
+    loadingproductcategory = false;
+    notifyListeners();
+  }
+  selectSupplier(String suplylierId)
+  {
+    selectedSupplier = suppliers.firstWhere( (sup) => sup.id == suplylierId,
+      orElse: () => Supplier(id: '', supplier: '', staff: '', contact: '', company: '', companyid: '', datecreated: Timestamp.now()), );
+    notifyListeners();
+  }
+
    selectBranch(String branchId)
   {
     selectedBranch = branches.firstWhere( (branch) => branch.id == branchId,
       orElse: () => BranchModel(), );
     notifyListeners();
   }
+
 
   Future<void> fetchWarehouses() async {
     try {

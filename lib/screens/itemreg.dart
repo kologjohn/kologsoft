@@ -1,15 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/itemregmodel.dart';
-import '../providers/Datafeed.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' hide Uint8List;
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-enum PriceMode {
-  retailPercent,
-  retailAbsolute,
-  wholesalePercent,
-  wholesaleAbsolute,
-}
+import '../providers/Datafeed.dart';
 
 class ItemRegPage extends StatefulWidget {
   final String? docId;
@@ -28,415 +27,661 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _barcodeController = TextEditingController();
   final _costController = TextEditingController();
 
-  final _retailMarkupController = TextEditingController();
-  final _retailAbsoluteController = TextEditingController();
+  bool _enableBoxPricing = false;
+  bool _showBoxPricingSwitch = false;
+  final _boxQtyController = TextEditingController();
+  final _retailPriceController = TextEditingController();
+  final _wholesalePriceController = TextEditingController();
+  final _supplierPriceController = TextEditingController();
 
-  final _wholesaleMarkupController = TextEditingController();
-  final _wholesaleAbsoluteController = TextEditingController();
 
-  final _openingStockController = TextEditingController();
+  // Carton total quantity
+  final _cartonQtyController = TextEditingController();
 
+// Carton prices
+  final _cartonRetailController = TextEditingController();
+  final _cartonWholesaleController = TextEditingController();
+  final _cartonSupplierController = TextEditingController();
+
+// Half prices (auto)
+  final _halfRetailController = TextEditingController();
+  final _halfWholesaleController = TextEditingController();
+  final _halfSupplierController = TextEditingController();
+
+// Quarter prices (auto)
+  final _quarterRetailController = TextEditingController();
+  final _quarterWholesaleController = TextEditingController();
+  final _quarterSupplierController = TextEditingController();
+
+// Pack
+  final _packQtyController = TextEditingController();
+  final _packRetailController = TextEditingController();
+  final _packWholesaleController = TextEditingController();
+  final _packSupplierController = TextEditingController();
+
+
+  final _wholesaleMinQtyController = TextEditingController();
+  final _supplierMinQtyController = TextEditingController();
+  Map<String, TextEditingController> stockingControllers = {};
   String? _productType;
   String? _pricingMode;
   String? _productCategory;
-  String? _warehouse;
 
   bool _loading = false;
-
-  PriceMode? _activeMode;
+  Uint8List? _logoBytes;
+  File? _logoFile;
+  String? _existingLogoUrl;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<Datafeed>().fetchWarehouses();
+      context.read<Datafeed>().fetchproductcategory();
     });
+
     if (widget.data != null) {
       final d = widget.data!;
-
+      _existingLogoUrl = d['imageurl'];
       _nameController.text = d['name'] ?? '';
       _barcodeController.text = d['barcode'] ?? '';
       _costController.text = d['costprice'] ?? '';
-
-      _retailMarkupController.text = d['retailmarkup'] ?? '';
-      _retailAbsoluteController.text = d['retailabsolute'] ?? '';
-
-      _wholesaleMarkupController.text = d['wholesalemarkup'] ?? '';
-      _wholesaleAbsoluteController.text = d['wholesaleabsolute'] ?? '';
-
-      _openingStockController.text = d['openingstock'] ?? '';
-
       _productType = d['producttype'];
-      _pricingMode = d['pricingmode'];
       _productCategory = d['productcategory'];
-      _warehouse = d['warehouse'];
 
-      if (_retailMarkupController.text.isNotEmpty) {
-        _activeMode = PriceMode.retailPercent;
-      } else if (_retailAbsoluteController.text.isNotEmpty) {
-        _activeMode = PriceMode.retailAbsolute;
-      } else if (_wholesaleMarkupController.text.isNotEmpty) {
-        _activeMode = PriceMode.wholesalePercent;
-      } else if (_wholesaleAbsoluteController.text.isNotEmpty) {
-        _activeMode = PriceMode.wholesaleAbsolute;
+    }
+  }
+  Future<void> pickLogo() async {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+
+    if (picked == null) return;
+
+    if (kIsWeb) {
+      _logoBytes = await picked.readAsBytes();
+      _logoFile = null;
+    } else {
+      _logoFile = File(picked.path);
+      _logoBytes = null;
+    }
+
+    setState(() {});
+  }
+
+  Future<String?> uploadLogo(String itemId) async {
+    if (_logoFile == null && _logoBytes == null) {
+      return _existingLogoUrl; // unchanged
+    }
+
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('items')
+        .child('$itemId.png');
+
+    UploadTask task;
+
+    if (kIsWeb) {
+      task = ref.putData(
+        _logoBytes!,
+        SettableMetadata(contentType: 'image/png'),
+      );
+    } else {
+      task = ref.putFile(
+        _logoFile!,
+        SettableMetadata(contentType: 'image/png'),
+      );
+    }
+
+    final snap = await task;
+    return snap.ref.getDownloadURL();
+  }
+
+
+  Future<void> saveItem() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    try {
+      final docRef = widget.docId == null
+          ? _db.collection('items').doc()
+          : _db.collection('items').doc(widget.docId);
+
+      final imageUrl = await uploadLogo(docRef.id);
+      if (_enableBoxPricing) {
+        final wMin = int.tryParse(_wholesaleMinQtyController.text) ?? 0;
+        final sMin = int.tryParse(_supplierMinQtyController.text) ?? 0;
+
+        if (wMin >= sMin) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Wholesale min qty must be less than supplier min qty")),
+          );
+          setState(() => _loading = false);
+          return;
+        }
       }
+
+      final data = {
+        'name': _nameController.text.trim(),
+        'barcode': _barcodeController.text.trim(),
+        'costprice': _costController.text.trim(),
+        'producttype': _productType,
+        'pricingmode': _pricingMode,
+        'productcategory': _productCategory,
+        'imageurl': imageUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'boxPricingEnabled': _enableBoxPricing,
+        'boxQty': _boxQtyController.text,
+        'retailBoxPrice': _retailPriceController.text,
+        'wholesaleBoxPrice': _wholesalePriceController.text,
+        'supplierBoxPrice': _supplierPriceController.text,
+        'wholesaleMinQty': _wholesaleMinQtyController.text,
+        'supplierMinQty': _supplierMinQtyController.text,
+      };
+
+      if (widget.docId == null) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+        await docRef.set(data);
+      } else {
+        await docRef.update(data);
+      }
+
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+
+    setState(() => _loading = false);
   }
 
-  // ================= PRICE CALCULATION =================
-
-  String calcRetailPrice() {
-    final cost = double.tryParse(_costController.text) ?? 0;
-
-    if (_activeMode == PriceMode.retailPercent) {
-      final percent = double.tryParse(_retailMarkupController.text) ?? 0;
-      return (cost + (cost * percent / 100)).toStringAsFixed(2);
-    }
-
-    if (_activeMode == PriceMode.retailAbsolute) {
-      final value = double.tryParse(_retailAbsoluteController.text) ?? cost;
-      return value.toStringAsFixed(2);
-    }
-
-    return cost.toStringAsFixed(2);
-  }
-
-  String calcWholesalePrice() {
-    final cost = double.tryParse(_costController.text) ?? 0;
-
-    if (_activeMode == PriceMode.wholesalePercent) {
-      final percent = double.tryParse(_wholesaleMarkupController.text) ?? 0;
-      return (cost + (cost * percent / 100)).toStringAsFixed(2);
-    }
-
-    if (_activeMode == PriceMode.wholesaleAbsolute) {
-      final value = double.tryParse(_wholesaleAbsoluteController.text) ?? cost;
-      return value.toStringAsFixed(2);
-    }
-
-    return cost.toStringAsFixed(2);
-  }
-
-  // =====================================================
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final formWidth = screenWidth > 900 ? screenWidth * 0.6 : screenWidth * 0.95;
+    return Consumer<Datafeed>(builder: (context, datafeed, child) {
+      final companyType = datafeed.companytype;
 
-    return Consumer<Datafeed>(
-      builder: (context, datafeed, child) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF101624),
+        appBar: AppBar(title: Text(widget.docId == null ? 'Register Item' : 'Edit Item')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 700),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    _imagePickerSection(),
+                    const SizedBox(height: 10),
+                    _buildField(_nameController, 'Item Name', Icons.label),
+                    const SizedBox(height: 10),
+                    _buildField(_barcodeController, 'Barcode', Icons.qr_code),
+                    const SizedBox(height: 10),
+                    _buildField(
+                      _boxQtyController,
+                      'Box quantity',
+                      Icons.attach_money,
+                      isNumber: true,
+                      onChanged: (value) {
+                        final qty = int.tryParse(value) ?? 0;
 
-        final companyType = datafeed.companytype;
+                        setState(() {
+                          if (qty > 1) {
+                            _enableBoxPricing = true;
+                            _showBoxPricingSwitch = true;
+                          } else {
 
-        final bool showRetail = companyType == "retail" || companyType == "both";
+                            _enableBoxPricing = false;
+                            _showBoxPricingSwitch = false;
+                          }
 
-        final bool showWholesale =  companyType == "wholesale" || companyType == "both";
 
-        return Scaffold(
-          backgroundColor: const Color(0xFF101624),
-          appBar: AppBar(
-            title: Text(widget.docId == null ? "Register Item" : "Edit Item"),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 700),
-                  child: Container(
-                    width: formWidth,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1B263B),
-                      borderRadius: BorderRadius.circular(20),
+                          if (qty == 1) {
+                            _wholesalePriceController.text = '1';
+                            _retailPriceController.text = '1';
+                          } else if (qty > 1) {
+                            _wholesalePriceController.text = (qty * 0.9).toString();
+                            _retailPriceController.text = (qty * 1.0).toString();
+                          } else {
+                            _wholesalePriceController.clear();
+                            _retailPriceController.clear();
+                          }
+                        });
+                      },
                     ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildField(_nameController, "Item Name", Icons.label),
-                          const SizedBox(height: 14),
-                          _buildField(_barcodeController, "Barcode", Icons.qr_code),
-                          const SizedBox(height: 14),
-                          _buildField(_costController, "Cost Price", Icons.attach_money, isNumber: true),
-                          const SizedBox(height: 14),
+                    SizedBox(height: 10,),
+                   _buildField(_retailPriceController, 'Retail Price', Icons.attach_money, isNumber: true),
+                    SizedBox(height: 10,),
 
-                          // ================= RETAIL =================
-                          if (showRetail) ...[
-                            _priceField(
-                              controller: _retailMarkupController,
-                              label: "Retail Mark Up %",
-                              icon: Icons.percent,
-                              active: _activeMode == PriceMode.retailPercent,
-                              onActivate: () => setState(() {
-                                _activeMode = PriceMode.retailPercent;
-                              }),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _priceField(
-                              controller: _retailAbsoluteController,
-                              label: "Retail Price (Absolute)",
-                              icon: Icons.attach_money,
-                              active: _activeMode == PriceMode.retailAbsolute,
-                              onActivate: () => setState(() {
-                                _activeMode = PriceMode.retailAbsolute;
-                              }),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-
-                          // ================= WHOLESALE =================
-                          if (showWholesale) ...[
-                            _priceField(
-                              controller: _wholesaleMarkupController,
-                              label: "Wholesale Mark Up %",
-                              icon: Icons.percent,
-                              active: _activeMode == PriceMode.wholesalePercent,
-                              onActivate: () => setState(() {
-                                _activeMode = PriceMode.wholesalePercent;
-                              }),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _priceField(
-                              controller: _wholesaleAbsoluteController,
-                              label: "Wholesale Price (Absolute)",
-                              icon: Icons.attach_money,
-                              active: _activeMode == PriceMode.wholesaleAbsolute,
-                              onActivate: () => setState(() {
-                                _activeMode = PriceMode.wholesaleAbsolute;
-                              }),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-
-                          _buildField(_openingStockController, "Opening Stock", Icons.inventory, isNumber: true),
-                          const SizedBox(height: 14),
-
-                          DropdownButtonFormField<String>(
-                            style: TextStyle(color: Colors.white70),
-                            decoration: _buildDropdownDecoration("Product Type"),
-                            value: _productType,
-                            items: const [
-                              DropdownMenuItem(value: "product", child: Text("Product")),
-                              DropdownMenuItem(value: "service", child: Text("Service")),
-                            ],
-                            onChanged: (val) => setState(() => _productType = val),
-                            validator: (val) => val == null ? "Please select a product type" : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            _wholesalePriceController,
+                            'Wholesale Price',
+                            Icons.attach_money,
+                            isNumber: true,
                           ),
-                          const SizedBox(height: 14),
-
-                          DropdownButtonFormField<String>(
-                            style: TextStyle(color: Colors.white70),
-                            decoration: _buildDropdownDecoration("Pricing Mode"),
-                            value: _pricingMode,
-                            items: const [
-                              DropdownMenuItem(value: "retail", child: Text("Retail")),
-                              DropdownMenuItem(value: "wholesale", child: Text("Wholesale")),
-                            ],
-                            onChanged: (val) => setState(() => _pricingMode = val),
-                            validator: (val) => val == null ? "Please select pricing mode" : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildField(
+                            _supplierPriceController,
+                            'Supplier Price',
+                            Icons.attach_money,
+                            isNumber: true,
                           ),
-                          const SizedBox(height: 14),
+                        ),
+                      ],
+                    ),
 
-                          DropdownButtonFormField<String>(
-                            style: TextStyle(color: Colors.white70),
-                            decoration: _buildDropdownDecoration("Product Category"),
-                            value: _productCategory,
-                            items: const [
-                              DropdownMenuItem(value: "category1", child: Text("Category 1")),
-                              DropdownMenuItem(value: "category2", child: Text("Category 2")),
-                            ],
-                            onChanged: (val) => setState(() => _productCategory = val),
-                            validator: (val) => val == null ? "Please select product category" : null,
-                          ),
-                          const SizedBox(height: 14),
+                    const SizedBox(height: 10),
 
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            _wholesaleMinQtyController,
+                            'Wholesale Min Qty',
+                            onChanged: (value) {
+                              _formKey.currentState?.validate();
+                            },
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Required';
 
-                          Consumer<Datafeed>(
-                            builder: (context, datafeed, _) {
-                              if (datafeed.loadingWarehouses) {
-                                return const Center(child: CircularProgressIndicator());
+                              final wholesaleQty = int.tryParse(v) ?? 0;
+                              final supplierQty =
+                                  int.tryParse(_supplierMinQtyController.text) ?? 0;
+
+                              if (supplierQty > 0 && wholesaleQty > supplierQty) {
+                                return 'Cannot exceed Supplier Min Qty';
                               }
 
-                              return DropdownButtonFormField<String>(
-                                style: const TextStyle(color: Colors.white70),
-                                decoration: _buildDropdownDecoration("Warehouse"),
-                                value: _warehouse,
-                                items: datafeed.warehouses.map((w) {
-                                  return DropdownMenuItem<String>(
-                                    value: w.name,
-                                    child: Text(w.name),
-                                  );
-                                }).toList(),
-                                onChanged: (val) => setState(() => _warehouse = val),
-                                validator: (val) =>
-                                val == null ? "Please select warehouse" : null,
-                              );
+                              return null;
+                            },
+                            Icons.numbers,
+                            isNumber: true,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildField(
+                            _supplierMinQtyController,
+                            'Supplier Min Qty',
+                            Icons.numbers,
+                            isNumber: true,
+                            onChanged: (value) {
+                              _formKey.currentState?.validate();
                             },
                           ),
-                          const SizedBox(height: 25),
+                        ),
+                      ],
+                    ),
+                    if (_showBoxPricingSwitch)
+                      SwitchListTile(
+                        title: const Text(
+                          "Enable Box Pricing",
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        value: _enableBoxPricing,
+                        onChanged: (v) {
+                          setState(() => _enableBoxPricing = v);
+                        },
+                      ),
 
-                          SizedBox(
-                            width: 200,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF415A77),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed: _loading ? null : () async {
-                                if (!_formKey.currentState!.validate()) return;
+                    if (_enableBoxPricing) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              _cartonQtyController,
+                              'Carton Qty',
+                              Icons.inventory,
+                              isNumber: true,
+                              onChanged: (v) {
 
-                                setState(() => _loading = true);
-                                final staff = datafeed.staff;
-
-                                try {
-                                  if (widget.docId != null) {
-                                    await _db.collection('items').doc(widget.docId).update({
-                                      'name': _nameController.text.trim(),
-                                      'barcode': _barcodeController.text.trim(),
-                                      'costprice': _costController.text.trim(),
-
-                                      'retailmarkup': _retailMarkupController.text.trim(),
-                                      'retailabsolute': _retailAbsoluteController.text.trim(),
-
-                                      'wholesalemarkup': _wholesaleMarkupController.text.trim(),
-                                      'wholesaleabsolute': _wholesaleAbsoluteController.text.trim(),
-
-                                      'retailprice': calcRetailPrice(),
-                                      'wholesaleprice': calcWholesalePrice(),
-
-                                      'openingstock': _openingStockController.text.trim(),
-                                      'producttype': _productType,
-                                      'pricingmode': _pricingMode,
-                                      'productcategory': _productCategory,
-                                      'warehouse': _warehouse,
-                                      'updatedAt': DateTime.now(),
-                                      'updatedBy': staff,
-                                    });
-                                  } else {
-                                    final name =_nameController.text.trim();
-                                    final id =
-                                    '${datafeed.companyid}_${_warehouse}_${name}'
-                                        .trim()
-                                        .toLowerCase()
-                                        .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
-                                        .replaceAll(RegExp(r'\s+'), '_');
-                                    final model = ItemModel(
-                                      id: id,
-                                      no: id,
-                                      name: _nameController.text.trim(),
-                                      barcode: _barcodeController.text.trim(),
-                                      costprice: _costController.text.trim(),
-
-                                      retailmarkup: _retailMarkupController.text.trim(),
-                                      wholesalemarkup: _wholesaleMarkupController.text.trim(),
-
-                                      retailprice: calcRetailPrice(),
-                                      wholesaleprice: calcWholesalePrice(),
-
-                                      openingstock: _openingStockController.text.trim(),
-                                      producttype: _productType!,
-                                      pricingmode: _pricingMode!,
-                                      productcategory: _productCategory!,
-                                      warehouse: _warehouse!,
-                                      company: datafeed.company,
-                                      companyid: datafeed.companyid,
-                                      createdAt: DateTime.now(),
-                                      updatedAt: DateTime.now(),
-                                      updatedBy: staff,
-                                    );
-                           await _db.collection('items').doc(id).set(model.toMap());
-
-                                  }
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(widget.docId == null
-                                          ? "Item Registered Successfully"
-                                          : "Item Updated Successfully"),
-                                    ),
-                                  );
-
-                                  Navigator.pop(context);
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-
-                                setState(() => _loading = false);
                               },
-                              child: _loading
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : Text(widget.docId == null ? "Register" : "Update",
-                                  style: const TextStyle(color: Colors.white70)),
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _cartonRetailController,
+                              'Carton retail Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                              onChanged: (v) {
+
+                              },
+                              validator: (v) => v == null || v.isEmpty ? 'Required' :null
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _cartonWholesaleController,
+                              'Carton wholesale price',
+                              Icons.attach_money,
+                              isNumber: true,
+                              onChanged: (v) {
+
+                              },
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _cartonSupplierController,
+                              'Carton Supplier Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                              onChanged: (v) {
+
+                              },
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              _halfRetailController,
+                              'Quarter Qty',
+                              Icons.attach_money,
+                              isNumber: true,
+                              onChanged: (v) {
+
+                              },
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _halfRetailController,
+                              'Retail Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _halfWholesaleController,
+                              'Wholesale Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _halfSupplierController,
+                              'Supplier Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                    const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              _quarterRetailController,
+                              'Retail Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _quarterRetailController,
+                              'Retail Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _quarterWholesaleController,
+                              'Wholesale Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _quarterSupplierController,
+                              'Supplier Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              _packQtyController,
+                              'Pack Qty',
+                              Icons.inventory,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _packRetailController,
+                              'Retail Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _packWholesaleController,
+                              'Wholesale Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _packSupplierController,
+                              'Supplier Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ],
+                    SizedBox(height: 10,),
+
+                    _buildField(_costController, 'Cost Price', Icons.attach_money, isNumber: true),
+                    const SizedBox(height: 10),
+
+                    DropdownButtonFormField<String>(
+                      value: _productType,
+                      decoration: _buildDropdownDecoration('Product Type'),
+                      items: const [
+                        DropdownMenuItem(value: 'product', child: Text('Product')),
+                        DropdownMenuItem(value: 'service', child: Text('Service')),
+                      ],
+                      onChanged: (v) => setState(() => _productType = v),
+                      validator: (v) => v == null ? 'Select product type' : null,
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    Consumer<Datafeed>(
+                      builder: (context, datafeed, _) {
+
+                        if (datafeed.loadingproductcategory) {
+                          return const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (datafeed.productcategory.isEmpty) {
+                          return const Text(
+                            "No product categories found",
+                            style: TextStyle(color: Colors.white54),
+                          );
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: _productCategory,
+                          decoration: _buildDropdownDecoration('Product category'),
+                          items: datafeed.productcategory
+                              .map(
+                                (w) => DropdownMenuItem<String>(
+                              value: w.productname,
+                              child: Text(w.productname),
+                            ),
+                          )
+                              .toList(),
+                          onChanged: (v) => setState(() => _productCategory = v),
+                          validator: (v) => v == null ? 'Select product category' : null,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white70, // text color
+                          backgroundColor: Colors.white60,     // button color (optional)
+                        ),
+                        onPressed: _loading ? null : saveItem,
+                        child: _loading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Save Item'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      );
+    });
+  }
+
+  // ================= IMAGE UI =================
+  Widget _imagePickerSection() {
+    Widget preview;
+
+    if (_logoBytes != null) {
+      preview = Image.memory(_logoBytes!, fit: BoxFit.cover);
+    } else if (_logoFile != null) {
+      preview = Image.file(_logoFile!, fit: BoxFit.cover);
+    } else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty) {
+      preview = Image.network(_existingLogoUrl!, fit: BoxFit.cover);
+    } else {
+      preview = const Icon(Icons.image, size: 50, color: Colors.white38);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Item Image (optional)', style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: pickLogo,
+          child: Container(
+            height: 140,
+            width: 140,
+            decoration: BoxDecoration(
+              color: const Color(0xFF22304A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Center(child: preview),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextButton.icon(
+          onPressed: pickLogo,
+          icon: const Icon(Icons.upload),
+          label: const Text('Select Image'),
+        ),
+      ],
     );
   }
 
-  // ================= UI HELPERS =================
+  // ================= FIELDS =================
+  Widget _priceField(TextEditingController controller, String label, IconData icon) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: const TextStyle(color: Colors.white70),
+      decoration: _inputDecoration(label, icon),
+    );
+  }
 
-  Widget _priceField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool active,
-    required VoidCallback onActivate,
-  }) {
-    return GestureDetector(
-      onDoubleTap: onActivate,
-      child: TextFormField(
-        controller: controller,
-        enabled: active,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        style: TextStyle(color: active ? Colors.white70 : Colors.white38),
-        validator: (v) => active && (v == null || v.isEmpty) ? "Required" : null,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          prefixIcon: Icon(icon, color: Colors.white70),
-          fillColor: const Color(0xFF22304A),
-          filled: true,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: active ? Colors.white24 : Colors.white12),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.blue),
-          ),
-        ),
+  TextFormField _buildField(TextEditingController controller, String label, IconData icon,{bool isNumber = false,  Function(String)? onChanged,String? Function(String?)? validator,}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      style: const TextStyle(color: Colors.white70),
+      validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
+      decoration: _inputDecoration(label, icon),
+      onChanged: onChanged,
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      prefixIcon: Icon(icon, color: Colors.white70),
+      filled: true,
+      fillColor: const Color(0xFF22304A),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white24),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.blue),
       ),
     );
   }
 
   InputDecoration _buildDropdownDecoration(String label) {
     return InputDecoration(
-
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white70),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      filled: true,
+      fillColor: const Color(0xFF22304A),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.white24),
@@ -445,38 +690,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.red),
       ),
-      fillColor: const Color(0xFF22304A),
-      filled: true,
     );
   }
 
-  TextFormField _buildField(
-      TextEditingController controller,
-      String label,
-      IconData icon, {
-        bool isNumber = false,
-      }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType:
-      isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-      style: const TextStyle(color: Colors.white70),
-      validator: (v) => v == null || v.isEmpty ? "Required" : null,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white70),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blue),
-        ),
-        fillColor: const Color(0xFF22304A),
-        filled: true,
-      ),
-    );
-  }
+
 }
+
+
+
+
+

@@ -20,7 +20,7 @@ class ItemModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String updatedBy;
-  final String imageurl = '';
+  final String imageurl;
 
   ItemModel({
     required this.id,
@@ -42,6 +42,7 @@ class ItemModel {
     required this.createdAt,
     required this.updatedAt,
     required this.updatedBy,
+    required this.imageurl,
   });
 
   Map<String, dynamic> toMap() {
@@ -65,6 +66,7 @@ class ItemModel {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'updatedBy': updatedBy,
+      'image': imageurl,
     };
   }
 
@@ -90,6 +92,7 @@ class ItemModel {
       createdAt: (d['createdAt'] as Timestamp).toDate(),
       updatedAt: (d['updatedAt'] as Timestamp).toDate(),
       updatedBy: d['updatedBy'] ?? '',
+      imageurl: d['image'] ?? '',
     );
   }
 }

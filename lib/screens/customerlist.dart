@@ -26,7 +26,7 @@ class CustomerListPage extends StatelessWidget {
         },
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: db.collection('customers').orderBy('contact').snapshots(),
+        stream: db.collection('customers').orderBy('name').snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());

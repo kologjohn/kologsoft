@@ -139,7 +139,16 @@ class Sidebar extends StatelessWidget {
                       Navigator.pushNamed(context, Routes.branchreg);
                     },
                   ),
-
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white),
+                    title: const Text(
+                      'Mode setup',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                     // Navigator.pushNamed(context, Routes.modesetup);
+                    },
+                  ),
                   ListTile(
                     leading: const Icon(Icons.person_add, color: Colors.white),
                     title: const Text(
@@ -186,20 +195,20 @@ class Sidebar extends StatelessWidget {
               ExpansionTile(
                 iconColor: Colors.white,
                 collapsedIconColor: Colors.white,
-                leading: const Icon(Icons.people, color: Colors.white),
+                leading: const Icon(Icons.inventory, color: Colors.white),
                 title: const Text(
-                  'Survey Setup',
+                  'Stock management',
                   style: TextStyle(color: Colors.white),
                 ),
                 children: [
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
-                      'Admin Setup ',
+                      'New Stock Entry ',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                    //  Navigator.pushNamed(context, Routes.adminsurvey);
+                     Navigator.pushNamed(context, Routes.newstock);
                     },
                   ),
                   ListTile(

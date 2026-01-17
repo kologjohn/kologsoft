@@ -6,57 +6,59 @@ import 'package:provider/provider.dart';
 
 import 'customerlist.dart';
 
-class CustomerRegistration extends StatefulWidget {
+class NewStock extends StatefulWidget {
   final String? docId;
   final Map<String, dynamic>? data;
-  const CustomerRegistration({super.key,this.docId, this.data});
+  const NewStock({super.key,this.docId, this.data});
 
   @override
-  State<CustomerRegistration> createState() => _CustomerRegistrationState();
+  State<NewStock> createState() => _NewStockState();
 }
 
-class _CustomerRegistrationState extends State<CustomerRegistration> {
+class _NewStockState extends State<NewStock> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _invoicenumberController = TextEditingController();
+  final TextEditingController _waybillController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _creditlimitController = TextEditingController();
 
-  String? _selectedCustomerType;
+  String? _selectedPurchaseType;
   String? _selectedpaymentduration;
   bool _loading=false;
 
-  late List<String> _customerTypes = ['Cash', 'Credit'];
+  late List<String> _purchasTypes = ['Cash', 'Credit','Opening Stock'];
   late List<String> paymentduration = ['Short term', 'Long term'];
 
-  bool get isCreditCustomer => _selectedCustomerType == 'Credit';
+  bool get isCashPurchase => _selectedPurchaseType == 'Cash';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-     final provider= Provider.of<Datafeed>(context, listen: false);
-     provider.fetchBranches();
-     if (widget.data != null)
-     {
-       final customadata = widget.data!;
-       final branchId = customadata['branchId'];
-       if (branchId != null && branchId.isNotEmpty) { provider.selectBranch(branchId); }
-     }
+      final provider= Provider.of<Datafeed>(context, listen: false);
+      provider.fetchBranches();
+      provider.fetchSuppliers();
+      if (widget.data != null)
+      {
+        final customadata = widget.data!;
+        final branchId = customadata['branchId'];
+        if (branchId != null && branchId.isNotEmpty) { provider.selectBranch(branchId); }
+      }
     });
     if (widget.data != null) {
       final customadata = widget.data!;
-      _nameController.text = customadata['name'] ?? '';
+      _invoicenumberController.text = customadata['name'] ?? '';
       _contactController.text = customadata['contact'] ?? '';
       _creditlimitController.text = customadata['creditlimit'] ?? '';
       final customerType = customadata['customertype'];
-      if (_customerTypes.contains(customerType)) { _selectedCustomerType = customerType; }
+      if (_purchasTypes.contains(customerType)) { _selectedPurchaseType = customerType; }
       final paymentDuration = customadata['paymentduration'];
       if (paymentduration.contains(paymentDuration)) { _selectedpaymentduration = paymentDuration; }
     }
   }
   @override
   void dispose() {
-    _nameController.dispose();
+    _invoicenumberController.dispose();
     _contactController.dispose();
     _creditlimitController.dispose();
     super.dispose();
@@ -69,7 +71,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
           return Scaffold(
             backgroundColor: const Color(0xFF101A23),
             appBar: AppBar(
-              title: Text(widget.docId != null ? "EDIT CUSTOMER REGISTRATION" : "CUSTOMER REGISTRATION"),
+              title: Text(widget.docId != null ? "EDIT STOCK ENTRY" : "NEW STOCK ENTRY"),
               backgroundColor: const Color(0xFF0D1A26),
               foregroundColor: Colors.white,
               elevation: 2,
@@ -95,10 +97,10 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                               child: Column(
                                 children: [
                                   TextFormField(
-                                    controller: _nameController,
+                                    controller: _invoicenumberController,
                                     style: TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
-                                      labelText: 'Customer Name',
+                                      labelText: 'Invoice Number',
                                       labelStyle: const TextStyle(
                                         color: Colors.white70,
                                       ),
@@ -120,21 +122,14 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       fillColor: const Color(0xFF22304A),
                                       filled: true,
                                     ),
-                                    validator: (value) => value == null || value.isEmpty
-                                        ? 'Enter customer name'
-                                        : null,
+
                                   ),
                                   SizedBox(height: 14),
                                   TextFormField(
-                                    controller: _contactController,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters:
-                                    [
-                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                                    ],
+                                    controller: _waybillController,
                                     style: TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
-                                      labelText: 'Contact',
+                                      labelText: 'Waybill Number',
                                       labelStyle: const TextStyle(
                                         color: Colors.white70,
                                       ),
@@ -156,19 +151,15 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       fillColor: const Color(0xFF22304A),
                                       filled: true,
                                     ),
-                                    validator: (value) => value == null || value.isEmpty
-                                        ? 'Enter valid contact'
-                                        : null,
+
                                   ),
-
-                                  const SizedBox(height: 14),
-
+                                  SizedBox(height: 14),
                                   DropdownButtonFormField<String>(
-                                    value: _selectedCustomerType,
+                                    value: value.selectedSupplier?.id, // must be one of branch.id
                                     dropdownColor: const Color(0xFF22304A),
                                     style: const TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
-                                      labelText: 'Customer Type',
+                                      labelText: 'Supplier',
                                       labelStyle: const TextStyle(color: Colors.white70),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -184,7 +175,43 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       fillColor: const Color(0xFF22304A),
                                       filled: true,
                                     ),
-                                    items: _customerTypes.map((type) {
+                                    items: value.suppliers.map((suplier) {
+                                      return DropdownMenuItem<String>(
+                                        value: suplier.id,
+                                        child: Text(suplier.supplier),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        value.selectSupplier(val); // call provider method
+                                      }
+                                    },
+                                    validator: (val) =>
+                                    val == null ? 'Please select Supplier' : null,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  DropdownButtonFormField<String>(
+                                    value: _selectedPurchaseType,
+                                    dropdownColor: const Color(0xFF22304A),
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'Purchase Mode',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    items: _purchasTypes.map((type) {
                                       return DropdownMenuItem<String>(
                                         value: type,
                                         child: Text(type),
@@ -192,7 +219,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                     }).toList(),
                                     onChanged: (value) {
                                       setState(() {
-                                        _selectedCustomerType = value;
+                                        _selectedPurchaseType = value;
                                         if (value != 'Credit') {
                                           _creditlimitController.clear();
                                           _selectedpaymentduration = null;
@@ -203,16 +230,16 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                     value == null ? 'Please select customer type' : null,
                                   ),
                                   SizedBox(height: 14),
-                                  if (isCreditCustomer) ...[
+                                  if (isCashPurchase) ...[
                                     /// CREDIT LIMIT
                                     TextFormField(
                                       controller: _creditlimitController,
                                       style: const TextStyle(color: Colors.white),
                                       keyboardType: TextInputType.number,
-                    inputFormatters:
-                    [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                    ],
+                                      inputFormatters:
+                                      [
+                                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                      ],
                                       decoration: InputDecoration(
                                         labelText: 'Credit Limit',
                                         labelStyle: const TextStyle(color: Colors.white70),
@@ -231,7 +258,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                         filled: true,
                                       ),
                                       validator: (value) {
-                                        if (!isCreditCustomer) return null;
+                                        if (!isCashPurchase) return null;
                                         if (value == null || value.isEmpty) {
                                           return 'Enter valid credit limit'; }
                                         final num? parsed = num.tryParse(value);
@@ -239,7 +266,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                           return 'Only numbers are allowed'; }
                                         if (parsed <= 0) { return 'Credit limit must be greater than 0'; }
                                         return null;
-                                        },
+                                      },
                                     ),
 
                                     const SizedBox(height: 14),
@@ -276,47 +303,48 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                         setState(() => _selectedpaymentduration = value);
                                       },
                                       validator: (value) {
-                                        if (!isCreditCustomer) return null;
+                                        if (!isCashPurchase) return null;
                                         return value == null ? 'Please select payment duration' : null;
                                       },
                                     ),
                                   ],
                                   SizedBox(height: 14),
-                                   DropdownButtonFormField<String>(
-                                        value: value.selectedBranch?.id, // must be one of branch.id
-                                        dropdownColor: const Color(0xFF22304A),
-                                        style: const TextStyle(color: Colors.white),
-                                        decoration: InputDecoration(
-                                          labelText: 'Branch',
-                                          labelStyle: const TextStyle(color: Colors.white70),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                            borderSide: const BorderSide(color: Colors.white24),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                            borderSide: const BorderSide(color: Colors.blue),
-                                          ),
-                                          fillColor: const Color(0xFF22304A),
-                                          filled: true,
-                                        ),
-                                        items: value.branches.map((branch) {
-                                          return DropdownMenuItem<String>(
-                                            value: branch.id,
-                                            child: Text(branch.branchname),
-                                          );
-                                        }).toList(),
-                                        onChanged: (val) {
-                                          if (val != null) {
-                                            value.selectBranch(val); // call provider method
-                                          }
-                                        },
-                                        validator: (val) =>
-                                        val == null ? 'Please select branch' : null,
+                                  DropdownButtonFormField<String>(
+                                    value: value.selectedBranch?.id, // must be one of branch.id
+                                    dropdownColor: const Color(0xFF22304A),
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'Branch',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    items: value.branches.map((branch) {
+                                      return DropdownMenuItem<String>(
+                                        value: branch.id,
+                                        child: Text(branch.branchname),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        value.selectBranch(val); // call provider method
+                                      }
+                                    },
+                                    validator: (val) =>
+                                    val == null ? 'Please select branch' : null,
+                                  ),
+
 
 
                                   const SizedBox(height: 30),
@@ -344,11 +372,11 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                               return;
 
                                             setState(() => _loading = true);
-                                            String name= _nameController.text.trim();
+                                            String name= _invoicenumberController.text.trim();
                                             String contact= _contactController.text.trim();
-                                            String customertype= _selectedCustomerType!;
-                                            String creditlimit = isCreditCustomer ? _creditlimitController.text.trim() : '';
-                                            String paymentduration = isCreditCustomer ? _selectedpaymentduration ?? '' : '';
+                                            String customertype= _selectedPurchaseType!;
+                                            String creditlimit = isCashPurchase ? _creditlimitController.text.trim() : '';
+                                            String paymentduration = isCashPurchase ? _selectedpaymentduration ?? '' : '';
                                             final branchId = value.selectedBranch?.id ?? '';
                                             final branchName = value.selectedBranch?.branchname ?? '';
                                             String docid=value.normalizeAndSanitize("${value.companyid}${contact}${branchId}");
@@ -366,9 +394,9 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                                     .collection('customers')
                                                     .doc(id)
                                                     .set(newCustomer.toMap());
-                                                _nameController.clear();
+                                                _invoicenumberController.clear();
                                                 _contactController.clear();
-                                                setState(() => _selectedCustomerType = null);
+                                                setState(() => _selectedPurchaseType = null);
                                               }
 
                                               else {
@@ -380,9 +408,9 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                                     .collection('customers')
                                                     .doc(docid)
                                                     .set(newCustomer.toMap());
-                                                _nameController.clear();
+                                                _invoicenumberController.clear();
                                                 _contactController.clear();
-                                                setState(() => _selectedCustomerType = null);
+                                                setState(() => _selectedPurchaseType = null);
 
                                               }
 
@@ -404,7 +432,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                             if (!mounted) return;
                                             // ✅ check before UI updates
                                             setState(() { _loading = false;
-                                              _selectedCustomerType = null;
+                                            _selectedPurchaseType = null;
                                             });
                                           },
                                           child: _loading
@@ -412,7 +440,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                               color: Colors.white)
                                               : Text(
                                             widget.docId == null
-                                                ? "Register"
+                                                ? "Proceed"
                                                 : "Update",
                                             style: const TextStyle(
                                                 color: Colors.white70),

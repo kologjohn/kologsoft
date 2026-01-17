@@ -40,10 +40,10 @@ class _ProductCategoryRegState extends State<ProductCategoryReg> {
             body: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: 700
+                    maxWidth: 700
                 ),
                 child: Form(
-                  key: _formKey,
+                    key: _formKey,
                     child: ListView(
                       children: [
                         Card(
