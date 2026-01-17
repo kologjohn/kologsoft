@@ -6,6 +6,7 @@ import 'package:kologsoft/providers/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/branch.dart';
+import '../models/warehousemodel.dart';
 
 
 class Datafeed extends ChangeNotifier {
@@ -13,11 +14,31 @@ class Datafeed extends ChangeNotifier {
   final db = FirebaseFirestore.instance;
   bool authenticated = false;
   String company = "kologsoft";
+  String companytype = "both";
   String companyid = "kS0001";
   String companyemail = "kologsoft@kologsoft.com";
   String companyphone = "0553354349";
   String staff = "Yinbey";
+  List<WarehouseModel> warehouses = [];
+  bool loadingWarehouses = false;
 
+  Future<void> fetchWarehouses() async {
+    try {
+      loadingWarehouses = true;
+      notifyListeners();
+
+      final snap = await db.collection('warehouse').where('companyid', isEqualTo: companyid).get();
+
+      warehouses = snap.docs.map((e) => WarehouseModel.fromMap(e.data()))
+          .toList();
+
+    } catch (e) {
+      debugPrint("Fetch warehouses error: $e");
+    }
+
+    loadingWarehouses = false;
+    notifyListeners();
+  }
   Future<void> logout(BuildContext context) async {
     final spref = await SharedPreferences.getInstance();
     await spref.clear();

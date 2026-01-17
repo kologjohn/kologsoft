@@ -4,6 +4,13 @@ import '../models/itemregmodel.dart';
 import '../providers/Datafeed.dart';
 import 'package:provider/provider.dart';
 
+enum PriceMode {
+  retailPercent,
+  retailAbsolute,
+  wholesalePercent,
+  wholesaleAbsolute,
+}
+
 class ItemRegPage extends StatefulWidget {
   final String? docId;
   final Map<String, dynamic>? data;
@@ -20,8 +27,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _nameController = TextEditingController();
   final _barcodeController = TextEditingController();
   final _costController = TextEditingController();
+
   final _retailMarkupController = TextEditingController();
+  final _retailAbsoluteController = TextEditingController();
+
   final _wholesaleMarkupController = TextEditingController();
+  final _wholesaleAbsoluteController = TextEditingController();
+
   final _openingStockController = TextEditingController();
 
   String? _productType;
@@ -31,56 +43,83 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
   bool _loading = false;
 
-  // ACTIVE FIELDS
-  bool _isRetailActive = true;
-  bool _isWholesaleActive = false;
+  PriceMode? _activeMode;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<Datafeed>().fetchWarehouses();
+    });
     if (widget.data != null) {
       final d = widget.data!;
+
       _nameController.text = d['name'] ?? '';
       _barcodeController.text = d['barcode'] ?? '';
       _costController.text = d['costprice'] ?? '';
+
       _retailMarkupController.text = d['retailmarkup'] ?? '';
+      _retailAbsoluteController.text = d['retailabsolute'] ?? '';
+
       _wholesaleMarkupController.text = d['wholesalemarkup'] ?? '';
+      _wholesaleAbsoluteController.text = d['wholesaleabsolute'] ?? '';
+
       _openingStockController.text = d['openingstock'] ?? '';
+
       _productType = d['producttype'];
       _pricingMode = d['pricingmode'];
       _productCategory = d['productcategory'];
       _warehouse = d['warehouse'];
 
-      // Determine active field
-      _isRetailActive = (_retailMarkupController.text.isNotEmpty || _wholesaleMarkupController.text.isEmpty);
-      _isWholesaleActive = !_isRetailActive;
+      if (_retailMarkupController.text.isNotEmpty) {
+        _activeMode = PriceMode.retailPercent;
+      } else if (_retailAbsoluteController.text.isNotEmpty) {
+        _activeMode = PriceMode.retailAbsolute;
+      } else if (_wholesaleMarkupController.text.isNotEmpty) {
+        _activeMode = PriceMode.wholesalePercent;
+      } else if (_wholesaleAbsoluteController.text.isNotEmpty) {
+        _activeMode = PriceMode.wholesaleAbsolute;
+      }
     }
   }
 
-  // MARKUP CALCULATION LOGIC
+  // ================= PRICE CALCULATION =================
+
   String calcRetailPrice() {
-    double cost = double.tryParse(_costController.text) ?? 0;
-    double markup = double.tryParse(_retailMarkupController.text) ?? 0;
+    final cost = double.tryParse(_costController.text) ?? 0;
 
-    if (!_isRetailActive || markup == 0) return cost.toStringAsFixed(2);
+    if (_activeMode == PriceMode.retailPercent) {
+      final percent = double.tryParse(_retailMarkupController.text) ?? 0;
+      return (cost + (cost * percent / 100)).toStringAsFixed(2);
+    }
 
-    if (markup <= 100) return (cost + cost * markup / 100).toStringAsFixed(2);
+    if (_activeMode == PriceMode.retailAbsolute) {
+      final value = double.tryParse(_retailAbsoluteController.text) ?? cost;
+      return value.toStringAsFixed(2);
+    }
 
-    return (cost + markup).toStringAsFixed(2);
+    return cost.toStringAsFixed(2);
   }
 
   String calcWholesalePrice() {
-    double cost = double.tryParse(_costController.text) ?? 0;
-    double markup = double.tryParse(_wholesaleMarkupController.text) ?? 0;
+    final cost = double.tryParse(_costController.text) ?? 0;
 
-    if (!_isWholesaleActive || markup == 0) return cost.toStringAsFixed(2);
+    if (_activeMode == PriceMode.wholesalePercent) {
+      final percent = double.tryParse(_wholesaleMarkupController.text) ?? 0;
+      return (cost + (cost * percent / 100)).toStringAsFixed(2);
+    }
 
-    if (markup <= 100) return (cost + cost * markup / 100).toStringAsFixed(2);
+    if (_activeMode == PriceMode.wholesaleAbsolute) {
+      final value = double.tryParse(_wholesaleAbsoluteController.text) ?? cost;
+      return value.toStringAsFixed(2);
+    }
 
-    return (cost + markup).toStringAsFixed(2);
+    return cost.toStringAsFixed(2);
   }
+
+  // =====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -89,17 +128,24 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
     return Consumer<Datafeed>(
       builder: (context, datafeed, child) {
+
+        final companyType = datafeed.companytype;
+
+        final bool showRetail = companyType == "retail" || companyType == "both";
+
+        final bool showWholesale =  companyType == "wholesale" || companyType == "both";
+
         return Scaffold(
           backgroundColor: const Color(0xFF101624),
           appBar: AppBar(
             title: Text(widget.docId == null ? "Register Item" : "Edit Item"),
           ),
           body: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
             child: Align(
               alignment: Alignment.topCenter,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 40),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 700),
                   child: Container(
@@ -120,79 +166,61 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           _buildField(_costController, "Cost Price", Icons.attach_money, isNumber: true),
                           const SizedBox(height: 14),
 
-                          // RETAIL MARKUP
-                          GestureDetector(
-                            onDoubleTap: () {
-                              setState(() {
-                                _isRetailActive = true;
-                                _isWholesaleActive = false;
-                              });
-                            },
-                            child: TextFormField(
+                          // ================= RETAIL =================
+                          if (showRetail) ...[
+                            _priceField(
                               controller: _retailMarkupController,
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                              style: TextStyle(
-                                color: _isRetailActive ? Colors.white70 : Colors.white38,
-                              ),
-                              enabled: _isRetailActive,
-                              validator: (v) => _isRetailActive && (v == null || v.isEmpty) ? "Required" : null,
-                              decoration: InputDecoration(
-                                labelText: "Retail Markup",
-                                prefixIcon: const Icon(Icons.percent, color: Colors.white70),
-                                fillColor: const Color(0xFF22304A),
-                                filled: true,
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: _isRetailActive ? Colors.white24 : Colors.white12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.blue),
-                                ),
-                              ),
+                              label: "Retail Mark Up %",
+                              icon: Icons.percent,
+                              active: _activeMode == PriceMode.retailPercent,
+                              onActivate: () => setState(() {
+                                _activeMode = PriceMode.retailPercent;
+                              }),
                             ),
-                          ),
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 14),
 
-                          // WHOLESALE MARKUP
-                          GestureDetector(
-                            onDoubleTap: () {
-                              setState(() {
-                                _isRetailActive = false;
-                                _isWholesaleActive = true;
-                              });
-                            },
-                            child: TextFormField(
-                              controller: _wholesaleMarkupController,
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                              style: TextStyle(
-                                color: _isWholesaleActive ? Colors.white70 : Colors.white38,
-                              ),
-                              enabled: _isWholesaleActive,
-                              validator: (v) => _isWholesaleActive && (v == null || v.isEmpty) ? "Required" : null,
-                              decoration: InputDecoration(
-                                labelText: "Wholesale Markup",
-                                prefixIcon: const Icon(Icons.percent, color: Colors.white70),
-                                fillColor: const Color(0xFF22304A),
-                                filled: true,
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: _isWholesaleActive ? Colors.white24 : Colors.white12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Colors.blue),
-                                ),
-                              ),
+                            _priceField(
+                              controller: _retailAbsoluteController,
+                              label: "Retail Price (Absolute)",
+                              icon: Icons.attach_money,
+                              active: _activeMode == PriceMode.retailAbsolute,
+                              onActivate: () => setState(() {
+                                _activeMode = PriceMode.retailAbsolute;
+                              }),
                             ),
-                          ),
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 14),
+                          ],
+
+                          // ================= WHOLESALE =================
+                          if (showWholesale) ...[
+                            _priceField(
+                              controller: _wholesaleMarkupController,
+                              label: "Wholesale Mark Up %",
+                              icon: Icons.percent,
+                              active: _activeMode == PriceMode.wholesalePercent,
+                              onActivate: () => setState(() {
+                                _activeMode = PriceMode.wholesalePercent;
+                              }),
+                            ),
+                            const SizedBox(height: 14),
+
+                            _priceField(
+                              controller: _wholesaleAbsoluteController,
+                              label: "Wholesale Price (Absolute)",
+                              icon: Icons.attach_money,
+                              active: _activeMode == PriceMode.wholesaleAbsolute,
+                              onActivate: () => setState(() {
+                                _activeMode = PriceMode.wholesaleAbsolute;
+                              }),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
 
                           _buildField(_openingStockController, "Opening Stock", Icons.inventory, isNumber: true),
                           const SizedBox(height: 14),
 
-                          // PRODUCT TYPE
                           DropdownButtonFormField<String>(
+                            style: TextStyle(color: Colors.white70),
                             decoration: _buildDropdownDecoration("Product Type"),
                             value: _productType,
                             items: const [
@@ -204,8 +232,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           ),
                           const SizedBox(height: 14),
 
-                          // PRICING MODE
                           DropdownButtonFormField<String>(
+                            style: TextStyle(color: Colors.white70),
                             decoration: _buildDropdownDecoration("Pricing Mode"),
                             value: _pricingMode,
                             items: const [
@@ -217,8 +245,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           ),
                           const SizedBox(height: 14),
 
-                          // PRODUCT CATEGORY
                           DropdownButtonFormField<String>(
+                            style: TextStyle(color: Colors.white70),
                             decoration: _buildDropdownDecoration("Product Category"),
                             value: _productCategory,
                             items: const [
@@ -230,16 +258,28 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           ),
                           const SizedBox(height: 14),
 
-                          // WAREHOUSE
-                          DropdownButtonFormField<String>(
-                            decoration: _buildDropdownDecoration("Warehouse"),
-                            value: _warehouse,
-                            items: const [
-                              DropdownMenuItem(value: "warehouse1", child: Text("Warehouse 1")),
-                              DropdownMenuItem(value: "warehouse2", child: Text("Warehouse 2")),
-                            ],
-                            onChanged: (val) => setState(() => _warehouse = val),
-                            validator: (val) => val == null ? "Please select warehouse" : null,
+
+                          Consumer<Datafeed>(
+                            builder: (context, datafeed, _) {
+                              if (datafeed.loadingWarehouses) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+
+                              return DropdownButtonFormField<String>(
+                                style: const TextStyle(color: Colors.white70),
+                                decoration: _buildDropdownDecoration("Warehouse"),
+                                value: _warehouse,
+                                items: datafeed.warehouses.map((w) {
+                                  return DropdownMenuItem<String>(
+                                    value: w.name,
+                                    child: Text(w.name),
+                                  );
+                                }).toList(),
+                                onChanged: (val) => setState(() => _warehouse = val),
+                                validator: (val) =>
+                                val == null ? "Please select warehouse" : null,
+                              );
+                            },
                           ),
                           const SizedBox(height: 25),
 
@@ -261,15 +301,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                 try {
                                   if (widget.docId != null) {
-                                    // EDIT MODE
                                     await _db.collection('items').doc(widget.docId).update({
                                       'name': _nameController.text.trim(),
                                       'barcode': _barcodeController.text.trim(),
                                       'costprice': _costController.text.trim(),
+
                                       'retailmarkup': _retailMarkupController.text.trim(),
+                                      'retailabsolute': _retailAbsoluteController.text.trim(),
+
                                       'wholesalemarkup': _wholesaleMarkupController.text.trim(),
+                                      'wholesaleabsolute': _wholesaleAbsoluteController.text.trim(),
+
                                       'retailprice': calcRetailPrice(),
                                       'wholesaleprice': calcWholesalePrice(),
+
                                       'openingstock': _openingStockController.text.trim(),
                                       'producttype': _productType,
                                       'pricingmode': _pricingMode,
@@ -279,39 +324,39 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       'updatedBy': staff,
                                     });
                                   } else {
-                                    // NEW ITEM
-                                    await _db.runTransaction((tx) async {
-                                      final counterRef = _db.collection('counters').doc('item_ids');
-                                      final counterSnap = await tx.get(counterRef);
-                                      int last = counterSnap.exists ? (counterSnap['last'] ?? 0) : 0;
-                                      final next = last + 1;
-                                      tx.set(counterRef, {'last': next});
-                                      final newNo = "KS00$next";
+                                    final name =_nameController.text.trim();
+                                    final id =
+                                    '${datafeed.companyid}_${_warehouse}_${name}'
+                                        .trim()
+                                        .toLowerCase()
+                                        .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
+                                        .replaceAll(RegExp(r'\s+'), '_');
+                                    final model = ItemModel(
+                                      id: id,
+                                      no: id,
+                                      name: _nameController.text.trim(),
+                                      barcode: _barcodeController.text.trim(),
+                                      costprice: _costController.text.trim(),
 
-                                      final model = ItemModel(
-                                        id: newNo,
-                                        no: newNo,
-                                        name: _nameController.text.trim(),
-                                        barcode: _barcodeController.text.trim(),
-                                        costprice: _costController.text.trim(),
-                                        retailmarkup: _retailMarkupController.text.trim(),
-                                        wholesalemarkup: _wholesaleMarkupController.text.trim(),
-                                        retailprice: calcRetailPrice(),
-                                        wholesaleprice: calcWholesalePrice(),
-                                        openingstock: _openingStockController.text.trim(),
-                                        producttype: _productType!,
-                                        pricingmode: _pricingMode!,
-                                        productcategory: _productCategory!,
-                                        warehouse: _warehouse!,
-                                        company: datafeed.company,
-                                        companyid: datafeed.companyid,
-                                        createdAt: DateTime.now(),
-                                        updatedAt: DateTime.now(),
-                                        updatedBy: staff,
-                                      );
+                                      retailmarkup: _retailMarkupController.text.trim(),
+                                      wholesalemarkup: _wholesaleMarkupController.text.trim(),
 
-                                      tx.set(_db.collection('items').doc(newNo), model.toMap());
-                                    });
+                                      retailprice: calcRetailPrice(),
+                                      wholesaleprice: calcWholesalePrice(),
+
+                                      openingstock: _openingStockController.text.trim(),
+                                      producttype: _productType!,
+                                      pricingmode: _pricingMode!,
+                                      productcategory: _productCategory!,
+                                      warehouse: _warehouse!,
+                                      company: datafeed.company,
+                                      companyid: datafeed.companyid,
+                                      createdAt: DateTime.now(),
+                                      updatedAt: DateTime.now(),
+                                      updatedBy: staff,
+                                    );
+                           await _db.collection('items').doc(id).set(model.toMap());
+
                                   }
 
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -350,8 +395,45 @@ class _ItemRegPageState extends State<ItemRegPage> {
     );
   }
 
+  // ================= UI HELPERS =================
+
+  Widget _priceField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool active,
+    required VoidCallback onActivate,
+  }) {
+    return GestureDetector(
+      onDoubleTap: onActivate,
+      child: TextFormField(
+        controller: controller,
+        enabled: active,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: TextStyle(color: active ? Colors.white70 : Colors.white38),
+        validator: (v) => active && (v == null || v.isEmpty) ? "Required" : null,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.white70),
+          prefixIcon: Icon(icon, color: Colors.white70),
+          fillColor: const Color(0xFF22304A),
+          filled: true,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: active ? Colors.white24 : Colors.white12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.blue),
+          ),
+        ),
+      ),
+    );
+  }
+
   InputDecoration _buildDropdownDecoration(String label) {
     return InputDecoration(
+
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white70),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -361,18 +443,23 @@ class _ItemRegPageState extends State<ItemRegPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.blue),
+        borderSide: const BorderSide(color: Colors.red),
       ),
       fillColor: const Color(0xFF22304A),
       filled: true,
     );
   }
 
-  TextFormField _buildField(TextEditingController controller, String label, IconData icon,
-      {bool isNumber = false}) {
+  TextFormField _buildField(
+      TextEditingController controller,
+      String label,
+      IconData icon, {
+        bool isNumber = false,
+      }) {
     return TextFormField(
       controller: controller,
-      keyboardType: isNumber ? TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      keyboardType:
+      isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
       validator: (v) => v == null || v.isEmpty ? "Required" : null,
       decoration: InputDecoration(

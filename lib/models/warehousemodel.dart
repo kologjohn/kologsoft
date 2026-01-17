@@ -15,6 +15,17 @@ class WarehouseModel {
     required this.company,
   });
 
+  factory WarehouseModel.fromMap(Map<String, dynamic> map) {
+    return WarehouseModel(
+      name: map['name'] ?? '',
+      staff: map['staff'] ?? '',
+      id: map['id'] ?? '',
+      date: DateTime.tryParse(map['date'] ?? '') ?? DateTime.now(),
+      companyid: map['companyid'] ?? '',
+      company: map['company'] ?? '',
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'name': name,
