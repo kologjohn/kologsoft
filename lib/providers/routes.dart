@@ -12,6 +12,7 @@ import '../screens/itemreg.dart';
 import '../screens/stocking_mode.dart';
 import '../screens/supplierlist.dart';
 import '../screens/supplierscreen.dart';
+import '../screens/warehousereg.dart';
 
 
 class Routes {
@@ -40,6 +41,8 @@ final pages = {
   Routes.supplierlist: (context) => const SupplierListPage(),
   Routes.companyreg: (context) => const CompanyRegPage(),
   Routes.companylist: (context) =>  CompanyListPage(),
+  Routes.warehousereg: (context) =>  WarehouseRegistration(),
+  Routes.warehousereg: (context) =>  WarehouseRegistration(),
   Routes.itemreg: (context) =>  ItemRegPage (),
   Routes.itemlist: (context) =>  ItemListPage (),
   Routes.branchview: (context) =>  BranchView (),
