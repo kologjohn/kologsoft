@@ -8,6 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:barcode_widget/barcode_widget.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:ui' as ui;
+import 'package:pdf/pdf.dart';
+
 import '../providers/Datafeed.dart';
 
 class ItemRegPage extends StatefulWidget {
@@ -19,6 +24,60 @@ class ItemRegPage extends StatefulWidget {
   @override
   State<ItemRegPage> createState() => _ItemRegPageState();
 }
+  Future<Uint8List?> generateBarcodeImage(String barcode) async {
+    try {
+      final barcodeWidget = BarcodeWidget(
+        barcode: Barcode.code128(),
+        data: barcode,
+        width: 200,
+        height: 80,
+      );
+      return await _captureWidget(barcodeWidget);
+    } catch (e) {
+      print('Error generating barcode: $e');
+      return null;
+    }
+  }
+
+  Future<Uint8List?> generateQRCodeImage(String data) async {
+    try {
+      // QR code generation via widget capture is complex
+      // For now, return null and handle in UI
+      print('QR code generation stub - platform-specific implementation needed');
+      return null;
+    } catch (e) {
+      print('Error generating QR code: $e');
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _captureWidget(Widget widget) async {
+    try {
+      print('Note: Widget capture requires platform-specific implementation');
+      return null;
+    } catch (e) {
+      print('Error capturing widget: $e');
+      return null;
+    }
+  }
+
+  Future<String?> uploadBarcodeImage(String itemId, Uint8List imageBytes, String type) async {
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('items')
+          .child('$itemId/$type.png');
+
+      await ref.putData(
+        imageBytes,
+        SettableMetadata(contentType: 'image/png'),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading $type image: $e');
+      return null;
+    }
+  }
 
 class _ItemRegPageState extends State<ItemRegPage> {
   final _formKey = GlobalKey<FormState>();
@@ -34,21 +93,14 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _wholesalePriceController = TextEditingController();
   final _supplierPriceController = TextEditingController();
 
-
-  // Carton total quantity
-  final _cartonQtyController = TextEditingController();
-
-// Carton prices
-  final _cartonRetailController = TextEditingController();
-  final _cartonWholesaleController = TextEditingController();
-  final _cartonSupplierController = TextEditingController();
-
 // Half prices (auto)
+  final _halfQtyController = TextEditingController();
   final _halfRetailController = TextEditingController();
   final _halfWholesaleController = TextEditingController();
   final _halfSupplierController = TextEditingController();
 
 // Quarter prices (auto)
+  final _quarterQtyController = TextEditingController();
   final _quarterRetailController = TextEditingController();
   final _quarterWholesaleController = TextEditingController();
   final _quarterSupplierController = TextEditingController();
@@ -162,7 +214,69 @@ class _ItemRegPageState extends State<ItemRegPage> {
           );
           setState(() => _loading = false);
           return;
+
+              // Generate barcode and QR code
+              String? barcodeUrl;
+              String? qrCodeUrl;
+      
+              final barcodeInput = _barcodeController.text.trim();
+              if (barcodeInput.isNotEmpty) {
+                final barcodeImage = await generateBarcodeImage(barcodeInput);
+                if (barcodeImage != null) {
+                  barcodeUrl = await uploadBarcodeImage(docRef.id, barcodeImage, 'barcode');
+                }
+        
+                final qrImage = await generateQRCodeImage(barcodeInput);
+                if (qrImage != null) {
+                  qrCodeUrl = await uploadBarcodeImage(docRef.id, qrImage, 'qrcode');
+                }
+              }
         }
+      }
+
+      // Build pricing structure
+      final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+      final retailPrice = _retailPriceController.text;
+      final wholesalePrice = _wholesalePriceController.text;
+      final supplierPrice = _supplierPriceController.text;
+      
+      final pricingData = {
+        'carton': {
+          'qty': boxQty,
+          'retail': retailPrice,
+          'wholesale': wholesalePrice,
+          'supplier': supplierPrice,
+        }
+      };
+
+      // Add half pricing if enabled
+      if (_enableBoxPricing && _halfQtyController.text.isNotEmpty) {
+        pricingData['half'] = {
+          'qty': _halfQtyController.text,
+          'retail': _halfRetailController.text,
+          'wholesale': _halfWholesaleController.text,
+          'supplier': _halfSupplierController.text,
+        };
+      }
+
+      // Add quarter pricing if enabled
+      if (_enableBoxPricing && _quarterQtyController.text.isNotEmpty) {
+        pricingData['quarter'] = {
+          'qty': _quarterQtyController.text,
+          'retail': _quarterRetailController.text,
+          'wholesale': _quarterWholesaleController.text,
+          'supplier': _quarterSupplierController.text,
+        };
+      }
+
+
+      if (_enableBoxPricing && _packQtyController.text.isNotEmpty) {
+        pricingData['pack'] = {
+          'qty': _packQtyController.text,
+          'retail': _packRetailController.text,
+          'wholesale': _packWholesaleController.text,
+          'supplier': _packSupplierController.text,
+        };
       }
 
       final data = {
@@ -173,18 +287,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
         'pricingmode': _pricingMode,
         'productcategory': _productCategory,
         'imageurl': imageUrl,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'boxPricingEnabled': _enableBoxPricing,
-        'boxQty': _boxQtyController.text,
-        'retailBoxPrice': _retailPriceController.text,
-        'wholesaleBoxPrice': _wholesalePriceController.text,
-        'supplierBoxPrice': _supplierPriceController.text,
-        'wholesaleMinQty': _wholesaleMinQtyController.text,
-        'supplierMinQty': _supplierMinQtyController.text,
+        'updatedat': FieldValue.serverTimestamp(),
+        'boxpricingenabled': _enableBoxPricing,
+        'boxqty': boxQty,
+        'boxretailprice': retailPrice,
+        'boxwholesalesprice': wholesalePrice,
+        'boxsupplierprice': supplierPrice,
+        'pricing': pricingData,
+        'wholesaleminqty': _wholesaleMinQtyController.text,
+        'supplierminqty': _supplierMinQtyController.text,
+        // if (barcodeUrl != null) 'barcodeurl': barcodeUrl,
+        // if (qrCodeUrl != null) 'qrcodeurl': qrCodeUrl,
       };
 
       if (widget.docId == null) {
-        data['createdAt'] = FieldValue.serverTimestamp();
+        data['createdat'] = FieldValue.serverTimestamp();
         await docRef.set(data);
       } else {
         await docRef.update(data);
@@ -230,33 +347,89 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       isNumber: true,
                       onChanged: (value) {
                         final qty = int.tryParse(value) ?? 0;
+                        if (qty == 1) {
+                          // When box qty is 1, disable box pricing
+                          _enableBoxPricing = false;
+                          _showBoxPricingSwitch = false;
 
-                        setState(() {
-                          if (qty > 1) {
-                            _enableBoxPricing = true;
-                            _showBoxPricingSwitch = true;
-                          } else {
+                          _halfQtyController.clear();
+                          _quarterQtyController.clear();
+                          _halfRetailController.clear();
+                          _halfWholesaleController.clear();
+                          _halfSupplierController.clear();
+                          _quarterRetailController.clear();
+                          _quarterWholesaleController.clear();
+                          _quarterSupplierController.clear();
+                          _packQtyController.clear();
+                          _packRetailController.clear();
+                          _packWholesaleController.clear();
+                          _packSupplierController.clear();
+                        } else if (qty > 1) {
+                          _enableBoxPricing = true;
+                          _showBoxPricingSwitch = true;
 
-                            _enableBoxPricing = false;
-                            _showBoxPricingSwitch = false;
-                          }
+                          // Auto calculate quantities (half and quarter)
+                          final halfQty = (qty / 2).floor();
+                          final quarterQty = (qty / 4).floor();
 
+                          _halfQtyController.text = halfQty.toString();
+                          _quarterQtyController.text = quarterQty.toString();
 
-                          if (qty == 1) {
-                            _wholesalePriceController.text = '1';
-                            _retailPriceController.text = '1';
-                          } else if (qty > 1) {
-                            _wholesalePriceController.text = (qty * 0.9).toString();
-                            _retailPriceController.text = (qty * 1.0).toString();
-                          } else {
-                            _wholesalePriceController.clear();
-                            _retailPriceController.clear();
-                          }
-                        });
+                          // Clear pack if box qty changed
+                          _packQtyController.clear();
+                        } else {
+                          _enableBoxPricing = false;
+                          _showBoxPricingSwitch = false;
+
+                          _wholesalePriceController.clear();
+                          _retailPriceController.clear();
+                          _supplierPriceController.clear();
+                          _halfQtyController.clear();
+                          _quarterQtyController.clear();
+                          _halfRetailController.clear();
+                          _halfWholesaleController.clear();
+                          _halfSupplierController.clear();
+                          _quarterRetailController.clear();
+                          _quarterWholesaleController.clear();
+                          _quarterSupplierController.clear();
+                          _packQtyController.clear();
+                          _packRetailController.clear();
+                          _packWholesaleController.clear();
+                          _packSupplierController.clear();
+                        }
+
+                        // Trigger rebuild after updating controllers
+                        setState(() {});
+                        
+                        // Validate form after updating
+                        _formKey.currentState?.validate();
                       },
                     ),
                     SizedBox(height: 10,),
-                   _buildField(_retailPriceController, 'Retail Price', Icons.attach_money, isNumber: true),
+                   _buildField(
+                     _retailPriceController,
+                     'Retail Price',
+                     Icons.attach_money,
+                     isNumber: true,
+                     validator: (v) {
+                       if (v == null || v.isEmpty) return 'Required';
+                       
+                       final retailPrice = double.tryParse(v) ?? 0;
+                       final wholesalePrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                       
+                       if (wholesalePrice > 0 && retailPrice < wholesalePrice) {
+                         return 'Retail must be >= Wholesale';
+                       }
+                       return null;
+                     },
+                     onChanged: (v) {
+                       // When box qty is 1, auto-sync wholesale to retail
+                       if (int.tryParse(_boxQtyController.text) == 1) {
+                         _wholesalePriceController.text = v;
+                       }
+                       _formKey.currentState?.validate();
+                     },
+                   ),
                     SizedBox(height: 10,),
 
                     Row(
@@ -267,6 +440,23 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             'Wholesale Price',
                             Icons.attach_money,
                             isNumber: true,
+                            enabled: int.tryParse(_boxQtyController.text) != 1,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Required';
+                              
+                              final wholesalePrice = double.tryParse(v) ?? 0;
+                              final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                              final retailPrice = double.tryParse(_retailPriceController.text) ?? 0;
+                              
+                              if (supplierPrice > 0 && wholesalePrice <= supplierPrice) {
+                                return 'Wholesale must be > Supplier';
+                              }
+                              if (retailPrice > 0 && wholesalePrice > retailPrice) {
+                                return 'Wholesale must be <= Retail';
+                              }
+                              return null;
+                            },
+                            onChanged: (v) => _formKey.currentState?.validate(),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -276,6 +466,18 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             'Supplier Price',
                             Icons.attach_money,
                             isNumber: true,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Required';
+                              
+                              final supplierPrice = double.tryParse(v) ?? 0;
+                              final wholesalePrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                              
+                              if (wholesalePrice > 0 && supplierPrice >= wholesalePrice) {
+                                return 'Supplier must be < Wholesale';
+                              }
+                              return null;
+                            },
+                            onChanged: (v) => _formKey.currentState?.validate(),
                           ),
                         ),
                       ],
@@ -299,8 +501,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               final supplierQty =
                                   int.tryParse(_supplierMinQtyController.text) ?? 0;
 
-                              if (supplierQty > 0 && wholesaleQty > supplierQty) {
-                                return 'Cannot exceed Supplier Min Qty';
+                              if (supplierQty > 0 && wholesaleQty >= supplierQty) {
+                                return 'Wholesale Min must be < Supplier Min';
                               }
 
                               return null;
@@ -336,81 +538,24 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       ),
 
                     if (_enableBoxPricing) ...[
+                      // =========== HALF QTY SECTION ===========
                       Row(
                         children: [
                           Expanded(
                             child: _buildField(
-                              _cartonQtyController,
-                              'Carton Qty',
+                              _halfQtyController,
+                              'Half Qty',
                               Icons.inventory,
                               isNumber: true,
-                              onChanged: (v) {
-
-                              },
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildField(
-                              _cartonRetailController,
-                              'Carton retail Price',
-                              Icons.attach_money,
-                              isNumber: true,
-                              onChanged: (v) {
-
-                              },
-                              validator: (v) => v == null || v.isEmpty ? 'Required' :null
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildField(
-                              _cartonWholesaleController,
-                              'Carton wholesale price',
-                              Icons.attach_money,
-                              isNumber: true,
-                              onChanged: (v) {
-
-                              },
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildField(
-                              _cartonSupplierController,
-                              'Carton Supplier Price',
-                              Icons.attach_money,
-                              isNumber: true,
-                              onChanged: (v) {
-
-                              },
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField(
-                              _halfRetailController,
-                              'Quarter Qty',
-                              Icons.attach_money,
-                              isNumber: true,
-                              onChanged: (v) {
-
-                              },
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null
+                              readOnly: true,
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildField(
                               _halfRetailController,
-                              'Retail Price',
+                              'Half Retail Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -419,7 +564,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _halfWholesaleController,
-                              'Wholesale Price',
+                              'Half Wholesale Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -428,30 +573,33 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _halfSupplierController,
-                              'Supplier Price',
+                              'Half Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
                           ),
                         ],
                       ),
-
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
+                      
+                      // =========== QUARTER QTY SECTION ===========
                       Row(
                         children: [
                           Expanded(
                             child: _buildField(
-                              _quarterRetailController,
-                              'Retail Price',
-                              Icons.attach_money,
+                              _quarterQtyController,
+                              'Quarter Qty',
+                              Icons.inventory,
                               isNumber: true,
+                              readOnly: true,
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildField(
                               _quarterRetailController,
-                              'Retail Price',
+                              'Quarter Retail Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -460,7 +608,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _quarterWholesaleController,
-                              'Wholesale Price',
+                              'Quarter Wholesale Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -469,15 +617,16 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _quarterSupplierController,
-                              'Supplier Price',
+                              'Quarter Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 20),
+                      
+                      // =========== PACK QTY SECTION ===========
                       Row(
                         children: [
                           Expanded(
@@ -486,13 +635,44 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Pack Qty',
                               Icons.inventory,
                               isNumber: true,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Required';
+                                
+                                final packQty = int.tryParse(v) ?? 0;
+                                final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+                                final halfQty = int.tryParse(_halfQtyController.text) ?? 0;
+                                final quarterQty = int.tryParse(_quarterQtyController.text) ?? 0;
+                                
+                                // Check if pack qty is less than box qty
+                                if (boxQty > 0 && packQty >= boxQty) {
+                                  return 'Pack must be < Box Qty ($boxQty)';
+                                }
+                                
+                                // Check if pack qty is less than half
+                                if (halfQty > 0 && packQty >= halfQty) {
+                                  return 'Pack must be < Half Qty ($halfQty)';
+                                }
+                                
+                                // Check if pack qty is less than quarter
+                                if (quarterQty > 0 && packQty >= quarterQty) {
+                                  return 'Pack must be < Quarter Qty ($quarterQty)';
+                                }
+                                
+                                // Check if pack qty is divisible by 2
+                                if (packQty % 2 != 0) {
+                                  return 'Pack must be divisible by 2';
+                                }
+                                
+                                return null;
+                              },
+                              onChanged: (v) => _formKey.currentState?.validate(),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildField(
                               _packRetailController,
-                              'Retail Price',
+                              'Pack Retail Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -501,7 +681,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _packWholesaleController,
-                              'Wholesale Price',
+                              'Pack Wholesale Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -510,7 +690,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           Expanded(
                             child: _buildField(
                               _packSupplierController,
-                              'Supplier Price',
+                              'Pack Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
                             ),
@@ -647,9 +827,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
     );
   }
 
-  TextFormField _buildField(TextEditingController controller, String label, IconData icon,{bool isNumber = false,  Function(String)? onChanged,String? Function(String?)? validator,}) {
+  TextFormField _buildField(TextEditingController controller, String label, IconData icon,{bool isNumber = false,  Function(String)? onChanged,String? Function(String?)? validator, bool enabled = true, bool readOnly = false}) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
+      readOnly: readOnly,
       keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
       validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
