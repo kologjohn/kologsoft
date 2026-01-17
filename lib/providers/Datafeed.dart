@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:kologsoft/models/productcategorymodel.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -89,11 +90,35 @@ class Datafeed extends ChangeNotifier {
         .doc(docId)
         .set(branch.toMap(), SetOptions(merge: true));
   }
+  Future<void> addOrUpdateCategory(Productcategorymodel category) async {
+    String docId;
+
+    if (category.id.isNotEmpty) {
+      docId = category.id;
+    }
+
+    else {
+      docId = "${category.companyid}${category.productname}"
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s+'), '_');
+
+      category.id = docId;
+    }
+
+    await db
+        .collection('productcategoryreg')
+        .doc(docId)
+        .set(category.toMap(), SetOptions(merge: true));
+  }
 
 
   Future<void> deleteBranch(String id) async {
     final db = FirebaseFirestore.instance;
     await db.collection('branches').doc(id).delete();
+  }
+  Future<void> deleteCategory(String id) async {
+    final db = FirebaseFirestore.instance;
+    await db.collection('productcategoryreg').doc(id).delete();
   }
 
 

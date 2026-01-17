@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kologsoft/models/customerreg_model.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
@@ -109,6 +110,11 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                   SizedBox(height: 14),
                                   TextFormField(
                                     controller: _contactController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters:
+                                    [
+                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                    ],
                                     style: TextStyle(color: Colors.white),
                                     decoration: InputDecoration(
                                       labelText: 'Contact',
@@ -186,6 +192,10 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       controller: _creditlimitController,
                                       style: const TextStyle(color: Colors.white),
                                       keyboardType: TextInputType.number,
+                    inputFormatters:
+                    [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                    ],
                                       decoration: InputDecoration(
                                         labelText: 'Credit Limit',
                                         labelStyle: const TextStyle(color: Colors.white70),
@@ -205,10 +215,14 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                                       ),
                                       validator: (value) {
                                         if (!isCreditCustomer) return null;
-                                        return value == null || value.isEmpty
-                                            ? 'Enter valid credit limit'
-                                            : null;
-                                      },
+                                        if (value == null || value.isEmpty) {
+                                          return 'Enter valid credit limit'; }
+                                        final num? parsed = num.tryParse(value);
+                                        if (parsed == null) {
+                                          return 'Only numbers are allowed'; }
+                                        if (parsed <= 0) { return 'Credit limit must be greater than 0'; }
+                                        return null;
+                                        },
                                     ),
 
                                     const SizedBox(height: 14),

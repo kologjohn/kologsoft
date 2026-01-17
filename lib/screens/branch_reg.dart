@@ -32,6 +32,7 @@ class _BranchRegistrationState extends State<BranchRegistration> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     return Consumer<Datafeed>(
         builder: (BuildContext context, Datafeed value, Widget? child){
@@ -195,7 +196,9 @@ class _BranchRegistrationState extends State<BranchRegistration> {
                                                 companyemail: value.companyemail,
                                                 date: DateTime.now(),
                                                 updatedat: DateTime.now(),
+                                                deletedat: DateTime.now(),
                                                 updatedby: '',
+                                                deletedby: '',
                                               );
 
                                               await value.addOrUpdateBranch(branch);
@@ -225,7 +228,6 @@ class _BranchRegistrationState extends State<BranchRegistration> {
                                               );
                                             }
                                           },
-
 
                                           child: Text(
                                             widget.branch != null ? "Update" : "Add",

@@ -85,7 +85,7 @@ class CustomerListPage extends StatelessWidget {
                          data['customertype'] == "Credit"
                               ? Text(
                             "Type: ${data['customertype']}\n"
-                                "Credit Limit: ${data['creditlimit']}\n"
+                                "Credit Limit: ${double.tryParse(data['creditlimit']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}\n"
                                 "Payment Duration: ${data['paymentduration']}\n"
                                 "Contact: ${data['contact']}\n",
                             style: const TextStyle(

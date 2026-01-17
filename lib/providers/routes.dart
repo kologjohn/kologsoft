@@ -1,6 +1,8 @@
 
 import 'package:kologsoft/screens/branch_reg.dart';
 import 'package:kologsoft/screens/login_screen.dart';
+import 'package:kologsoft/screens/product_category_reg.dart';
+import 'package:kologsoft/screens/productcategory_view.dart';
 
 import '../screens/branch_view.dart';
 import '../screens/companylist.dart';
@@ -31,6 +33,8 @@ class Routes {
   static const String itemlist = '/itemlist';
   static const String branchview = '/branchview';
   static const String customerreg = '/customerreg';
+  static const String productcatereg = '/productcatereg';
+  static const String productcateview = '/productcateview';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
@@ -47,4 +51,6 @@ final pages = {
   Routes.itemlist: (context) =>  ItemListPage (),
   Routes.branchview: (context) =>  BranchView (),
   Routes.customerreg: (context) =>  CustomerRegistration(),
+  Routes.productcatereg: (context) =>  ProductCategoryReg(),
+  Routes.productcateview: (context) =>  ProductCategoryView(),
 };
