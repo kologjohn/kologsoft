@@ -1,6 +1,7 @@
 
 import 'package:kologsoft/screens/branch_reg.dart';
 import 'package:kologsoft/screens/login_screen.dart';
+import 'package:kologsoft/screens/newstock.dart';
 import 'package:kologsoft/screens/payment_duration_reg.dart';
 import 'package:kologsoft/screens/payment_duration_view.dart';
 import 'package:kologsoft/screens/product_category_reg.dart';
@@ -39,6 +40,7 @@ class Routes {
   static const String productcateview = '/productcateview';
   static const String paymentdurationreg = '/paymentdurationreg';
   static const String paymentdurationview = '/paymentdurationview';
+  static const String newstock = '/newstock';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
@@ -59,4 +61,5 @@ final pages = {
   Routes.productcateview: (context) =>  ProductCategoryView(),
   Routes.paymentdurationreg: (context) =>  PaymentDurationReg(),
   Routes.paymentdurationview: (context) =>  PaymentDurationView(),
+  Routes.newstock: (context) =>  NewStock(),
 };
