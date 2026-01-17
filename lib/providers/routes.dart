@@ -2,6 +2,7 @@
 import 'package:kologsoft/screens/branch_reg.dart';
 import 'package:kologsoft/screens/login_screen.dart';
 
+import '../screens/customer_registration.dart';
 import '../screens/home_dashboard.dart';
 import '../screens/stocking_mode.dart';
 import '../screens/supplierlist.dart';
@@ -31,6 +32,7 @@ class Routes {
   static const String supplierlist = '/supplierlist';
   static const String warehousereg = '/warehousereg';
   static const String warehouselist = '/warehouselist';
+  static const String customerreg = '/customerreg';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
@@ -41,4 +43,5 @@ final pages = {
   Routes.supplierlist: (context) => const SupplierListPage(),
   Routes.warehousereg: (context) => const WarehouseRegistration (),
   Routes.warehouselist: (context) =>  WarehouseListPage (),
+  Routes.customerreg: (context) =>  CustomerRegistration (),
 };
