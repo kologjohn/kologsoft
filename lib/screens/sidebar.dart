@@ -188,7 +188,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.adminsurvey);
+                    //  Navigator.pushNamed(context, Routes.adminsurvey);
                     },
                   ),
                   ListTile(
@@ -198,7 +198,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.usersurvey);
+                    //  Navigator.pushNamed(context, Routes.usersurvey);
                     },
                   ),
 
@@ -224,19 +224,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.registerworkspace);
-
-                    },
-                  ),
-
-                  ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.white),
-                    title: const Text(
-                      'Certificate',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: (){
-                      Navigator.pushNamed(context, Routes.cert);
+                    //  Navigator.pushNamed(context, Routes.registerworkspace);
 
                     },
                   ),
@@ -247,39 +235,43 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                      Navigator.pushNamed(context, Routes.workspace);
+                   //   Navigator.pushNamed(context, Routes.workspace);
                     },
                   ),
-                  // ExpansionTile(
-                  //   leading: const Icon(Icons.attach_money, color: Colors.white),
-                  //   title: const Text(
-                  //     'Revenue',
-                  //     style: TextStyle(color: Colors.white),
-                  //   ),
-                  //   children: [
-                  //     ListTile(
-                  //       leading: const Icon(Icons.add, color: Colors.white),
-                  //       title: const Text(
-                  //         'Register',
-                  //         style: TextStyle(color: Colors.white),
-                  //       ),
-                  //       onTap: onRevenueRegister,
-                  //     ),
-                  //     ListTile(
-                  //       leading: const Icon(Icons.list, color: Colors.white),
-                  //       title: const Text(
-                  //         'View',
-                  //         style: TextStyle(color: Colors.white),
-                  //       ),
-                  //       onTap: onRevenueView,
-                  //     ),
-                  //   ],
-                  // ),
+
+                ],
+              ),
+              ExpansionTile(
+                leading: const Icon(Icons.attach_money, color: Colors.white),
+                title: const Text(
+                  'Company',
+                  style: TextStyle(color: Colors.white),
+                ),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add, color: Colors.white),
+                    title: const Text(
+                      'Register',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                      Navigator.pushNamed(context, Routes.companyreg);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.list, color: Colors.white),
+                    title: const Text(
+                      'View',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                      Navigator.pushNamed(context, Routes.companylist);
+                    },
+                  ),
                 ],
               ),
               const Divider(color: Colors.white24),
               ListTile(
-
                 leading: const Icon(Icons.login, color: Colors.white),
                 title: const Text(
                   'logout',
