@@ -183,7 +183,7 @@ class _WarehouseRegistrationState extends State<WarehouseRegistration> {
                                     ),
                                     icon: const Icon(Icons.view_list, color: Colors.white70),
                                     label: const Text("View Warehouses",
-                                        style: TextStyle(color: Colors.white70)),
+                                        style: TextStyle(fontSize:16,color: Colors.white70)),
                                     onPressed: () {
                                       Navigator.push(
                                         context,
