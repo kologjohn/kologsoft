@@ -524,14 +524,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         ],
                       ),
 
-                      // if (_showBoxPricingSwitch)
-                      //   Switch(
-                      //     value: _enableBoxPricing,
-                      //     activeColor: Colors.green,
-                      //     onChanged: (v) {
-                      //       setState(() => _enableBoxPricing = v);
-                      //     },
-                      //   ),
+
                       if (_enableBoxPricing) ...[
                         const SizedBox(height: 15),
 
@@ -546,19 +539,27 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.inventory,
                                   isNumber: true,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty)
-                                      return 'Required';
+                                    if (v == null || v.isEmpty) return 'Required';
 
-                                    final halfQty = int.tryParse(v) ?? 0;
-                                    final boxQty =
-                                        int.tryParse(_boxQtyController.text) ??
-                                        0;
+                                    final halfBoxQty = int.tryParse(v) ?? 0;
+                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
 
-                                    if (boxQty > 0 && halfQty > boxQty) {
-                                      return 'Half Qty cannot exceed Box Qty';
+                                    if (boxQty == 0) return null;
+
+                                    final requiredHalfQty = (boxQty / 2).ceil();
+                                    if (halfBoxQty > boxQty) {
+                                      return 'Half Box Qty cannot exceed Box Qty';
                                     }
+                                    if (halfBoxQty < requiredHalfQty) {
+                                      return 'Half Box Qty must be at least $requiredHalfQty';
+                                    }
+
                                     return null;
                                   },
+                                    onChanged: (value) {
+                                      //final qty = double.tryParse(value) ?? 0;
+                                      _formKey.currentState?.validate();
+                                    }
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -568,6 +569,23 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Half Box Price',
                                   Icons.attach_money,
                                   isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Required';
+                                    final halfBoxPrice = double.tryParse(v) ?? 0;
+                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                                    if (boxPrice == 0) return null;
+                                    final requiredHalfPrice = boxPrice / 2;
+                                    if (halfBoxPrice > boxPrice) {
+                                      return 'Half Box Price cannot exceed Box Price';
+                                    }
+                                    if (halfBoxPrice < requiredHalfPrice) {
+                                      return 'Half Box Price must be at least ${requiredHalfPrice.toStringAsFixed(2)}';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    _formKey.currentState?.validate();
+                                  },
                                 ),
                               ),
                               IconButton(
@@ -603,35 +621,33 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.inventory,
                                   isNumber: true,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty)
-                                      return 'Required';
+                                    if (v == null || v.isEmpty) return 'Required';
 
                                     final quarterQty = int.tryParse(v) ?? 0;
-                                    final boxQty =
-                                        int.tryParse(_boxQtyController.text) ??
-                                        0;
-                                    final halfQty =
-                                        int.tryParse(
-                                          _halfboxqty_controller.text,
-                                        ) ??
-                                        0;
-                                    final packQty =
-                                        int.tryParse(_packQtyController.text) ??
-                                        0;
+                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+                                    final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
+                                    final packQty = int.tryParse(_packQtyController.text) ?? 0;
 
-                                    if (boxQty > 0 && quarterQty > boxQty) {
+                                    if (boxQty == 0) return null;
+
+                                    final requiredQuarterQty = (boxQty / 4).ceil();
+                                    if (quarterQty > boxQty) {
                                       return 'Quarter Qty cannot exceed Box Qty';
                                     }
-
+                                    if (quarterQty < requiredQuarterQty) {
+                                      return 'Quarter Qty must be at least $requiredQuarterQty';
+                                    }
                                     if (halfQty > 0 && quarterQty >= halfQty) {
                                       return 'Quarter Qty must be less than Half Qty';
                                     }
-
                                     if (packQty > 0 && quarterQty <= packQty) {
                                       return 'Quarter Qty must be greater than Pack Qty';
                                     }
 
                                     return null;
+                                  },
+                                  onChanged: (value) {
+                                    _formKey.currentState?.validate();
                                   },
                                 ),
                               ),
@@ -642,6 +658,31 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Quarter Price',
                                   Icons.attach_money,
                                   isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Required';
+
+                                    final quarterPrice = double.tryParse(v) ?? 0;
+                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                                    final halfBoxPrice =
+                                        double.tryParse(_halfboxprice_controller.text) ?? 0;
+
+                                    if (boxPrice == 0) return null;
+
+                                    final requiredQuarterPrice = boxPrice / 4;
+                                    if (quarterPrice > boxPrice) {
+                                      return 'Quarter Price cannot exceed Box Price';
+                                    }
+                                    if (quarterPrice < requiredQuarterPrice) {
+                                      return 'Quarter Price must be at least ${requiredQuarterPrice.toStringAsFixed(2)}';
+                                    }
+                                    if (halfBoxPrice > 0 && quarterPrice >= halfBoxPrice) {
+                                      return 'Quarter Price must be less than Half Box Price';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    _formKey.currentState?.validate();
+                                  },
                                 ),
                               ),
                               IconButton(
@@ -726,6 +767,27 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Pack Price',
                                   Icons.attach_money,
                                   isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty) return 'Required';
+
+                                    final packPrice = double.tryParse(v) ?? 0;
+                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+                                    final packQty = int.tryParse(_packQtyController.text) ?? 0;
+
+                                    if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null; // skip if missing
+
+                                    final totalFromPacks = (boxQty / packQty) * packPrice;
+
+                                    if (totalFromPacks < boxPrice) {
+                                      return 'Pack Price too low: total must be ≥ Box Price';
+                                    }
+
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    _formKey.currentState?.validate();
+                                  },
                                 ),
                               ),
                               IconButton(
@@ -749,6 +811,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                       DropdownButtonFormField<String>(
                         value: _productType,
+                        dropdownColor: Color(0xFF1B263B),
+                        style: TextStyle(color: Colors.white70),
                         decoration: _buildDropdownDecoration('Product Type'),
                         items: const [
                           DropdownMenuItem(
@@ -760,7 +824,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             child: Text('Service'),
                           ),
                         ],
-                        onChanged: (v) => setState(() => _productType = v),
+                        onChanged: (v) => setState(() {
+                          _productType = v;
+                          _formKey.currentState?.validate();
+                        } ),
                         validator: (v) =>
                             v == null ? 'Select product type' : null,
                       ),
@@ -783,6 +850,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                           return DropdownButtonFormField<String>(
                             value: _productCategory,
+                            style: TextStyle(color: Colors.white70),
+                            dropdownColor: Color(0xFF1B263B),
                             decoration: _buildDropdownDecoration(
                               'Product category',
                             ),
@@ -795,7 +864,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                 )
                                 .toList(),
                             onChanged: (v) =>
-                                setState(() => _productCategory = v),
+                                setState(() {
+                                  _productCategory = v;
+                                  _formKey.currentState?.validate();
+                                }
+
+                              ),
+
                             validator: (v) =>
                                 v == null ? 'Select product category' : null,
                           );
@@ -808,7 +883,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white70,
-                            backgroundColor: Colors.white60,
+                            backgroundColor: Colors.blue,
                           ),
                           onPressed: _loading
                               ? null
