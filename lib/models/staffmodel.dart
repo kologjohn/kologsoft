@@ -111,7 +111,7 @@ class StaffModel {
           ? parseTimestamp(map['deletedAt'])
           : null,
       deletedBy: map['deletedBy'] ?? map['deletedby'],
-      companyId: map['companyId'] ?? map['companyid'] ?? '',
+      companyId: map['companyId'] ?? map['companyId'] ?? '',
     );
   }
 }

@@ -4,9 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kologsoft/models/paymentdurationmodel.dart';
 import 'package:kologsoft/models/productcategorymodel.dart';
+import 'package:kologsoft/models/staffmodel.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/branch.dart';
+import '../models/companymodel.dart';
 import '../models/suppliermodel.dart';
 import '../models/warehousemodel.dart';
 
@@ -14,12 +16,12 @@ class Datafeed extends ChangeNotifier {
   final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
   bool authenticated = false;
-  String company = "kologsoft";
+  String company = "";
   String companytype = "both";
-  String companyid = "kS0001";
-  String companyemail = "kologsoft@kologsoft.com";
-  String companyphone = "0553354349";
-  String staff = "Yinbey";
+  String companyid = "";
+  String companyemail = "";
+  String companyphone = "";
+  String staff = "";
   List<WarehouseModel> warehouses = [];
   bool loadingproductcategory = false;
   List<Productcategorymodel> productcategory = [];
@@ -28,14 +30,12 @@ class Datafeed extends ChangeNotifier {
   bool loadingWarehouses = false;
   BranchModel? selectedBranch;
   Supplier? selectedSupplier;
+  StaffModel? currentStaff;
+  CompanyModel? currentCompany;
 
   Datafeed() {
     //_initSync();
   }
-
-
-
-
 
   fetchBranches() async {
     try {
@@ -146,8 +146,42 @@ class Datafeed extends ChangeNotifier {
     companyid = "";
     companyemail = "";
     companyphone = "";
+    staff = "";
+    currentStaff = null;
+    currentCompany = null;
     notifyListeners();
     Navigator.pushNamedAndRemoveUntil(context, Routes.login, (route) => false);
+  }
+
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      // Re-authenticate user with current password
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Change password
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password') {
+        throw Exception('Current password is incorrect');
+      } else if (e.code == 'weak-password') {
+        throw Exception('New password is too weak');
+      } else {
+        throw Exception(e.message ?? 'Failed to change password');
+      }
+    } catch (e) {
+      throw Exception('Failed to change password: $e');
+    }
   }
 
   String normalizeAndSanitize(dynamic value) {
@@ -255,28 +289,50 @@ class Datafeed extends ChangeNotifier {
   login(String email, String password, BuildContext context) async {
     final spref = await SharedPreferences.getInstance();
     try {
-      UserCredential userCredential = await auth.signInWithEmailAndPassword(
+      final userCredential = await auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      // authenticated = true;
-      // final userDoc = await db
-      //     .collection('staff')
-      //     .doc(auth.currentUser!.email.toString())
-      //     .get();
-      // String accessLevel = userDoc.data()!['accessLevel'];
-      // String staffName = userDoc.data()!['name'];
-      // String phone = userDoc.data()!['phone'];
-      // String region = userDoc.data()!['region'];
-      //
-      // spref.setString('email', email);
-      // spref.setString('accessLevel', accessLevel);
-      // spref.setString('staff', staffName);
-      // spref.setString('phone', phone);
-      // spref.setString('region', region);
-      // auth.currentUser!.updateDisplayName(staffName);
-      //
-      // await getdata();
+      authenticated = true;
+      final userDoc = await db
+          .collection('staff')
+          .doc(auth.currentUser!.email.toString())
+          .get();
+
+      if (userDoc.exists) {
+        // Use StaffModel to parse the data
+        currentStaff = StaffModel.fromMap(userDoc.data()!);
+
+        final companydoc = await db
+            .collection('companies')
+            .doc(currentStaff!.companyId.toString().toUpperCase())
+            .get();
+        print(currentStaff!.companyId);
+
+        if (companydoc.exists) {
+          currentCompany = CompanyModel.fromMap(companydoc.data()!);
+          company = currentCompany!.company;
+          companyemail = currentCompany!.email;
+          companyphone = currentCompany!.phone;
+        }
+        // Save to SharedPreferences
+        spref.setString('email', currentStaff!.email);
+        spref.setString('accessLevel', currentStaff!.accesslevel);
+        spref.setString('staff', currentStaff!.name);
+        spref.setString('phone', currentStaff!.phone);
+        spref.setString('companyid', currentStaff!.companyId);
+        spref.setString('companyphone', currentCompany!.phone);
+        spref.setString('company', currentCompany!.name);
+        spref.setString('companyemail', currentCompany!.email);
+
+        // Update display name
+        auth.currentUser!.updateDisplayName(currentStaff!.name);
+
+        // Update local state
+        staff = currentStaff!.name;
+        companyid = currentStaff!.companyId;
+      }
+      await getdata();
       notifyListeners();
       Navigator.pushNamed(context, Routes.home);
     } on FirebaseAuthException catch (e) {
@@ -293,6 +349,8 @@ class Datafeed extends ChangeNotifier {
         );
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
+      SnackBar snackBar = SnackBar(content: Text('Error: ${e.message}'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
 
     // Implement login logic here
@@ -305,6 +363,8 @@ class Datafeed extends ChangeNotifier {
       companyid = spref.getString('companyid')!;
       companyemail = spref.getString('companyemail')!;
       companyphone = spref.getString('companyphone')!;
+      staff = spref.getString('staff')!;
+      print(company);
     } catch (e) {
       print(e);
     }

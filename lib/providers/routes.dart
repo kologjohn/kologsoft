@@ -1,4 +1,3 @@
-
 import 'package:kologsoft/screens/branch_reg.dart';
 import 'package:kologsoft/screens/login_screen.dart';
 import 'package:kologsoft/screens/newstock.dart';
@@ -6,6 +5,8 @@ import 'package:kologsoft/screens/payment_duration_reg.dart';
 import 'package:kologsoft/screens/payment_duration_view.dart';
 import 'package:kologsoft/screens/product_category_reg.dart';
 import 'package:kologsoft/screens/productcategory_view.dart';
+import 'package:kologsoft/screens/staff_profile.dart';
+import 'package:kologsoft/providers/route_guard.dart';
 
 import '../screens/branch_view.dart';
 import '../screens/companylist.dart';
@@ -19,7 +20,6 @@ import '../screens/stocking_mode.dart';
 import '../screens/supplierlist.dart';
 import '../screens/supplierscreen.dart';
 import '../screens/warehousereg.dart';
-
 
 class Routes {
   static const String home = '/home';
@@ -43,26 +43,35 @@ class Routes {
   static const String paymentdurationview = '/paymentdurationview';
   static const String newstock = '/newstock';
   static const String staffreg = '/staffreg';
+  static const String staffprofile = '/staffprofile';
 }
+
 final pages = {
-  Routes.home: (context) => const HomeDashboard(),
   Routes.login: (context) => const LoginScreen(),
-  Routes.branchreg: (context) => const BranchRegistration(),
-  Routes.supplierreg: (context) => const SupplierRegistration(),
-  Routes.stockingmode: (context) => const StockingMode(),
-  Routes.supplierlist: (context) => const SupplierListPage(),
-  Routes.companyreg: (context) => const CompanyRegPage(),
-  Routes.companylist: (context) =>  CompanyListPage(),
-  Routes.warehousereg: (context) =>  WarehouseRegistration(),
-  Routes.warehousereg: (context) =>  WarehouseRegistration(),
-  Routes.itemreg: (context) =>  ItemRegPage (),
-  Routes.itemlist: (context) =>  ItemListPage (),
-  Routes.branchview: (context) =>  BranchView (),
-  Routes.customerreg: (context) =>  CustomerRegistration(),
-  Routes.productcatereg: (context) =>  ProductCategoryReg(),
-  Routes.productcateview: (context) =>  ProductCategoryView(),
-  Routes.paymentdurationreg: (context) =>  PaymentDurationReg(),
-  Routes.paymentdurationview: (context) =>  PaymentDurationView(),
-  Routes.newstock: (context) =>  NewStock(),
-  Routes.staffreg: (context) =>  Staff(),
+  Routes.home: (context) => const RouteGuard(child: HomeDashboard()),
+  Routes.branchreg: (context) => const RouteGuard(child: BranchRegistration()),
+  Routes.supplierreg: (context) =>
+      const RouteGuard(child: SupplierRegistration()),
+  Routes.stockingmode: (context) => const RouteGuard(child: StockingMode()),
+  Routes.supplierlist: (context) => const RouteGuard(child: SupplierListPage()),
+  Routes.companyreg: (context) => RouteGuard(
+    child: CompanyRegPage(),
+    allowedAccessLevels: ['admin', 'manager'],
+  ),
+  Routes.companylist: (context) => RouteGuard(child: CompanyListPage()),
+  Routes.warehousereg: (context) => RouteGuard(child: WarehouseRegistration()),
+  Routes.itemreg: (context) => RouteGuard(child: ItemRegPage()),
+  Routes.itemlist: (context) => RouteGuard(child: ItemListPage()),
+  Routes.branchview: (context) => RouteGuard(child: BranchView()),
+  Routes.customerreg: (context) => RouteGuard(child: CustomerRegistration()),
+  Routes.productcatereg: (context) => RouteGuard(child: ProductCategoryReg()),
+  Routes.productcateview: (context) => RouteGuard(child: ProductCategoryView()),
+  Routes.paymentdurationreg: (context) =>
+      RouteGuard(child: PaymentDurationReg()),
+  Routes.paymentdurationview: (context) =>
+      RouteGuard(child: PaymentDurationView()),
+  Routes.newstock: (context) => RouteGuard(child: NewStock()),
+  Routes.staffreg: (context) =>
+      RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager']),
+  Routes.staffprofile: (context) => const RouteGuard(child: StaffProfile()),
 };

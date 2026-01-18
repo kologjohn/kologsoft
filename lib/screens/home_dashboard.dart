@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:kologsoft/screens/sidebar.dart';
+import 'package:provider/provider.dart';
 
 import '../providers/routes.dart';
 
@@ -14,8 +16,307 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   int _selectedIndex = 0;
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<Datafeed>().getdata();
+    });
 
+  }
+
+  void _showLogoutDialog(BuildContext context, Datafeed datafeed) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                datafeed.logout(context);
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context, Datafeed datafeed) {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+    bool showCurrentPassword = false;
+    bool showNewPassword = false;
+    bool showConfirmPassword = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.lock_reset,
+                              color: Colors.blue.shade700,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Change Password',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Update your account password',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: currentPasswordController,
+                        obscureText: !showCurrentPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Current Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              showCurrentPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                showCurrentPassword = !showCurrentPassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter current password';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: newPasswordController,
+                        obscureText: !showNewPassword,
+                        decoration: InputDecoration(
+                          labelText: 'New Password',
+                          prefixIcon: const Icon(Icons.lock),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              showNewPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                showNewPassword = !showNewPassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          helperText: 'Must be at least 6 characters',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter new password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: !showConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm New Password',
+                          prefixIcon: Icon(Icons.lock),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              showConfirmPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                showConfirmPassword = !showConfirmPassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm password';
+                          }
+                          if (value != newPasswordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () async {
+                                    if (formKey.currentState!.validate()) {
+                                      setState(() => isLoading = true);
+                                      try {
+                                        await datafeed.changePassword(
+                                          currentPasswordController.text,
+                                          newPasswordController.text,
+                                        );
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Password changed successfully',
+                                              ),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        setState(() => isLoading = false);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Update Password'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     bool isMobile = screenWidth <= 512;
     bool isSmallTablet = screenWidth < 774;
@@ -24,142 +325,261 @@ class _HomeDashboardState extends State<HomeDashboard> {
     bool isBigTablet = screenWidth < 1200;
     print(screenWidth);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF101A23),
-      appBar: AppBar(
-        title: const Text('NWC SMS Dashboard'),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF0D1A26),
-        foregroundColor: Colors.white,
-        elevation: 2,
-      ),
-      drawer:Sidebar(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                runSpacing: 15,
-                spacing: 15,
-                children: [
-                  WorkPlaceWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.47
-                        : isMediumTablet
-                        ? screenWidth * 0.30
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.24
-                        : screenWidth * 0.23,
+    return Consumer<Datafeed>(
+      builder: (BuildContext context, Datafeed value, Widget? child) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF101A23),
+          appBar: AppBar(
+            title: Text(value.company.toString().toUpperCase()),
+            centerTitle: true,
+            backgroundColor: const Color(0xFF0D1A26),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              // User menu
+              PopupMenuButton<String>(
+                icon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      radius: 16,
+                      child: Text(
+                        value.staff.isNotEmpty
+                            ? value.staff[0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (screenWidth > 600)
+                      Text(
+                        value.staff.isNotEmpty ? value.staff : 'User',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
+                offset: const Offset(0, 50),
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          value.staff.isNotEmpty ? value.staff : 'User',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        if (value.companyemail.isNotEmpty)
+                          Text(
+                            value.companyemail,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        const Divider(),
+                      ],
+                    ),
                   ),
-                  RespWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.47
-                        : isMediumTablet
-                        ? screenWidth * 0.21
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.15
-                        : screenWidth * 0.16,
+                  PopupMenuItem<String>(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 20,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'My Profile',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ],
+                    ),
                   ),
-                  MiddleWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.47
-                        : isMediumTablet
-                        ? screenWidth * 0.21
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.15
-                        : screenWidth * 0.16,
+                  PopupMenuItem<String>(
+                    value: 'password',
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock_outline, size: 20, color: Colors.blue),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Change Password',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ],
+                    ),
                   ),
-                  CsatWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.47
-                        : isMediumTablet
-                        ? screenWidth * 0.21
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.15
-                        : screenWidth * 0.16,
+                  PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout, size: 20, color: Colors.red),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Logout',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
                   ),
-                  TopWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isTablet
-                        ? screenWidth * 0.98
-                        : isMediumTablet
-                        ? screenWidth * 0.98
-                        : isBigTablet
-                        ? screenWidth * 0.24
-                        : screenWidth * 0.22,
-                  )
                 ],
+                onSelected: (String selectedValue) async {
+                  if (selectedValue == 'logout') {
+                    _showLogoutDialog(context, value);
+                  } else if (selectedValue == 'password') {
+                    _showChangePasswordDialog(context, value);
+                  } else if (selectedValue == 'profile') {
+                    Navigator.pushNamed(context, Routes.staffprofile);
+                  }
+                },
               ),
-              SizedBox(height: 15),
-              Wrap(
-                spacing: 15,
-                runSpacing: 15,
-                children: [
-                  PieChartWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isTablet
-                        ? screenWidth * 0.98
-                        : isBigTablet
-                        ? screenWidth * 0.98
-                        : screenWidth * 0.40,
-                  ),
-                  FeedbackWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.97
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.49
-                        : screenWidth * 0.33,
-                  ),
-                  MonthlyRevenueWidget(
-                    cwidth: isMobile
-                        ? screenWidth * 0.95
-                        : isSmallTablet
-                        ? screenWidth * 0.97
-                        : isTablet
-                        ? screenWidth * 0.48
-                        : isBigTablet
-                        ? screenWidth * 0.48
-                        : screenWidth * 0.23,
-                  )
-                ],
-              )
             ],
           ),
-        ),
-      ),
+          drawer: Sidebar(),
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    runSpacing: 15,
+                    spacing: 15,
+                    children: [
+                      WorkPlaceWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.47
+                            : isMediumTablet
+                            ? screenWidth * 0.30
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.24
+                            : screenWidth * 0.23,
+                      ),
+                      RespWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.47
+                            : isMediumTablet
+                            ? screenWidth * 0.21
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.15
+                            : screenWidth * 0.16,
+                      ),
+                      MiddleWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.47
+                            : isMediumTablet
+                            ? screenWidth * 0.21
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.15
+                            : screenWidth * 0.16,
+                      ),
+                      CsatWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.47
+                            : isMediumTablet
+                            ? screenWidth * 0.21
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.15
+                            : screenWidth * 0.16,
+                      ),
+                      TopWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isTablet
+                            ? screenWidth * 0.98
+                            : isMediumTablet
+                            ? screenWidth * 0.98
+                            : isBigTablet
+                            ? screenWidth * 0.24
+                            : screenWidth * 0.22,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 15),
+                  Wrap(
+                    spacing: 15,
+                    runSpacing: 15,
+                    children: [
+                      PieChartWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isTablet
+                            ? screenWidth * 0.98
+                            : isBigTablet
+                            ? screenWidth * 0.98
+                            : screenWidth * 0.40,
+                      ),
+                      FeedbackWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.97
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.49
+                            : screenWidth * 0.33,
+                      ),
+                      MonthlyRevenueWidget(
+                        cwidth: isMobile
+                            ? screenWidth * 0.95
+                            : isSmallTablet
+                            ? screenWidth * 0.97
+                            : isTablet
+                            ? screenWidth * 0.48
+                            : isBigTablet
+                            ? screenWidth * 0.48
+                            : screenWidth * 0.23,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class FeedbackWidget extends StatelessWidget {
   final double cwidth;
-  const FeedbackWidget({
-    super.key, required this.cwidth,
-  });
+  const FeedbackWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -185,85 +605,85 @@ class FeedbackWidget extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Expanded(
-                child: ListView.separated(
-                    itemCount: 6,
-                  separatorBuilder: (_, __) =>
-                  const Divider(color: Colors.white24, height: 1),
-                  itemBuilder: (context, index){
-                    final feedback = [
-                      {
-                        'message': 'Thanks for exchanging my item so promptly',
-                        'time': 'an hour ago'
-                      },
-                      {
-                        'message': 'Super fast resolution, thank you!',
-                        'time': 'an hour ago'
-                      },
-                      {    'message': 'Great service as always',
-                        'time': '3 hours ago',},
-                      {
-                        'message': 'Helpful and efficient. Great service!',
-                        'time': '4 hours ago',
-                      },
-                      {
-                        'message': 'Fast and efficient, thanks.',
-                        'time': '2 days ago',
-                      },
-                      {
-                        'message': 'Super fast resolution, thank you!',
-                        'time': 'an hour ago'
-                      },
-                    ][index];
+              child: ListView.separated(
+                itemCount: 6,
+                separatorBuilder: (_, __) =>
+                    const Divider(color: Colors.white24, height: 1),
+                itemBuilder: (context, index) {
+                  final feedback = [
+                    {
+                      'message': 'Thanks for exchanging my item so promptly',
+                      'time': 'an hour ago',
+                    },
+                    {
+                      'message': 'Super fast resolution, thank you!',
+                      'time': 'an hour ago',
+                    },
+                    {
+                      'message': 'Great service as always',
+                      'time': '3 hours ago',
+                    },
+                    {
+                      'message': 'Helpful and efficient. Great service!',
+                      'time': '4 hours ago',
+                    },
+                    {
+                      'message': 'Fast and efficient, thanks.',
+                      'time': '2 days ago',
+                    },
+                    {
+                      'message': 'Super fast resolution, thank you!',
+                      'time': 'an hour ago',
+                    },
+                  ][index];
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 36,
-                            width: 36,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF3A6FF8),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.thumb_up,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF3A6FF8),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  feedback['message']!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  feedback['time']!,
-                                  style: const TextStyle(
-                                    color: Colors.white60,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: const Icon(
+                            Icons.thumb_up,
+                            color: Colors.white,
+                            size: 18,
                           ),
-                        ],
-                      ),
-                    );
-
-                  },
-                )
-            )
-
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                feedback['message']!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                feedback['time']!,
+                                style: const TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -273,9 +693,7 @@ class FeedbackWidget extends StatelessWidget {
 
 class PieChartWidget extends StatelessWidget {
   final double cwidth;
-  const PieChartWidget({
-    super.key, required this.cwidth,
-  });
+  const PieChartWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -323,10 +741,8 @@ class PieChartWidget extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 5,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.white12,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: Colors.white12, strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
@@ -349,27 +765,34 @@ class PieChartWidget extends StatelessWidget {
                       getTitlesWidget: (value, _) {
                         switch (value.toInt()) {
                           case 9:
-                            return const Text('09:00',
-                                style: TextStyle(color: Colors.white60));
+                            return const Text(
+                              '09:00',
+                              style: TextStyle(color: Colors.white60),
+                            );
                           case 12:
-                            return const Text('12:00',
-                                style: TextStyle(color: Colors.white60));
+                            return const Text(
+                              '12:00',
+                              style: TextStyle(color: Colors.white60),
+                            );
                           case 15:
-                            return const Text('15:00',
-                                style: TextStyle(color: Colors.white60));
+                            return const Text(
+                              '15:00',
+                              style: TextStyle(color: Colors.white60),
+                            );
                         }
                         return const SizedBox.shrink();
                       },
                     ),
                   ),
-                  rightTitles:
-                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles:
-                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
-
                   LineChartBarData(
                     spots: const [
                       FlSpot(9, 19),
@@ -385,7 +808,6 @@ class PieChartWidget extends StatelessWidget {
                     barWidth: 3,
                     dotData: const FlDotData(show: false),
                   ),
-
 
                   LineChartBarData(
                     spots: const [
@@ -414,9 +836,7 @@ class PieChartWidget extends StatelessWidget {
 
 class MonthlyRevenueWidget extends StatelessWidget {
   final double cwidth;
-  const MonthlyRevenueWidget({
-    super.key, required this.cwidth,
-  });
+  const MonthlyRevenueWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -462,7 +882,7 @@ class MonthlyRevenueWidget extends StatelessWidget {
               child: ListView.separated(
                 itemCount: 12,
                 separatorBuilder: (_, __) =>
-                const Divider(color: Colors.white24, height: 1),
+                    const Divider(color: Colors.white24, height: 1),
                 itemBuilder: (context, index) {
                   final data = [
                     {'name': 'January', 'amount': '37'},
@@ -514,9 +934,7 @@ class MonthlyRevenueWidget extends StatelessWidget {
 
 class TopWidget extends StatelessWidget {
   final double cwidth;
-  const TopWidget({
-    super.key, required this.cwidth,
-  });
+  const TopWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -562,7 +980,7 @@ class TopWidget extends StatelessWidget {
               child: ListView.separated(
                 itemCount: 6,
                 separatorBuilder: (_, __) =>
-                const Divider(color: Colors.white24, height: 1),
+                    const Divider(color: Colors.white24, height: 1),
                 itemBuilder: (context, index) {
                   final data = [
                     {'name': 'Reece Martin', 'solved': '37'},
@@ -602,17 +1020,13 @@ class TopWidget extends StatelessWidget {
           ],
         ),
       ),
-
-
     );
   }
 }
 
 class CsatWidget extends StatelessWidget {
   final double cwidth;
-  const CsatWidget({
-    super.key, required this.cwidth,
-  });
+  const CsatWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -641,11 +1055,11 @@ class CsatWidget extends StatelessWidget {
               Text(
                 "CSAT",
                 style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
-              )
+              ),
             ],
           ),
 
@@ -696,17 +1110,11 @@ class CsatWidget extends StatelessWidget {
             children: [
               Text(
                 '0%',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               Text(
                 '100%',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -718,9 +1126,7 @@ class CsatWidget extends StatelessWidget {
 
 class MiddleWidget extends StatelessWidget {
   final double cwidth;
-  const MiddleWidget({
-    super.key, required this.cwidth,
-  });
+  const MiddleWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -749,17 +1155,11 @@ class MiddleWidget extends StatelessWidget {
                 ),
                 TextSpan(
                   text: "%\n",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 TextSpan(
                   text: "CSAT today",
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
                 ),
               ],
             ),
@@ -772,9 +1172,7 @@ class MiddleWidget extends StatelessWidget {
 
 class RespWidget extends StatelessWidget {
   final double cwidth;
-  const RespWidget({
-    super.key, required this.cwidth,
-  });
+  const RespWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -813,17 +1211,11 @@ class RespWidget extends StatelessWidget {
                 ),
                 TextSpan(
                   text: "m\n",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 TextSpan(
                   text: "FRT",
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
             ),
@@ -862,17 +1254,11 @@ class RespWidget extends StatelessWidget {
                 ),
                 TextSpan(
                   text: "%\n",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 TextSpan(
                   text: "Within SLA",
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
                 ),
               ],
             ),
@@ -885,9 +1271,7 @@ class RespWidget extends StatelessWidget {
 
 class WorkPlaceWidget extends StatelessWidget {
   final double cwidth;
-  const WorkPlaceWidget({
-    super.key, required this.cwidth,
-  });
+  const WorkPlaceWidget({super.key, required this.cwidth});
 
   @override
   Widget build(BuildContext context) {
@@ -912,7 +1296,6 @@ class WorkPlaceWidget extends StatelessWidget {
           ),
 
           //const SizedBox(height: 12),
-
           const Text(
             "23",
             style: TextStyle(
@@ -924,10 +1307,7 @@ class WorkPlaceWidget extends StatelessWidget {
 
           const Text(
             "Assigned",
-            style: TextStyle(
-              color: Colors.white60,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white60, fontSize: 14),
           ),
 
           //const SizedBox(height: 14),
@@ -958,10 +1338,7 @@ class WorkPlaceWidget extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       "Unassigned",
-                      style: TextStyle(
-                        color: Colors.white60,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: Colors.white60, fontSize: 13),
                     ),
                   ],
                 ),
@@ -1010,18 +1387,11 @@ class _LegendDot extends StatelessWidget {
         Container(
           height: 8,
           width: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
+        Text(text, style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
 }
-

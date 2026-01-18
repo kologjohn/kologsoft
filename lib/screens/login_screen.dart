@@ -211,15 +211,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   setState(
                                                     () => _loading = true,
                                                   );
-                                                  // await value.login(
-                                                  //   _emailController.text
-                                                  //       .trim(),
-                                                  //   _passwordController.text
-                                                  //       .trim(),
-                                                  //   context,
-                                                  // );
-                                                  Navigator.pushNamed(context, Routes.home);
+                                                  await value.login(_emailController.text.trim(), _passwordController.text.trim(), context);
+                                               //  Navigator.pushNamed(context, Routes.home);
                                                 } catch (e) {
+                                                  print(e);
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
