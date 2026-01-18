@@ -43,13 +43,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _halfboxprice_controller = TextEditingController();
   final _quarterprice_controller = TextEditingController();
   final _packprice_controller = TextEditingController();
-  final _cartonQtyController = TextEditingController();
-  final _cartonSupplierController = TextEditingController();
-  final _quarterRetailController = TextEditingController();
-  final _quarterWholesaleController = TextEditingController();
-  final _quarterSupplierController = TextEditingController();
 
-// Pack
 
   final _wholesaleMinQtyController = TextEditingController();
   final _supplierMinQtyController = TextEditingController();
@@ -131,133 +125,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
     return snap.ref.getDownloadURL();
   }
 
-  Future<Map<String, String?>> generateAndUploadBarcodeCodes(String barcode, String itemId) async {
-    try {
-      final barcodeController = ScreenshotController();
-      final qrController = ScreenshotController();
-
-      // Generate barcode image
-      final barcodeImage = await barcodeController.captureFromWidget(
-        BarcodeWidget(
-          data: barcode,
-          barcode: Barcode.code128(),
-          width: 200,
-          height: 80,
-          drawText: true,
-          style: const TextStyle(fontSize: 12),
-        ),
-        delay: const Duration(milliseconds: 100),
-      );
-
-      // Generate QR code image
-      final qrImage = await qrController.captureFromWidget(
-        QrImageView(
-          data: barcode,
-          version: QrVersions.auto,
-          size: 200.0,
-        ),
-        delay: const Duration(milliseconds: 100),
-      );
-
-      // Upload barcode image
-      final barcodeRef = FirebaseStorage.instance
-          .ref()
-          .child('items')
-          .child('barcodes')
-          .child('${itemId}_barcode.png');
-
-      await barcodeRef.putData(
-        barcodeImage,
-        SettableMetadata(contentType: 'image/png'),
-      );
-      final barcodeUrl = await barcodeRef.getDownloadURL();
-
-      // Upload QR code image
-      final qrRef = FirebaseStorage.instance
-          .ref()
-          .child('items')
-          .child('qrcodes')
-          .child('${itemId}_qr.png');
-
-      await qrRef.putData(
-        qrImage,
-        SettableMetadata(contentType: 'image/png'),
-      );
-      final qrUrl = await qrRef.getDownloadURL();
-
-      return {
-        'barcodeUrl': barcodeUrl,
-        'qrUrl': qrUrl,
-      };
-    } catch (e) {
-      debugPrint('Error generating barcode/QR codes: $e');
-      return {
-        'barcodeUrl': null,
-        'qrUrl': null,
-      };
-    }
-  }
-
-
-  // Future<void> saveItem() async {
-  //   if (!_formKey.currentState!.validate()) return;
-  //
-  //   setState(() => _loading = true);
-  //
-  //   try {
-  //     final docRef = widget.docId == null
-  //         ? _db.collection('items').doc()
-  //         : _db.collection('items').doc(widget.docId);
-  //
-  //     final imageUrl = await uploadLogo(docRef.id);
-  //     if (_enableBoxPricing) {
-  //       final wMin = int.tryParse(_wholesaleMinQtyController.text) ?? 0;
-  //       final sMin = int.tryParse(_supplierMinQtyController.text) ?? 0;
-  //
-  //       if (wMin >= sMin) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           const SnackBar(content: Text("Wholesale min qty must be less than supplier min qty")),
-  //         );
-  //         setState(() => _loading = false);
-  //         return;
-  //       }
-  //     }
-  //
-  //     final data = {
-  //       'name': _nameController.text.trim(),
-  //       'barcode': _barcodeController.text.trim(),
-  //       'costprice': _costController.text.trim(),
-  //       'producttype': _productType,
-  //       'pricingmode': _pricingMode,
-  //       'productcategory': _productCategory,
-  //       'imageurl': imageUrl,
-  //       'updatedAt': FieldValue.serverTimestamp(),
-  //       'boxPricingEnabled': _enableBoxPricing,
-  //       'boxQty': _boxQtyController.text,
-  //       'retailBoxPrice': _retail_price.text,
-  //       'wholesaleBoxPrice': _wholesalePriceController.text,
-  //       'supplierBoxPrice': _supplierPriceController.text,
-  //       'wholesaleMinQty': _wholesaleMinQtyController.text,
-  //       'supplierMinQty': _supplierMinQtyController.text,
-  //     };
-  //
-  //     if (widget.docId == null) {
-  //       data['createdAt'] = FieldValue.serverTimestamp();
-  //       await docRef.set(data);
-  //     } else {
-  //       await docRef.update(data);
-  //     }
-  //
-  //     if (mounted) Navigator.pop(context, true);
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context)
-  //         .showSnackBar(SnackBar(content: Text('Error: $e')));
-  //   }
-  //
-  //   setState(() => _loading = false);
-  // }
-
-
   @override
   Widget build(BuildContext context) {
     return Consumer<Datafeed>(builder: (context, datafeed, child) {
@@ -292,8 +159,39 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             _supplierPriceController.text = value;
                           });
                         }
+                        _formKey.currentState?.validate();
+                      },
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        
+                        final retailPrice = double.tryParse(v) ?? 0;
+                        final costPrice = double.tryParse(_costController.text) ?? 0;
+                        
+                        if (costPrice > 0 && retailPrice <= costPrice) {
+                          return 'Retail price must be greater than Unit Cost Price';
+                        }
+                        return null;
                       },
                     ),
+                    SizedBox(height: 10,),
+
+                    _buildField(_costController, 'Unit Cost Price', Icons.attach_money, isNumber: true,
+                      onChanged: (_) {
+                        _formKey.currentState?.validate();
+                      },
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        
+                        final costPrice = double.tryParse(v) ?? 0;
+                        final retailPrice = double.tryParse(_retail_price.text) ?? 0;
+                        
+                        if (retailPrice > 0 && costPrice >= retailPrice) {
+                          return 'Unit Cost Price must be less than Retail Price';
+                        }
+                        return null;
+                      },
+                    ),
+
                     SizedBox(height: 10,),
                     const SizedBox(height: 10),
                     _buildField(_boxQtyController, 'Box quantity', Icons.attach_money, isNumber: true,
@@ -332,32 +230,67 @@ class _ItemRegPageState extends State<ItemRegPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildField(
-                            // onChanged: (val){
-                            //   final qty = double.tryParse(val) ?? 0;
-                            //   _halfboxprice_controller.text = (qty / 2).toStringAsFixed(2);
-                            //   _quarterprice_controller.text = (qty / 4).toStringAsFixed(2);
-                            //
-                            // },
+                          child: _buildFieldWithEnabled(
                             onChanged: (val) {
                               final price = double.tryParse(val) ?? 0;
 
                               _halfboxprice_controller.text = (price / 2).toStringAsFixed(2);
                               _quarterprice_controller.text = (price / 4).toStringAsFixed(2);
+                              _formKey.currentState?.validate();
                             },
                             _wholesalePriceController,
                             'Box Price',
                             Icons.attach_money,
                             isNumber: true,
+                            enabled: double.tryParse(_boxQtyController.text) != 1,
+                            validator: (v) {
+                              final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+                              if (boxQty == 1) return null; // Skip validation when box qty is 1
+                              
+                              if (v == null || v.isEmpty) return 'Required';
+                              
+                              final boxPrice = double.tryParse(v) ?? 0;
+                              final boxQtyVal = double.tryParse(_boxQtyController.text) ?? 1;
+                              final pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
+                              final retailPrice = double.tryParse(_retail_price.text) ?? 0;
+                              final costPrice = double.tryParse(_costController.text) ?? 0;
+                              
+                              if (pricePerUnit < retailPrice) {
+                                return 'Box Price / Qty cannot be less than Retail Price';
+                              }
+                              
+                              if (pricePerUnit < costPrice) {
+                                return 'Box Price / Qty cannot be less than Unit Cost Price';
+                              }
+                              
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: _buildField(
+                          child: _buildFieldWithEnabled(
                             _supplierPriceController,
                             'Supplier Price',
                             Icons.attach_money,
                             isNumber: true,
+                            enabled: double.tryParse(_boxQtyController.text) != 1,
+                            validator: (v) {
+                              final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+                              if (boxQty == 1) return null; // Skip validation when box qty is 1
+                              
+                              if (v == null || v.isEmpty) return 'Required';
+                              
+                              final supplierPrice = double.tryParse(v) ?? 0;
+                              final costPrice = double.tryParse(_costController.text) ?? 0;
+                              final minSupplierPrice = costPrice * boxQty;
+                              
+                              if (supplierPrice <= minSupplierPrice) {
+                                return 'Supplier Price must be more than Unit Cost × Box Qty';
+                              }
+                              
+                              return null;
+                            },
                           ),
                         ),
                       ],
@@ -367,38 +300,38 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                     Row(
                       children: [
-                        Expanded(
-                          child: _buildField(
-                            _wholesaleMinQtyController,
-                            'Wholesale Min Qty',
-                            onChanged: (value) {
-                              _formKey.currentState?.validate();
-                            },
-                            validator: (v) {
-                              // If wholesale is empty, always pass
-                              if (v == null || v.isEmpty) return null;
-
-                              final wholesaleQty = int.tryParse(v) ?? 0;
-                              final supplierText = _supplierMinQtyController.text.trim();
-                              
-                              // If supplier is empty, always pass
-                              if (supplierText.isEmpty) return null;
-                              
-                              final supplierQty = int.tryParse(supplierText) ?? 0;
-
-                              // Skip validation when either is 1
-                              if (wholesaleQty == 1 || supplierQty == 1) return null;
-
-                              if (wholesaleQty > supplierQty) {
-                                return 'Cannot exceed Supplier Min Qty';
-                              }
-
-                              return null;
-                            },
-                            Icons.numbers,
-                            isNumber: true,
-                          ),
-                        ),
+                        // Expanded(
+                        //   child: _buildField(
+                        //     _wholesaleMinQtyController,
+                        //     'Wholesale Min Qty',
+                        //     onChanged: (value) {
+                        //       _formKey.currentState?.validate();
+                        //     },
+                        //     validator: (v) {
+                        //       // If wholesale is empty, always pass
+                        //       if (v == null || v.isEmpty) return null;
+                        //
+                        //       final wholesaleQty = int.tryParse(v) ?? 0;
+                        //       final supplierText = _supplierMinQtyController.text.trim();
+                        //
+                        //       // If supplier is empty, always pass
+                        //       if (supplierText.isEmpty) return null;
+                        //
+                        //       final supplierQty = int.tryParse(supplierText) ?? 0;
+                        //
+                        //       // Skip validation when either is 1
+                        //       if (wholesaleQty == 1 || supplierQty == 1) return null;
+                        //
+                        //       if (wholesaleQty > supplierQty) {
+                        //         return 'Cannot exceed Supplier Min Qty';
+                        //       }
+                        //
+                        //       return null;
+                        //     },
+                        //     Icons.numbers,
+                        //     isNumber: true,
+                        //   ),
+                        // ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _buildField(
@@ -621,10 +554,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         ),
                     ],
 
-                    SizedBox(height: 10,),
-
-                    _buildField(_costController, 'Unit Cost Price', Icons.attach_money, isNumber: true),
-                    const SizedBox(height: 10),
+                   const SizedBox(height: 10),
 
                     DropdownButtonFormField<String>(
                       value: _productType,
@@ -698,45 +628,31 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                             final imageUrl = await uploadLogo(docId);
 
-                            // Generate and upload barcode and QR code if barcode is provided
-                            String? barcodeUrl;
-                            String? qrUrl;
-                            final barcodeText = _barcodeController.text.trim();
-                            
-                            if (barcodeText.isNotEmpty) {
-                              final barcodeCodes = await generateAndUploadBarcodeCodes(barcodeText, docId);
-                              barcodeUrl = barcodeCodes['barcodeUrl'];
-                              qrUrl = barcodeCodes['qrUrl'];
-                            }
-                            
-                            // Validate wholesale and supplier min qty only if both are filled
                             final wholesaleText = _wholesaleMinQtyController.text.trim();
                             final supplierText = _supplierMinQtyController.text.trim();
                             
-                            if (wholesaleText.isNotEmpty && supplierText.isNotEmpty) {
-                              final wMin = int.tryParse(wholesaleText) ?? 0;
-                              final sMin = int.tryParse(supplierText) ?? 0;
-                              
-                              // Skip validation when either is 1
-                              if (wMin != 1 && sMin != 1 && wMin >= sMin) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Wholesale min qty must be less than supplier min qty")),
-                                );
-                                setState(() => _loading = false);
-                                return;
-                              }
-                            }
-
+                            // if (wholesaleText.isNotEmpty && supplierText.isNotEmpty) {
+                            //   final wMin = int.tryParse(wholesaleText) ?? 0;
+                            //   final sMin = int.tryParse(supplierText) ?? 0;
+                            //
+                            //   // Skip validation when either is 1
+                            //   if (wMin != 1 && sMin != 1 && wMin >= sMin) {
+                            //     ScaffoldMessenger.of(context).showSnackBar(
+                            //       const SnackBar(content: Text("Wholesale min qty must be less than supplier min qty")),
+                            //     );
+                            //     setState(() => _loading = false);
+                            //     return;
+                            //   }
+                            // }
                             Map<String, dynamic> modesMap = {
                               "single": {
                                 'name': 'Single',
-                                'sp': _supplierPriceController.text.trim(),
-                                'wp': _wholesalePriceController.text.trim(),
+                                'sp': _retail_price.text.trim(),
+                                'wp': _retail_price.text.trim(),
                                 'rp': _retail_price.text.trim(),
-                                'qty': _boxQtyController.text.trim(),
+                                'qty': '1',
                               }
                             };
-
 
                             if (_enableBoxPricing) {
 
@@ -744,6 +660,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               if (pricingStep >= 1 &&
                                   _halfboxqty_controller.text.isNotEmpty &&
                                   _halfboxprice_controller.text.isNotEmpty) {
+                                modesMap["carton"] = {
+                                    'name': 'carton',
+                                    'sp': _supplierPriceController.text.trim(),
+                                    'wp': _wholesalePriceController.text.trim(),
+                                    'rp': _retail_price.text.trim(),
+                                    'qty': _boxQtyController.text.trim(),
+                                  };
                                 modesMap["half"] = {
                                   'name': 'Half carton',
                                   'sp': _halfboxprice_controller.text.trim(),
@@ -761,7 +684,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'name': 'Quarter carton',
                                   'sp': _quarterprice_controller.text.trim(),
                                   'wp': _quarterprice_controller.text.trim(),
-                                  'rp': _quarterprice_controller.text.trim(),
+                                  'rp': _retail_price.text.trim(),
                                   'qty': _quarterqty_controller.text.trim(),
                                 };
                               }
@@ -774,7 +697,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'name': 'Pack',
                                   'sp': _packprice_controller.text.trim(),
                                   'wp': _packprice_controller.text.trim(),
-                                  'rp': _packprice_controller.text.trim(),
+                                  'rp': _retail_price.text.trim(),
                                   'qty': _packQtyController.text.trim(),
                                 };
                               }
@@ -786,8 +709,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'company': datafeed.company,
                               'name': itemName,
                               'barcode': _barcodeController.text.trim(),
-                              'barcodeUrl': barcodeUrl,
-                              'qrUrl': qrUrl,
                               'cp': _costController.text.trim(),
                               'pcategory': _productCategory,
                               'imageurl': imageUrl,
@@ -802,7 +723,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             };
 
                             if (widget.docId == null) {
-                              data['createdAt'] = FieldValue.serverTimestamp();
+                              data['createdat'] = FieldValue.serverTimestamp();
                             }
 
                             await docRef.set(data, SetOptions(merge: true));
@@ -827,7 +748,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
             ),
           ),
         ),
-        floatingActionButton: _enableBoxPricing
+        floatingActionButton: _enableBoxPricing && double.tryParse(_boxQtyController.text) != 1
             ? Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Row(
@@ -857,14 +778,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                   ],
                 ),
               )
-            : FloatingActionButton(
-                heroTag: 'toggle_pricing',
-                backgroundColor: Colors.green,
-                onPressed: () {
-                  setState(() => _enableBoxPricing = true);
-                },
-                child: const Icon(Icons.add),
-              ),
+            : null,
 
       );
     });
@@ -928,6 +842,26 @@ class _ItemRegPageState extends State<ItemRegPage> {
   TextFormField _buildField(TextEditingController controller, String label, IconData icon,{bool isNumber = false,  Function(String)? onChanged,String? Function(String?)? validator,}) {
     return TextFormField(
       controller: controller,
+      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      style: const TextStyle(color: Colors.white70),
+      validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
+      decoration: _inputDecoration(label, icon),
+      onChanged: onChanged,
+    );
+  }
+
+  TextFormField _buildFieldWithEnabled(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    {bool isNumber = false,
+    bool enabled = true,
+    Function(String)? onChanged,
+    String? Function(String?)? validator,}
+  ) {
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
       keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
       validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
