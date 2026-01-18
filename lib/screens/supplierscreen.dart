@@ -91,8 +91,24 @@ class _SupplierRegistrationState extends State<SupplierRegistration> {
                           controller: _contactController,
                           style: const TextStyle(color: Colors.white70),
                           decoration: _inputDecoration('Contact', Icons.phone),
-                          validator: (v) =>
-                          v == null || v.isEmpty ? 'Required' : null,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Phone number is required';
+                            }
+
+                            final value = v.trim();
+
+                            if (!RegExp(r'^\+?[0-9]+$').hasMatch(value)) {
+                              return 'Enter a valid phone number';
+                            }
+
+                            if (value.replaceAll('+', '').length < 9 ||
+                                value.replaceAll('+', '').length > 15) {
+                              return 'Enter a valid phone number';
+                            }
+
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
                         Wrap(
