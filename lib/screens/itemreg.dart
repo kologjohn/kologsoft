@@ -54,7 +54,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
   String? _productCategory;
 
   bool _loading = false;
-  bool _imageExpanded = false;
   Uint8List? _logoBytes;
   File? _logoFile;
   String? _existingLogoUrl;
@@ -807,15 +806,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         height: 50,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white70,
+                            backgroundColor: Colors.white60,
                           ),
                           onPressed: _loading
                               ? null
                               : () async {
                                   if (!_formKey.currentState!.validate())
                                     return;
+
                                   setState(() => _loading = true);
+
                                   try {
                                     // Get companyid from Datafeed provider
                                     final datafeed = context.read<Datafeed>();
@@ -1131,10 +1132,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
   // ================= IMAGE UI =================
   Widget _imagePickerSection() {
     Widget preview;
-    bool hasImage =
-        _logoBytes != null ||
-        _logoFile != null ||
-        (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty);
 
     if (_logoBytes != null) {
       preview = Image.memory(_logoBytes!, fit: BoxFit.cover);
@@ -1143,165 +1140,40 @@ class _ItemRegPageState extends State<ItemRegPage> {
     } else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty) {
       preview = Image.network(_existingLogoUrl!, fit: BoxFit.cover);
     } else {
-      preview = const Icon(Icons.image, size: 20, color: Colors.white38);
+      preview = const Icon(Icons.image, size: 50, color: Colors.white38);
     }
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Compact header with toggle
-          InkWell(
-            onTap: () {
-              setState(() => _imageExpanded = !_imageExpanded);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF22304A),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                children: [
-                  // Small image preview
-                  Container(
-                    height: 40,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A2438),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: hasImage
-                            ? Colors.green.withOpacity(0.5)
-                            : Colors.white24,
-                        width: hasImage ? 2 : 1,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Center(child: preview),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      hasImage
-                          ? 'Item Image (tap to change)'
-                          : 'Item Image (optional)',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _imageExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white54,
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Item Image (optional)',
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: pickLogo,
+          child: Container(
+            height: 140,
+            width: 140,
+            decoration: BoxDecoration(
+              color: const Color(0xFF22304A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Center(child: preview),
             ),
           ),
-          // Expanded section
-          if (_imageExpanded) ...[
-            const SizedBox(height: 12),
-            Center(
-              child: GestureDetector(
-                onTap: pickLogo,
-                child: Container(
-                  height: 160,
-                  width: 160,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22304A),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Center(
-                      child: hasImage
-                          ? Stack(
-                              children: [
-                                if (_logoBytes != null)
-                                  Image.memory(
-                                    _logoBytes!,
-                                    fit: BoxFit.cover,
-                                    width: 160,
-                                    height: 160,
-                                  )
-                                else if (_logoFile != null)
-                                  Image.file(
-                                    _logoFile!,
-                                    fit: BoxFit.cover,
-                                    width: 160,
-                                    height: 160,
-                                  )
-                                else if (_existingLogoUrl != null &&
-                                    _existingLogoUrl!.isNotEmpty)
-                                  Image.network(
-                                    _existingLogoUrl!,
-                                    fit: BoxFit.cover,
-                                    width: 160,
-                                    height: 160,
-                                  ),
-                                Positioned(
-                                  bottom: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Icon(
-                                      Icons.edit,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Icon(
-                              Icons.add_photo_alternate,
-                              size: 50,
-                              color: Colors.white38,
-                            ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton.icon(
-                onPressed: pickLogo,
-                icon: const Icon(Icons.upload, size: 18),
-                label: Text(hasImage ? 'Change Image' : 'Select Image'),
-                style: TextButton.styleFrom(foregroundColor: Colors.blue),
-              ),
-            ),
-            if (hasImage)
-              Center(
-                child: TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _logoBytes = null;
-                      _logoFile = null;
-                      _existingLogoUrl = null;
-                    });
-                  },
-                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                  label: const Text('Remove Image'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                ),
-              ),
-          ],
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        TextButton.icon(
+          onPressed: pickLogo,
+          icon: const Icon(Icons.upload),
+          label: const Text('Select Image'),
+        ),
+      ],
     );
   }
 
@@ -1408,47 +1280,9 @@ class BarcodeScannerScreen extends StatefulWidget {
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    // Check platform support
-    if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pop(context);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Barcode scanning is not supported on web platform',
-              ),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: const Text('Scanner Not Available'),
-          backgroundColor: Colors.black,
-        ),
-        body: const Center(
-          child: Text(
-            'Camera scanning is not available on web',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -1491,33 +1325,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                 setState(() => _isProcessing = true);
                 Navigator.pop(context, code);
               }
-            },
-            errorBuilder: (context, error, child) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error, color: Colors.red, size: 64),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Camera Error: ${error.errorCode}',
-                      style: const TextStyle(color: Colors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Please check camera permissions',
-                      style: TextStyle(color: Colors.white70),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Go Back'),
-                    ),
-                  ],
-                ),
-              );
             },
           ),
           // Overlay with scanning guide
