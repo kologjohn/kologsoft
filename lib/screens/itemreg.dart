@@ -146,7 +146,31 @@ class _ItemRegPageState extends State<ItemRegPage> {
                     const SizedBox(height: 10),
                     _buildField(_nameController, 'Item Name', Icons.label),
                     const SizedBox(height: 10),
-                    _buildField(_barcodeController, 'Barcode', Icons.qr_code),
+                    _buildField(
+                      _barcodeController,
+                      'Barcode',
+                      Icons.qr_code,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Barcode is required';
+                        
+                        // Check if barcode contains only valid characters (alphanumeric and hyphens)
+                        if (!RegExp(r'^[a-zA-Z0-9\-]+$').hasMatch(v)) {
+                          return 'Barcode can only contain letters, numbers, and hyphens';
+                        }
+                        
+                        // Check minimum length (typical barcodes are at least 8 characters)
+                        if (v.length < 8) {
+                          return 'Barcode must be at least 8 characters long';
+                        }
+                        
+                        // Check maximum length (typical barcodes are max 128 characters)
+                        if (v.length > 128) {
+                          return 'Barcode cannot exceed 128 characters';
+                        }
+                        
+                        return null;
+                      },
+                    ),
 
                     SizedBox(height: 10,),
                     _buildField(_retail_price, 'Retail Price', Icons.attach_money, isNumber: true,
