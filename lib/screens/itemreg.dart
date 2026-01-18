@@ -54,6 +54,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
   String? _productCategory;
 
   bool _loading = false;
+  bool _imageExpanded = false;
   Uint8List? _logoBytes;
   File? _logoFile;
   String? _existingLogoUrl;
@@ -1131,48 +1132,136 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
   // ================= IMAGE UI =================
   Widget _imagePickerSection() {
-    Widget preview;
-
-    if (_logoBytes != null) {
-      preview = Image.memory(_logoBytes!, fit: BoxFit.cover);
-    } else if (_logoFile != null) {
-      preview = Image.file(_logoFile!, fit: BoxFit.cover);
-    } else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty) {
-      preview = Image.network(_existingLogoUrl!, fit: BoxFit.cover);
-    } else {
-      preview = const Icon(Icons.image, size: 50, color: Colors.white38);
-    }
+    bool hasImage =
+        _logoBytes != null ||
+        _logoFile != null ||
+        (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Item Image (optional)',
-          style: TextStyle(color: Colors.white70),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: pickLogo,
+        // Compact toggle button
+        InkWell(
+          onTap: () {
+            setState(() => _imageExpanded = !_imageExpanded);
+          },
           child: Container(
-            height: 140,
-            width: 140,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: const Color(0xFF22304A),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.white24),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Center(child: preview),
+            child: Row(
+              children: [
+                Icon(
+                  hasImage ? Icons.image : Icons.add_photo_alternate,
+                  color: hasImage ? Colors.green : Colors.white54,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    hasImage
+                        ? 'Item Image (tap to change)'
+                        : 'Item Image (optional - tap to add)',
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ),
+                Icon(
+                  _imageExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white54,
+                  size: 20,
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 6),
-        TextButton.icon(
-          onPressed: pickLogo,
-          icon: const Icon(Icons.upload),
-          label: const Text('Select Image'),
-        ),
+        // Expanded content
+        if (_imageExpanded) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: GestureDetector(
+              onTap: pickLogo,
+              child: Container(
+                height: 140,
+                width: 140,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF22304A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasImage ? Colors.green : Colors.white24,
+                    width: hasImage ? 2 : 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Center(
+                    child: hasImage
+                        ? Stack(
+                            children: [
+                              if (_logoBytes != null)
+                                Image.memory(
+                                  _logoBytes!,
+                                  fit: BoxFit.cover,
+                                  width: 140,
+                                  height: 140,
+                                )
+                              else if (_logoFile != null)
+                                Image.file(
+                                  _logoFile!,
+                                  fit: BoxFit.cover,
+                                  width: 140,
+                                  height: 140,
+                                )
+                              else if (_existingLogoUrl != null &&
+                                  _existingLogoUrl!.isNotEmpty)
+                                Image.network(
+                                  _existingLogoUrl!,
+                                  fit: BoxFit.cover,
+                                  width: 140,
+                                  height: 140,
+                                ),
+                            ],
+                          )
+                        : const Icon(
+                            Icons.add_photo_alternate,
+                            size: 50,
+                            color: Colors.white38,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: pickLogo,
+                icon: Icon(hasImage ? Icons.edit : Icons.upload, size: 18),
+                label: Text(hasImage ? 'Change' : 'Select Image'),
+                style: TextButton.styleFrom(foregroundColor: Colors.blue),
+              ),
+              if (hasImage) ...[
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _logoBytes = null;
+                      _logoFile = null;
+                      _existingLogoUrl = null;
+                    });
+                  },
+                  icon: const Icon(Icons.delete, size: 18),
+                  label: const Text('Remove'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ],
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1345,6 +1434,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             right: 0,
             child: Container(
               padding: const EdgeInsets.all(16),
+              // Only one child property is allowed
               child: const Text(
                 'Position the barcode or QR code within the frame',
                 textAlign: TextAlign.center,
