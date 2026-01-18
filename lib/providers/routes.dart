@@ -14,6 +14,7 @@ import '../screens/customer_registration.dart';
 import '../screens/home_dashboard.dart';
 import '../screens/itemlist.dart';
 import '../screens/itemreg.dart';
+import '../screens/staff.dart';
 import '../screens/stocking_mode.dart';
 import '../screens/supplierlist.dart';
 import '../screens/supplierscreen.dart';
@@ -41,6 +42,7 @@ class Routes {
   static const String paymentdurationreg = '/paymentdurationreg';
   static const String paymentdurationview = '/paymentdurationview';
   static const String newstock = '/newstock';
+  static const String staffreg = '/staffreg';
 }
 final pages = {
   Routes.home: (context) => const HomeDashboard(),
@@ -62,4 +64,5 @@ final pages = {
   Routes.paymentdurationreg: (context) =>  PaymentDurationReg(),
   Routes.paymentdurationview: (context) =>  PaymentDurationView(),
   Routes.newstock: (context) =>  NewStock(),
+  Routes.staffreg: (context) =>  Staff(),
 };

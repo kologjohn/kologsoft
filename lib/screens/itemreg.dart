@@ -6,10 +6,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' hide Uint8List;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/src/objects/barcode.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:mobile_scanner/mobile_scanner.dart' hide Barcode;
 
 import '../providers/Datafeed.dart';
 
@@ -44,7 +46,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _quarterprice_controller = TextEditingController();
   final _packprice_controller = TextEditingController();
 
-
   final _wholesaleMinQtyController = TextEditingController();
   final _supplierMinQtyController = TextEditingController();
   Map<String, TextEditingController> stockingControllers = {};
@@ -53,6 +54,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
   String? _productCategory;
 
   bool _loading = false;
+  bool _imageExpanded = false;
   Uint8List? _logoBytes;
   File? _logoFile;
   String? _existingLogoUrl;
@@ -75,9 +77,47 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _costController.text = d['costprice'] ?? '';
       _productType = d['producttype'];
       _productCategory = d['productcategory'];
-
     }
   }
+
+  void _clearAllFields() {
+    setState(() {
+      // Clear text controllers
+      _nameController.clear();
+      _barcodeController.clear();
+      _costController.clear();
+      _boxQtyController.clear();
+      _halfboxqty_controller.clear();
+      _quarterqty_controller.clear();
+      _retail_price.clear();
+      _packQtyController.clear();
+      _supplierPriceController.clear();
+      _wholesalePriceController.clear();
+      _halfboxprice_controller.clear();
+      _quarterprice_controller.clear();
+      _packprice_controller.clear();
+      _wholesaleMinQtyController.clear();
+      _supplierMinQtyController.clear();
+
+      // Reset dropdown values
+      _productType = null;
+      _productCategory = null;
+
+      // Reset pricing options
+      pricingStep = 0;
+      _enableBoxPricing = false;
+      _showBoxPricingSwitch = false;
+
+      // Clear image
+      _logoBytes = null;
+      _logoFile = null;
+      _existingLogoUrl = null;
+
+      // Reset form validation
+      _formKey.currentState?.reset();
+    });
+  }
+
   Future<void> pickLogo() async {
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -125,692 +165,976 @@ class _ItemRegPageState extends State<ItemRegPage> {
     return snap.ref.getDownloadURL();
   }
 
+  Future<void> _scanBarcode() async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+      );
+
+      if (result != null && result is String) {
+        setState(() {
+          _barcodeController.text = result;
+        });
+        _formKey.currentState?.validate();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening scanner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<Datafeed>(builder: (context, datafeed, child) {
-      final companyType = datafeed.companytype;
+    return Consumer<Datafeed>(
+      builder: (context, datafeed, child) {
+        final companyType = datafeed.companytype;
 
-      return Scaffold(
-        backgroundColor: const Color(0xFF101624),
-        appBar: AppBar(title: Text(widget.docId == null ? 'Register Item' : 'Edit Item')),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _imagePickerSection(),
-                    const SizedBox(height: 10),
-                    _buildField(_nameController, 'Item Name', Icons.label),
-                    const SizedBox(height: 10),
-                    _buildField(
-                      _barcodeController,
-                      'Barcode',
-                      Icons.qr_code,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Barcode is required';
-                        
-                        // Check if barcode contains only valid characters (alphanumeric and hyphens)
-                        if (!RegExp(r'^[a-zA-Z0-9\-]+$').hasMatch(v)) {
-                          return 'Barcode can only contain letters, numbers, and hyphens';
-                        }
-                        
-                        // Check minimum length (typical barcodes are at least 8 characters)
-                        if (v.length < 8) {
-                          return 'Barcode must be at least 8 characters long';
-                        }
-                        
-                        // Check maximum length (typical barcodes are max 128 characters)
-                        if (v.length > 128) {
-                          return 'Barcode cannot exceed 128 characters';
-                        }
-                        
-                        return null;
-                      },
-                    ),
+        return Scaffold(
+          backgroundColor: const Color(0xFF101624),
+          appBar: AppBar(
+            title: Text(widget.docId == null ? 'Register Item' : 'Edit Item'),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      _imagePickerSection(),
+                      const SizedBox(height: 10),
+                      _buildField(_nameController, 'Item Name', Icons.label),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              _barcodeController,
+                              'Barcode',
+                              Icons.qr_code,
+                              validator: (v) {
+                                if (v == null || v.isEmpty)
+                                  return 'Barcode is required';
 
-                    SizedBox(height: 10,),
-                    _buildField(_retail_price, 'Retail Price', Icons.attach_money, isNumber: true,
-                      onChanged: (value) {
-                        // When box qty is 1, sync all prices to retail price
-                        final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-                        if (_enableBoxPricing && boxQty == 1) {
-                          setState(() {
-                            _wholesalePriceController.text = value;
-                            _supplierPriceController.text = value;
-                          });
-                        }
-                        _formKey.currentState?.validate();
-                      },
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        
-                        final retailPrice = double.tryParse(v) ?? 0;
-                        final costPrice = double.tryParse(_costController.text) ?? 0;
-                        
-                        if (costPrice > 0 && retailPrice <= costPrice) {
-                          return 'Retail price must be greater than Unit Cost Price';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 10,),
+                                // Check if barcode contains only valid characters (alphanumeric and hyphens)
+                                if (!RegExp(r'^[a-zA-Z0-9\-]+$').hasMatch(v)) {
+                                  return 'Barcode can only contain letters, numbers, and hyphens';
+                                }
 
-                    _buildField(_costController, 'Unit Cost Price', Icons.attach_money, isNumber: true,
-                      onChanged: (_) {
-                        _formKey.currentState?.validate();
-                      },
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        
-                        final costPrice = double.tryParse(v) ?? 0;
-                        final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-                        
-                        if (retailPrice > 0 && costPrice >= retailPrice) {
-                          return 'Unit Cost Price must be less than Retail Price';
-                        }
-                        return null;
-                      },
-                    ),
+                                // Check minimum length (typical barcodes are at least 8 characters)
+                                if (v.length < 8) {
+                                  return 'Barcode must be at least 8 characters long';
+                                }
 
-                    SizedBox(height: 10,),
-                    const SizedBox(height: 10),
-                    _buildField(_boxQtyController, 'Box quantity', Icons.attach_money, isNumber: true,
-                      onChanged: (value) {
-                        final qty = double.tryParse(value) ?? 0;
-                        if (qty > 1) {
-                          setState(() {
-                            _showBoxPricingSwitch = true;
-                            _enableBoxPricing = true;
+                                // Check maximum length (typical barcodes are max 128 characters)
+                                if (v.length > 128) {
+                                  return 'Barcode cannot exceed 128 characters';
+                                }
 
-                            // auto calculate quantities
-                            _halfboxqty_controller.text = (qty / 2).ceil().toString();
-                            _quarterqty_controller.text = (qty / 4).ceil().toString();
-                          });
-                        } else if (qty == 1) {
-                          // When box qty is 1, sync all prices
-                          setState(() {
-                            _showBoxPricingSwitch = true;
-                            _enableBoxPricing = true;
-                            
-                            // Sync prices: retail = wholesale = supplier
-                            final retailPrice = _retail_price.text;
-                            _wholesalePriceController.text = retailPrice;
-                            _supplierPriceController.text = retailPrice;
-                          });
-                        } else {
-                          setState(() {
-                            _showBoxPricingSwitch = false;
-                            _enableBoxPricing = false;
-                            pricingStep = 0;
-                          });
-                        }
-                      },
-                    ),
-                    SizedBox(height: 10,),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFieldWithEnabled(
-                            onChanged: (val) {
-                              final price = double.tryParse(val) ?? 0;
-
-                              _halfboxprice_controller.text = (price / 2).toStringAsFixed(2);
-                              _quarterprice_controller.text = (price / 4).toStringAsFixed(2);
-                              _formKey.currentState?.validate();
-                            },
-                            _wholesalePriceController,
-                            'Box Price',
-                            Icons.attach_money,
-                            isNumber: true,
-                            enabled: double.tryParse(_boxQtyController.text) != 1,
-                            validator: (v) {
-                              final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-                              if (boxQty == 1) return null; // Skip validation when box qty is 1
-                              
-                              if (v == null || v.isEmpty) return 'Required';
-                              
-                              final boxPrice = double.tryParse(v) ?? 0;
-                              final boxQtyVal = double.tryParse(_boxQtyController.text) ?? 1;
-                              final pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
-                              final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-                              final costPrice = double.tryParse(_costController.text) ?? 0;
-                              
-                              if (pricePerUnit < retailPrice) {
-                                return 'Box Price / Qty cannot be less than Retail Price';
-                              }
-                              
-                              if (pricePerUnit < costPrice) {
-                                return 'Box Price / Qty cannot be less than Unit Cost Price';
-                              }
-                              
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildFieldWithEnabled(
-                            _supplierPriceController,
-                            'Supplier Price',
-                            Icons.attach_money,
-                            isNumber: true,
-                            enabled: double.tryParse(_boxQtyController.text) != 1,
-                            validator: (v) {
-                              final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-                              if (boxQty == 1) return null; // Skip validation when box qty is 1
-                              
-                              if (v == null || v.isEmpty) return 'Required';
-                              
-                              final supplierPrice = double.tryParse(v) ?? 0;
-                              final costPrice = double.tryParse(_costController.text) ?? 0;
-                              final minSupplierPrice = costPrice * boxQty;
-                              
-                              if (supplierPrice <= minSupplierPrice) {
-                                return 'Supplier Price must be more than Unit Cost × Box Qty';
-                              }
-                              
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Row(
-                      children: [
-                        // Expanded(
-                        //   child: _buildField(
-                        //     _wholesaleMinQtyController,
-                        //     'Wholesale Min Qty',
-                        //     onChanged: (value) {
-                        //       _formKey.currentState?.validate();
-                        //     },
-                        //     validator: (v) {
-                        //       // If wholesale is empty, always pass
-                        //       if (v == null || v.isEmpty) return null;
-                        //
-                        //       final wholesaleQty = int.tryParse(v) ?? 0;
-                        //       final supplierText = _supplierMinQtyController.text.trim();
-                        //
-                        //       // If supplier is empty, always pass
-                        //       if (supplierText.isEmpty) return null;
-                        //
-                        //       final supplierQty = int.tryParse(supplierText) ?? 0;
-                        //
-                        //       // Skip validation when either is 1
-                        //       if (wholesaleQty == 1 || supplierQty == 1) return null;
-                        //
-                        //       if (wholesaleQty > supplierQty) {
-                        //         return 'Cannot exceed Supplier Min Qty';
-                        //       }
-                        //
-                        //       return null;
-                        //     },
-                        //     Icons.numbers,
-                        //     isNumber: true,
-                        //   ),
-                        // ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildField(
-                            _supplierMinQtyController,
-                            'Supplier Min Qty',
-                            Icons.numbers,
-                            isNumber: true,
-                            onChanged: (value) {
-                              _formKey.currentState?.validate();
-                            },
-                            validator: (v) {
-                              // If supplier is empty, always pass
-                              if (v == null || v.isEmpty) return null;
-
-                              final supplierQty = int.tryParse(v) ?? 0;
-                              final wholesaleText = _wholesaleMinQtyController.text.trim();
-                              
-                              // If wholesale is empty, always pass
-                              if (wholesaleText.isEmpty) return null;
-                              
-                              final wholesaleQty = int.tryParse(wholesaleText) ?? 0;
-
-                              // Skip validation when either is 1
-                              if (supplierQty == 1 || wholesaleQty == 1) return null;
-
-                              if (supplierQty <= wholesaleQty) {
-                                return 'Must be greater than Wholesale Min Qty';
-                              }
-
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    // if (_showBoxPricingSwitch)
-                    //   Switch(
-                    //     value: _enableBoxPricing,
-                    //     activeColor: Colors.green,
-                    //     onChanged: (v) {
-                    //       setState(() => _enableBoxPricing = v);
-                    //     },
-                    //   ),
-
-                    if (_enableBoxPricing) ...[
-                      const SizedBox(height: 15),
-
-                      /// HALF ROW
-                      if (pricingStep >= 1)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildField(
-                                _halfboxqty_controller,
-                                'Half Box Qty',
-                                Icons.inventory,
-                                isNumber: true,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Required';
-                                  
-                                  final halfQty = int.tryParse(v) ?? 0;
-                                  final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                  
-                                  if (boxQty > 0 && halfQty > boxQty) {
-                                    return 'Half Qty cannot exceed Box Qty';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildField(
-                                _halfboxprice_controller,
-                                'Half Box Price',
-                                Icons.attach_money,
-                                isNumber: true,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  pricingStep = 0;
-                                  _halfboxqty_controller.clear();
-                                  _halfboxprice_controller.clear();
-                                  _quarterqty_controller.clear();
-                                  _quarterprice_controller.clear();
-                                  _packQtyController.clear();
-                                  _packprice_controller.clear();
-                                });
+                                return null;
                               },
                             ),
-                          ],
-                        ),
-
-                      if (pricingStep >= 1) const SizedBox(height: 15),
-
-                      /// QUARTER ROW
-                      if (pricingStep >= 2)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildField(
-                                _quarterqty_controller,
-                                'Quarter Qty',
-                                Icons.inventory,
-                                isNumber: true,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Required';
-                                  
-                                  final quarterQty = int.tryParse(v) ?? 0;
-                                  final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                  final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
-                                  final packQty = int.tryParse(_packQtyController.text) ?? 0;
-                                  
-                                  if (boxQty > 0 && quarterQty > boxQty) {
-                                    return 'Quarter Qty cannot exceed Box Qty';
-                                  }
-                                  
-                                  if (halfQty > 0 && quarterQty >= halfQty) {
-                                    return 'Quarter Qty must be less than Half Qty';
-                                  }
-                                  
-                                  if (packQty > 0 && quarterQty <= packQty) {
-                                    return 'Quarter Qty must be greater than Pack Qty';
-                                  }
-                                  
-                                  return null;
-                                },
-                              ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22304A),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white24),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildField(
-                                _quarterprice_controller,
-                                'Quarter Price',
-                                Icons.attach_money,
-                                isNumber: true,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_scanner,
+                                color: Colors.white70,
                               ),
+                              onPressed: _scanBarcode,
+                              tooltip: 'Scan Barcode/QR Code',
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  pricingStep = 1;
-                                  _quarterqty_controller.clear();
-                                  _quarterprice_controller.clear();
-                                  _packQtyController.clear();
-                                  _packprice_controller.clear();
-                                });
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 10),
+                      _buildField(
+                        _retail_price,
+                        'Retail Price',
+                        Icons.attach_money,
+                        isNumber: true,
+                        onChanged: (value) {
+                          // When box qty is 1, sync all prices to retail price
+                          final boxQty =
+                              double.tryParse(_boxQtyController.text) ?? 0;
+                          if (_enableBoxPricing && boxQty == 1) {
+                            setState(() {
+                              _wholesalePriceController.text = value;
+                              _supplierPriceController.text = value;
+                            });
+                          }
+                          _formKey.currentState?.validate();
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Required';
+
+                          final retailPrice = double.tryParse(v) ?? 0;
+                          final costPrice =
+                              double.tryParse(_costController.text) ?? 0;
+
+                          if (costPrice > 0 && retailPrice <= costPrice) {
+                            return 'Retail price must be greater than Unit Cost Price';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+
+                      _buildField(
+                        _costController,
+                        'Unit Cost Price',
+                        Icons.attach_money,
+                        isNumber: true,
+                        onChanged: (_) {
+                          _formKey.currentState?.validate();
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Required';
+
+                          final costPrice = double.tryParse(v) ?? 0;
+                          final retailPrice =
+                              double.tryParse(_retail_price.text) ?? 0;
+
+                          if (retailPrice > 0 && costPrice >= retailPrice) {
+                            return 'Unit Cost Price must be less than Retail Price';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                      _buildField(
+                        _boxQtyController,
+                        'Box quantity',
+                        Icons.attach_money,
+                        isNumber: true,
+                        onChanged: (value) {
+                          final qty = double.tryParse(value) ?? 0;
+                          if (qty > 1) {
+                            setState(() {
+                              _showBoxPricingSwitch = true;
+                              _enableBoxPricing = true;
+
+                              // auto calculate quantities
+                              _halfboxqty_controller.text = (qty / 2)
+                                  .ceil()
+                                  .toString();
+                              _quarterqty_controller.text = (qty / 4)
+                                  .ceil()
+                                  .toString();
+                            });
+                          } else if (qty == 1) {
+                            // When box qty is 1, sync all prices
+                            setState(() {
+                              _showBoxPricingSwitch = true;
+                              _enableBoxPricing = true;
+
+                              // Sync prices: retail = wholesale = supplier
+                              final retailPrice = _retail_price.text;
+                              _wholesalePriceController.text = retailPrice;
+                              _supplierPriceController.text = retailPrice;
+                            });
+                          } else {
+                            setState(() {
+                              _showBoxPricingSwitch = false;
+                              _enableBoxPricing = false;
+                              pricingStep = 0;
+                            });
+                          }
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildFieldWithEnabled(
+                              onChanged: (val) {
+                                final price = double.tryParse(val) ?? 0;
+
+                                _halfboxprice_controller.text = (price / 2)
+                                    .toStringAsFixed(2);
+                                _quarterprice_controller.text = (price / 4)
+                                    .toStringAsFixed(2);
+                                _formKey.currentState?.validate();
+                              },
+                              _wholesalePriceController,
+                              'Box Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                              enabled:
+                                  double.tryParse(_boxQtyController.text) != 1,
+                              validator: (v) {
+                                final boxQty =
+                                    double.tryParse(_boxQtyController.text) ??
+                                    0;
+                                if (boxQty == 1)
+                                  return null; // Skip validation when box qty is 1
+                                if (v == null || v.isEmpty) return 'Required';
+                                final boxPrice = double.tryParse(v) ?? 0;
+                                final boxQtyVal =
+                                    double.tryParse(_boxQtyController.text) ??
+                                    1;
+                                final pricePerUnit = boxQtyVal > 0
+                                    ? boxPrice / boxQtyVal
+                                    : 0;
+                                final retailPrice =
+                                    double.tryParse(_retail_price.text) ?? 0;
+                                final costPrice =
+                                    double.tryParse(_costController.text) ?? 0;
+
+                                if (pricePerUnit > retailPrice) {
+                                  print(pricePerUnit);
+                                  print(retailPrice);
+                                  return 'Box Price / Qty cannot be less than Retail Price';
+                                }
+
+                                if (pricePerUnit < costPrice) {
+                                  return 'Box Price / Qty cannot be less than Unit Cost Price';
+                                }
+
+                                return null;
                               },
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildFieldWithEnabled(
+                              _supplierPriceController,
+                              'Supplier Price',
+                              Icons.attach_money,
+                              isNumber: true,
+                              enabled:
+                                  double.tryParse(_boxQtyController.text) != 1,
+                              validator: (v) {
+                                final boxQty =
+                                    double.tryParse(_boxQtyController.text) ??
+                                    0;
+                                if (boxQty == 1)
+                                  return null; // Skip validation when box qty is 1
 
-                      if (pricingStep >= 2) const SizedBox(height: 15),
+                                if (v == null || v.isEmpty) return 'Required';
 
-                      /// PACK ROW
-                      if (pricingStep >= 3)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildField(
-                                _packQtyController,
-                                'Pack Qty',
-                                Icons.inventory,
-                                isNumber: true,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Required';
-                                  
-                                  if (!_enableBoxPricing) return null;
-                                  
-                                  final packQty = int.tryParse(v) ?? 0;
-                                  final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                  final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
-                                  final quarterQty = int.tryParse(_quarterqty_controller.text) ?? 0;
-                                  
-                                  // Box Qty must be divisible by Pack Qty
-                                  if (boxQty > 0 && packQty > 0 && boxQty % packQty != 0) {
-                                    return 'Box Qty must be divisible by Pack Qty';
-                                  }
-                                  
-                                  if (boxQty > 0 && packQty > boxQty) {
-                                    return 'Pack Qty cannot exceed Box Qty';
-                                  }
-                                  
-                                  if (halfQty > 0 && packQty >= halfQty) {
-                                    return 'Pack Qty must be less than Half Qty';
-                                  }
-                                  
-                                  if (quarterQty > 0 && packQty >= quarterQty) {
-                                    return 'Pack Qty must be less than Quarter Qty';
-                                  }
-                                  
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildField(
-                                _packprice_controller,
-                                'Pack Price',
-                                Icons.attach_money,
-                                isNumber: true,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  pricingStep = 2;
-                                  _packQtyController.clear();
-                                  _packprice_controller.clear();
-                                });
+                                final supplierPrice = double.tryParse(v) ?? 0;
+                                final costPrice =
+                                    double.tryParse(_costController.text) ?? 0;
+                                final minSupplierPrice = costPrice * boxQty;
+
+                                if (supplierPrice <= minSupplierPrice) {
+                                  return 'Supplier Price must be more than Unit Cost × Box Qty';
+                                }
+
+                                return null;
                               },
                             ),
-                          ],
-                        ),
-                    ],
+                          ),
+                        ],
+                      ),
 
-                   const SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
-                    DropdownButtonFormField<String>(
-                      value: _productType,
-                      decoration: _buildDropdownDecoration('Product Type'),
-                      items: const [
-                        DropdownMenuItem(value: 'product', child: Text('Product')),
-                        DropdownMenuItem(value: 'service', child: Text('Service')),
+                      Row(
+                        children: [
+                          // Expanded(
+                          //   child: _buildField(
+                          //     _wholesaleMinQtyController,
+                          //     'Wholesale Min Qty',
+                          //     onChanged: (value) {
+                          //       _formKey.currentState?.validate();
+                          //     },
+                          //     validator: (v) {
+                          //       // If wholesale is empty, always pass
+                          //       if (v == null || v.isEmpty) return null;
+                          //
+                          //       final wholesaleQty = int.tryParse(v) ?? 0;
+                          //       final supplierText = _supplierMinQtyController.text.trim();
+                          //
+                          //       // If supplier is empty, always pass
+                          //       if (supplierText.isEmpty) return null;
+                          //
+                          //       final supplierQty = int.tryParse(supplierText) ?? 0;
+                          //
+                          //       // Skip validation when either is 1
+                          //       if (wholesaleQty == 1 || supplierQty == 1) return null;
+                          //
+                          //       if (wholesaleQty > supplierQty) {
+                          //         return 'Cannot exceed Supplier Min Qty';
+                          //       }
+                          //
+                          //       return null;
+                          //     },
+                          //     Icons.numbers,
+                          //     isNumber: true,
+                          //   ),
+                          // ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildField(
+                              _supplierMinQtyController,
+                              'Supplier Min Qty',
+                              Icons.numbers,
+                              isNumber: true,
+                              onChanged: (value) {
+                                _formKey.currentState?.validate();
+                              },
+                              validator: (v) {
+                                // If supplier is empty, always pass
+                                if (v == null || v.isEmpty) return null;
+
+                                final supplierQty = int.tryParse(v) ?? 0;
+                                final wholesaleText = _wholesaleMinQtyController
+                                    .text
+                                    .trim();
+
+                                // If wholesale is empty, always pass
+                                if (wholesaleText.isEmpty) return null;
+
+                                final wholesaleQty =
+                                    int.tryParse(wholesaleText) ?? 0;
+
+                                // Skip validation when either is 1
+                                if (supplierQty == 1 || wholesaleQty == 1)
+                                  return null;
+
+                                if (supplierQty <= wholesaleQty) {
+                                  return 'Must be greater than Wholesale Min Qty';
+                                }
+
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // if (_showBoxPricingSwitch)
+                      //   Switch(
+                      //     value: _enableBoxPricing,
+                      //     activeColor: Colors.green,
+                      //     onChanged: (v) {
+                      //       setState(() => _enableBoxPricing = v);
+                      //     },
+                      //   ),
+                      if (_enableBoxPricing) ...[
+                        const SizedBox(height: 15),
+
+                        /// HALF ROW
+                        if (pricingStep >= 1)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildField(
+                                  _halfboxqty_controller,
+                                  'Half Box Qty',
+                                  Icons.inventory,
+                                  isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
+
+                                    final halfQty = int.tryParse(v) ?? 0;
+                                    final boxQty =
+                                        int.tryParse(_boxQtyController.text) ??
+                                        0;
+
+                                    if (boxQty > 0 && halfQty > boxQty) {
+                                      return 'Half Qty cannot exceed Box Qty';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildField(
+                                  _halfboxprice_controller,
+                                  'Half Box Price',
+                                  Icons.attach_money,
+                                  isNumber: true,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    pricingStep = 0;
+                                    _halfboxqty_controller.clear();
+                                    _halfboxprice_controller.clear();
+                                    _quarterqty_controller.clear();
+                                    _quarterprice_controller.clear();
+                                    _packQtyController.clear();
+                                    _packprice_controller.clear();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+
+                        if (pricingStep >= 1) const SizedBox(height: 15),
+
+                        /// QUARTER ROW
+                        if (pricingStep >= 2)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildField(
+                                  _quarterqty_controller,
+                                  'Quarter Qty',
+                                  Icons.inventory,
+                                  isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
+
+                                    final quarterQty = int.tryParse(v) ?? 0;
+                                    final boxQty =
+                                        int.tryParse(_boxQtyController.text) ??
+                                        0;
+                                    final halfQty =
+                                        int.tryParse(
+                                          _halfboxqty_controller.text,
+                                        ) ??
+                                        0;
+                                    final packQty =
+                                        int.tryParse(_packQtyController.text) ??
+                                        0;
+
+                                    if (boxQty > 0 && quarterQty > boxQty) {
+                                      return 'Quarter Qty cannot exceed Box Qty';
+                                    }
+
+                                    if (halfQty > 0 && quarterQty >= halfQty) {
+                                      return 'Quarter Qty must be less than Half Qty';
+                                    }
+
+                                    if (packQty > 0 && quarterQty <= packQty) {
+                                      return 'Quarter Qty must be greater than Pack Qty';
+                                    }
+
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildField(
+                                  _quarterprice_controller,
+                                  'Quarter Price',
+                                  Icons.attach_money,
+                                  isNumber: true,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    pricingStep = 1;
+                                    _quarterqty_controller.clear();
+                                    _quarterprice_controller.clear();
+                                    _packQtyController.clear();
+                                    _packprice_controller.clear();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+
+                        if (pricingStep >= 2) const SizedBox(height: 15),
+
+                        /// PACK ROW
+                        if (pricingStep >= 3)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildField(
+                                  _packQtyController,
+                                  'Pack Qty',
+                                  Icons.inventory,
+                                  isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
+
+                                    if (!_enableBoxPricing) return null;
+
+                                    final packQty = int.tryParse(v) ?? 0;
+                                    final boxQty =
+                                        int.tryParse(_boxQtyController.text) ??
+                                        0;
+                                    final halfQty =
+                                        int.tryParse(
+                                          _halfboxqty_controller.text,
+                                        ) ??
+                                        0;
+                                    final quarterQty =
+                                        int.tryParse(
+                                          _quarterqty_controller.text,
+                                        ) ??
+                                        0;
+
+                                    // Box Qty must be divisible by Pack Qty
+                                    if (boxQty > 0 &&
+                                        packQty > 0 &&
+                                        boxQty % packQty != 0) {
+                                      return 'Box Qty must be divisible by Pack Qty';
+                                    }
+
+                                    if (boxQty > 0 && packQty > boxQty) {
+                                      return 'Pack Qty cannot exceed Box Qty';
+                                    }
+
+                                    if (halfQty > 0 && packQty >= halfQty) {
+                                      return 'Pack Qty must be less than Half Qty';
+                                    }
+
+                                    if (quarterQty > 0 &&
+                                        packQty >= quarterQty) {
+                                      return 'Pack Qty must be less than Quarter Qty';
+                                    }
+
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildField(
+                                  _packprice_controller,
+                                  'Pack Price',
+                                  Icons.attach_money,
+                                  isNumber: true,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    pricingStep = 2;
+                                    _packQtyController.clear();
+                                    _packprice_controller.clear();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
                       ],
-                      onChanged: (v) => setState(() => _productType = v),
-                      validator: (v) => v == null ? 'Select product type' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Consumer<Datafeed>(
-                      builder: (context, datafeed, _) {
 
-                        if (datafeed.loadingproductcategory) {
-                          return const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: CircularProgressIndicator(),
-                          );
-                        }
+                      const SizedBox(height: 10),
 
-                        if (datafeed.productcategory.isEmpty) {
-                          return const Text(
-                            "No product categories found",
-                            style: TextStyle(color: Colors.white54),
-                          );
-                        }
-
-                        return DropdownButtonFormField<String>(
-                          value: _productCategory,
-                          decoration: _buildDropdownDecoration('Product category'),
-                          items: datafeed.productcategory
-                              .map(
-                                (w) => DropdownMenuItem<String>(
-                              value: w.productname,
-                              child: Text(w.productname),
-                            ),
-                          )
-                              .toList(),
-                          onChanged: (v) => setState(() => _productCategory = v),
-                          validator: (v) => v == null ? 'Select product category' : null,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white70,
-                          backgroundColor: Colors.white60,
-                        ),
-                        onPressed: _loading ? null : () async {
-                          if (!_formKey.currentState!.validate()) return;
-
-                          setState(() => _loading = true);
-
-                          try {
-                            // Get companyid from Datafeed provider
-                            final datafeed = context.read<Datafeed>();
-                            final companyId = datafeed.companyid;
-                            final itemName = _nameController.text.trim();
-
-                            String sanitize(String input) {
-                              return input.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'[^a-z0-9_]'), '');
-                            }
-                            final docId = '${sanitize(companyId)}_${sanitize(itemName)}';
-                            final docRef = _db.collection('itemsreg').doc(docId);
-
-                            final imageUrl = await uploadLogo(docId);
-
-                            final wholesaleText = _wholesaleMinQtyController.text.trim();
-                            final supplierText = _supplierMinQtyController.text.trim();
-                            
-                            // if (wholesaleText.isNotEmpty && supplierText.isNotEmpty) {
-                            //   final wMin = int.tryParse(wholesaleText) ?? 0;
-                            //   final sMin = int.tryParse(supplierText) ?? 0;
-                            //
-                            //   // Skip validation when either is 1
-                            //   if (wMin != 1 && sMin != 1 && wMin >= sMin) {
-                            //     ScaffoldMessenger.of(context).showSnackBar(
-                            //       const SnackBar(content: Text("Wholesale min qty must be less than supplier min qty")),
-                            //     );
-                            //     setState(() => _loading = false);
-                            //     return;
-                            //   }
-                            // }
-                            Map<String, dynamic> modesMap = {
-                              "single": {
-                                'name': 'Single',
-                                'sp': _retail_price.text.trim(),
-                                'wp': _retail_price.text.trim(),
-                                'rp': _retail_price.text.trim(),
-                                'qty': '1',
-                              }
-                            };
-
-                            if (_enableBoxPricing) {
-
-                              // Half box
-                              if (pricingStep >= 1 &&
-                                  _halfboxqty_controller.text.isNotEmpty &&
-                                  _halfboxprice_controller.text.isNotEmpty) {
-                                modesMap["carton"] = {
-                                    'name': 'carton',
-                                    'sp': _supplierPriceController.text.trim(),
-                                    'wp': _wholesalePriceController.text.trim(),
-                                    'rp': _retail_price.text.trim(),
-                                    'qty': _boxQtyController.text.trim(),
-                                  };
-                                modesMap["half"] = {
-                                  'name': 'Half carton',
-                                  'sp': _halfboxprice_controller.text.trim(),
-                                  'wp': _halfboxprice_controller.text.trim(),
-                                  'rp': _halfboxprice_controller.text.trim(),
-                                  'qty': _halfboxqty_controller.text.trim(),
-                                };
-                              }
-
-                              // Quarter box
-                              if (pricingStep >= 2 &&
-                                  _quarterqty_controller.text.isNotEmpty &&
-                                  _quarterprice_controller.text.isNotEmpty) {
-                                modesMap["quarter"] = {
-                                  'name': 'Quarter carton',
-                                  'sp': _quarterprice_controller.text.trim(),
-                                  'wp': _quarterprice_controller.text.trim(),
-                                  'rp': _retail_price.text.trim(),
-                                  'qty': _quarterqty_controller.text.trim(),
-                                };
-                              }
-
-                              // Pack
-                              if (pricingStep >= 3 &&
-                                  _packQtyController.text.isNotEmpty &&
-                                  _packprice_controller.text.isNotEmpty) {
-                                modesMap["pack"] = {
-                                  'name': 'Pack',
-                                  'sp': _packprice_controller.text.trim(),
-                                  'wp': _packprice_controller.text.trim(),
-                                  'rp': _retail_price.text.trim(),
-                                  'qty': _packQtyController.text.trim(),
-                                };
-                              }
-                            }
-
-                            final data = {
-                              'id': docId,
-                              'companyid': datafeed.companyid,
-                              'company': datafeed.company,
-                              'name': itemName,
-                              'barcode': _barcodeController.text.trim(),
-                              'cp': _costController.text.trim(),
-                              'pcategory': _productCategory,
-                              'imageurl': imageUrl,
-                              'updatedat': FieldValue.serverTimestamp(),
-                              'updatedby':  datafeed.staff,
-                              'deletedby': datafeed.staff,
-                              'deletedat': FieldValue.serverTimestamp(),
-                              'modemore': _enableBoxPricing,
-                              'modes': modesMap,
-                              'wminqty': _wholesaleMinQtyController.text,
-                              'sminqty': _supplierMinQtyController.text,
-                            };
-
-                            if (widget.docId == null) {
-                              data['createdat'] = FieldValue.serverTimestamp();
-                            }
-
-                            await docRef.set(data, SetOptions(merge: true));
-
-                            if (mounted) Navigator.pop(context, true);
-                          } catch (e) {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      DropdownButtonFormField<String>(
+                        value: _productType,
+                        decoration: _buildDropdownDecoration('Product Type'),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'product',
+                            child: Text('Product'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'service',
+                            child: Text('Service'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => _productType = v),
+                        validator: (v) =>
+                            v == null ? 'Select product type' : null,
+                      ),
+                      const SizedBox(height: 10),
+                      Consumer<Datafeed>(
+                        builder: (context, datafeed, _) {
+                          if (datafeed.loadingproductcategory) {
+                            return const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(),
+                            );
                           }
 
-                          setState(() => _loading = false);
-                        },
-                        child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Save Item'),
-                      ),
-                    ),
-                  ],
-                ),
+                          if (datafeed.productcategory.isEmpty) {
+                            return const Text(
+                              "No product categories found",
+                              style: TextStyle(color: Colors.white54),
+                            );
+                          }
 
+                          return DropdownButtonFormField<String>(
+                            value: _productCategory,
+                            decoration: _buildDropdownDecoration(
+                              'Product category',
+                            ),
+                            items: datafeed.productcategory
+                                .map(
+                                  (w) => DropdownMenuItem<String>(
+                                    value: w.productname,
+                                    child: Text(w.productname),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _productCategory = v),
+                            validator: (v) =>
+                                v == null ? 'Select product category' : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          onPressed: _loading
+                              ? null
+                              : () async {
+                                  if (!_formKey.currentState!.validate())
+                                    return;
+                                  setState(() => _loading = true);
+                                  try {
+                                    // Get companyid from Datafeed provider
+                                    final datafeed = context.read<Datafeed>();
+                                    final companyId = datafeed.companyid;
+                                    final itemName = _nameController.text
+                                        .trim();
+                                    final barcode = _barcodeController.text
+                                        .trim();
+
+                                    // Check for duplicates only if creating a new item (not editing)
+                                    if (widget.docId == null) {
+                                      // Check for duplicate name with same companyid
+                                      final nameQuery = await _db
+                                          .collection('itemsreg')
+                                          .where(
+                                            'companyid',
+                                            isEqualTo: companyId,
+                                          )
+                                          .where('name', isEqualTo: itemName)
+                                          .limit(1)
+                                          .get();
+
+                                      if (nameQuery.docs.isNotEmpty) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'An item with name "$itemName" already exists for this company',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(
+                                                seconds: 4,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        setState(() => _loading = false);
+                                        return;
+                                      }
+
+                                      // Check for duplicate barcode with same companyid
+                                      final barcodeQuery = await _db
+                                          .collection('itemsreg')
+                                          .where(
+                                            'companyid',
+                                            isEqualTo: companyId,
+                                          )
+                                          .where('barcode', isEqualTo: barcode)
+                                          .limit(1)
+                                          .get();
+
+                                      if (barcodeQuery.docs.isNotEmpty) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'An item with barcode "$barcode" already exists for this company',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(
+                                                seconds: 4,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        setState(() => _loading = false);
+                                        return;
+                                      }
+                                    }
+
+                                    String sanitize(String input) {
+                                      return input
+                                          .trim()
+                                          .toLowerCase()
+                                          .replaceAll(RegExp(r'\s+'), '')
+                                          .replaceAll(
+                                            RegExp(r'[^a-z0-9_]'),
+                                            '',
+                                          );
+                                    }
+
+                                    final docId =
+                                        widget.docId ??
+                                        '${sanitize(companyId)}_${sanitize(itemName)}';
+                                    final docRef = _db
+                                        .collection('itemsreg')
+                                        .doc(docId);
+                                    final imageUrl = await uploadLogo(docId);
+                                    final wholesaleText =
+                                        _wholesaleMinQtyController.text.trim();
+                                    final supplierText =
+                                        _supplierMinQtyController.text.trim();
+
+                                    Map<String, dynamic> modesMap = {
+                                      "single": {
+                                        'name': 'Single',
+                                        'sp': _retail_price.text.trim(),
+                                        'wp': _retail_price.text.trim(),
+                                        'rp': _retail_price.text.trim(),
+                                        'qty': '1',
+                                      },
+                                    };
+                                    double boxqty =
+                                        _boxQtyController.text.isNotEmpty
+                                        ? double.parse(_boxQtyController.text)
+                                        : 0;
+                                    if (boxqty >= 2) {
+                                      modesMap["carton"] = {
+                                        'name': 'carton',
+                                        'sp': _supplierPriceController.text
+                                            .trim(),
+                                        'wp': _wholesalePriceController.text
+                                            .trim(),
+                                        'rp': _wholesalePriceController.text
+                                            .trim(),
+                                        'qty': _boxQtyController.text.trim(),
+                                      };
+                                    }
+
+                                    if (_enableBoxPricing) {
+                                      // Half box
+                                      if (pricingStep >= 1 &&
+                                          _halfboxqty_controller
+                                              .text
+                                              .isNotEmpty &&
+                                          _halfboxprice_controller
+                                              .text
+                                              .isNotEmpty) {
+                                        modesMap["carton"] = {
+                                          'name': 'carton',
+                                          'sp': _supplierPriceController.text
+                                              .trim(),
+                                          'wp': _wholesalePriceController.text
+                                              .trim(),
+                                          'rp': _wholesalePriceController.text
+                                              .trim(),
+                                          'qty': _boxQtyController.text.trim(),
+                                        };
+                                        modesMap["half"] = {
+                                          'name': 'Half carton',
+                                          'sp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'wp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'rp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'qty': _halfboxqty_controller.text
+                                              .trim(),
+                                        };
+                                      }
+
+                                      // Quarter box
+                                      if (pricingStep >= 2 &&
+                                          _quarterqty_controller
+                                              .text
+                                              .isNotEmpty &&
+                                          _quarterprice_controller
+                                              .text
+                                              .isNotEmpty) {
+                                        modesMap["quarter"] = {
+                                          'name': 'Quarter carton',
+                                          'sp': _quarterprice_controller.text
+                                              .trim(),
+                                          'wp': _quarterprice_controller.text
+                                              .trim(),
+                                          'rp': _retail_price.text.trim(),
+                                          'qty': _quarterqty_controller.text
+                                              .trim(),
+                                        };
+                                      }
+
+                                      // Pack
+                                      if (pricingStep >= 3 &&
+                                          _packQtyController.text.isNotEmpty &&
+                                          _packprice_controller
+                                              .text
+                                              .isNotEmpty) {
+                                        modesMap["pack"] = {
+                                          'name': 'Pack',
+                                          'sp': _packprice_controller.text
+                                              .trim(),
+                                          'wp': _packprice_controller.text
+                                              .trim(),
+                                          'rp': _retail_price.text.trim(),
+                                          'qty': _packQtyController.text.trim(),
+                                        };
+                                      }
+                                    }
+
+                                    final data = {
+                                      'id': docId,
+                                      'companyid': datafeed.companyid,
+                                      'company': datafeed.company,
+                                      'name': itemName,
+                                      'barcode': _barcodeController.text.trim(),
+                                      'cp': _costController.text.trim(),
+                                      'pcategory': _productCategory,
+                                      'imageurl': imageUrl,
+                                      'updatedat': null,
+                                      'updatedby': null,
+                                      'deletedby': null,
+                                      'deletedat': null,
+                                      'modemore': _enableBoxPricing,
+                                      'modes': modesMap,
+                                      'wminqty':
+                                          _wholesaleMinQtyController.text,
+                                      'sminqty': _supplierMinQtyController.text,
+                                    };
+
+                                    if (widget.docId == null) {
+                                      data['createdat'] =
+                                          FieldValue.serverTimestamp();
+                                    }
+
+                                    await docRef.set(
+                                      data,
+                                      SetOptions(merge: true),
+                                    );
+
+                                    // Show success message
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            widget.docId == null
+                                                ? 'Item saved successfully!'
+                                                : 'Item updated successfully!',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+
+                                      // Clear all input fields only if it's a new item (not editing)
+                                      if (widget.docId == null) {
+                                        _clearAllFields();
+                                      }
+                                    }
+
+                                    // if (mounted) Navigator.pop(context, true);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                  }
+
+                                  setState(() => _loading = false);
+                                },
+                          child: _loading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text('Save Item'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        floatingActionButton: _enableBoxPricing && double.tryParse(_boxQtyController.text) != 1
-            ? Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FloatingActionButton(
-                      mini: true,
-                      heroTag: 'add_pricing',
-                      backgroundColor: Colors.green,
-                      onPressed: () {
-                        setState(() {
-                          if (pricingStep < 3) pricingStep++;
-                        });
-                      },
-                      child: const Icon(Icons.add),
-                    ),
-                    const SizedBox(width: 12),
-                    FloatingActionButton(
-                      mini: true,
-                      heroTag: 'toggle_pricing',
-                      backgroundColor: Colors.blue,
-                      onPressed: () {
-                        setState(() => _enableBoxPricing = false);
-                      },
-                      child: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              )
-            : null,
-
-      );
-    });
+          floatingActionButton:
+              _enableBoxPricing && double.tryParse(_boxQtyController.text) != 1
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FloatingActionButton(
+                        mini: true,
+                        heroTag: 'add_pricing',
+                        backgroundColor: Colors.green,
+                        onPressed: () {
+                          setState(() {
+                            if (pricingStep < 3) pricingStep++;
+                          });
+                        },
+                        child: const Icon(Icons.add),
+                      ),
+                      const SizedBox(width: 12),
+                      FloatingActionButton(
+                        mini: true,
+                        heroTag: 'toggle_pricing',
+                        backgroundColor: Colors.blue,
+                        onPressed: () {
+                          setState(() => _enableBoxPricing = false);
+                        },
+                        child: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                )
+              : null,
+        );
+      },
+    );
   }
 
   // ================= IMAGE UI =================
   Widget _imagePickerSection() {
     Widget preview;
+    bool hasImage =
+        _logoBytes != null ||
+        _logoFile != null ||
+        (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty);
 
     if (_logoBytes != null) {
       preview = Image.memory(_logoBytes!, fit: BoxFit.cover);
@@ -819,42 +1143,174 @@ class _ItemRegPageState extends State<ItemRegPage> {
     } else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty) {
       preview = Image.network(_existingLogoUrl!, fit: BoxFit.cover);
     } else {
-      preview = const Icon(Icons.image, size: 50, color: Colors.white38);
+      preview = const Icon(Icons.image, size: 20, color: Colors.white38);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Item Image (optional)', style: TextStyle(color: Colors.white70)),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: pickLogo,
-          child: Container(
-            height: 140,
-            width: 140,
-            decoration: BoxDecoration(
-              color: const Color(0xFF22304A),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white24),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Center(child: preview),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Compact header with toggle
+          InkWell(
+            onTap: () {
+              setState(() => _imageExpanded = !_imageExpanded);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22304A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                children: [
+                  // Small image preview
+                  Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A2438),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: hasImage
+                            ? Colors.green.withOpacity(0.5)
+                            : Colors.white24,
+                        width: hasImage ? 2 : 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Center(child: preview),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      hasImage
+                          ? 'Item Image (tap to change)'
+                          : 'Item Image (optional)',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _imageExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.white54,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        TextButton.icon(
-          onPressed: pickLogo,
-          icon: const Icon(Icons.upload),
-          label: const Text('Select Image'),
-        ),
-      ],
+          // Expanded section
+          if (_imageExpanded) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: GestureDetector(
+                onTap: pickLogo,
+                child: Container(
+                  height: 160,
+                  width: 160,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22304A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Center(
+                      child: hasImage
+                          ? Stack(
+                              children: [
+                                if (_logoBytes != null)
+                                  Image.memory(
+                                    _logoBytes!,
+                                    fit: BoxFit.cover,
+                                    width: 160,
+                                    height: 160,
+                                  )
+                                else if (_logoFile != null)
+                                  Image.file(
+                                    _logoFile!,
+                                    fit: BoxFit.cover,
+                                    width: 160,
+                                    height: 160,
+                                  )
+                                else if (_existingLogoUrl != null &&
+                                    _existingLogoUrl!.isNotEmpty)
+                                  Image.network(
+                                    _existingLogoUrl!,
+                                    fit: BoxFit.cover,
+                                    width: 160,
+                                    height: 160,
+                                  ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Icon(
+                              Icons.add_photo_alternate,
+                              size: 50,
+                              color: Colors.white38,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: pickLogo,
+                icon: const Icon(Icons.upload, size: 18),
+                label: Text(hasImage ? 'Change Image' : 'Select Image'),
+                style: TextButton.styleFrom(foregroundColor: Colors.blue),
+              ),
+            ),
+            if (hasImage)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _logoBytes = null;
+                      _logoFile = null;
+                      _existingLogoUrl = null;
+                    });
+                  },
+                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                  label: const Text('Remove Image'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ),
+          ],
+        ],
+      ),
     );
   }
 
   // ================= FIELDS =================
-  Widget _priceField(TextEditingController controller, String label, IconData icon) {
+  Widget _priceField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -863,12 +1319,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
     );
   }
 
-  TextFormField _buildField(TextEditingController controller, String label, IconData icon,{bool isNumber = false,  Function(String)? onChanged,String? Function(String?)? validator,}) {
+  TextFormField _buildField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool isNumber = false,
+    Function(String)? onChanged,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
-      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      keyboardType: isNumber
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
-      validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
+      validator: validator ?? (v) => v == null || v.isEmpty ? 'Required' : null,
       decoration: _inputDecoration(label, icon),
       onChanged: onChanged,
     );
@@ -877,18 +1342,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
   TextFormField _buildFieldWithEnabled(
     TextEditingController controller,
     String label,
-    IconData icon,
-    {bool isNumber = false,
+    IconData icon, {
+    bool isNumber = false,
     bool enabled = true,
     Function(String)? onChanged,
-    String? Function(String?)? validator,}
-  ) {
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
       enabled: enabled,
-      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      keyboardType: isNumber
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
-      validator: validator ??  (v) => v == null || v.isEmpty ? 'Required' : null,
+      validator: validator ?? (v) => v == null || v.isEmpty ? 'Required' : null,
       decoration: _inputDecoration(label, icon),
       onChanged: onChanged,
     );
@@ -928,7 +1395,168 @@ class _ItemRegPageState extends State<ItemRegPage> {
       ),
     );
   }
-
-
 }
 
+// Barcode Scanner Screen
+class BarcodeScannerScreen extends StatefulWidget {
+  const BarcodeScannerScreen({Key? key}) : super(key: key);
+
+  @override
+  State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
+  MobileScannerController cameraController = MobileScannerController();
+  bool _isProcessing = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check platform support
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Barcode scanning is not supported on web platform',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          title: const Text('Scanner Not Available'),
+          backgroundColor: Colors.black,
+        ),
+        body: const Center(
+          child: Text(
+            'Camera scanning is not available on web',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Scan Barcode/QR Code'),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: ValueListenableBuilder(
+              valueListenable: cameraController,
+              builder: (context, value, child) {
+                final isFlashOn = value.torchState == TorchState.on;
+                return Icon(
+                  isFlashOn ? Icons.flash_on : Icons.flash_off,
+                  color: Colors.white,
+                );
+              },
+            ),
+            onPressed: () => cameraController.toggleTorch(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            onPressed: () => cameraController.switchCamera(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: cameraController,
+            onDetect: (capture) {
+              if (_isProcessing) return;
+
+              final barcodes = capture.barcodes;
+              if (barcodes.isEmpty) return;
+
+              final barcode = barcodes.first;
+              final String? code = barcode.rawValue;
+
+              if (code != null && code.isNotEmpty) {
+                setState(() => _isProcessing = true);
+                Navigator.pop(context, code);
+              }
+            },
+            errorBuilder: (context, error, child) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, color: Colors.red, size: 64),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Camera Error: ${error.errorCode}',
+                      style: const TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Please check camera permissions',
+                      style: TextStyle(color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Go Back'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          // Overlay with scanning guide
+          Center(
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green, width: 3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          // Instructions
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: const Text(
+                'Position the barcode or QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
+  }
+}

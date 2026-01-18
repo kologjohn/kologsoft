@@ -29,7 +29,7 @@ class ItemListPage extends StatelessWidget {
 
       /// ITEMS STREAM
       body: StreamBuilder<QuerySnapshot>(
-        stream: db.collection('items').orderBy('name').snapshots(),
+        stream: db.collection('itemsreg').orderBy('name').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

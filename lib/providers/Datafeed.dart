@@ -10,7 +10,6 @@ import '../models/branch.dart';
 import '../models/suppliermodel.dart';
 import '../models/warehousemodel.dart';
 
-
 class Datafeed extends ChangeNotifier {
   final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
@@ -30,26 +29,48 @@ class Datafeed extends ChangeNotifier {
   BranchModel? selectedBranch;
   Supplier? selectedSupplier;
 
-   fetchBranches() async {
-    try { final snap = await db.collection('branches').where("companyId",isEqualTo: companyid).get();
-    final fetchedBranches = snap.docs.map((doc) {
-       return BranchModel.fromJson(doc.data());
-     }).toList();
-    branches = [ BranchModel(id: "$companyid${'all'}", branchname: 'All'), ...fetchedBranches, ];
-     notifyListeners();
+  Datafeed() {
+    //_initSync();
+  }
+
+
+
+
+
+  fetchBranches() async {
+    try {
+      final snap = await db
+          .collection('branches')
+          .where("companyId", isEqualTo: companyid)
+          .get();
+      final fetchedBranches = snap.docs.map((doc) {
+        return BranchModel.fromJson(doc.data());
+      }).toList();
+      branches = [
+        BranchModel(id: "$companyid${'all'}", branchname: 'All'),
+        ...fetchedBranches,
+      ];
+      notifyListeners();
     } catch (e) {
-      debugPrint("Error fetching branches: $e"); }
+      debugPrint("Error fetching branches: $e");
+    }
   }
 
   fetchSuppliers() async {
-    try { final snap = await db.collection('suppliers').where("companyid",isEqualTo: companyid).get();
-    suppliers = snap.docs.map((doc) {
-      return Supplier.fromMap(doc.data());
-    }).toList();
-    notifyListeners();
+    try {
+      final snap = await db
+          .collection('suppliers')
+          .where("companyid", isEqualTo: companyid)
+          .get();
+      suppliers = snap.docs.map((doc) {
+        return Supplier.fromMap(doc.data());
+      }).toList();
+      notifyListeners();
     } catch (e) {
-      debugPrint("Error fetching branches: $e"); }
+      debugPrint("Error fetching branches: $e");
+    }
   }
+
   Future<void> fetchproductcategory() async {
     loadingproductcategory = true;
     notifyListeners();
@@ -63,7 +84,6 @@ class Datafeed extends ChangeNotifier {
       productcategory = snap.docs
           .map((e) => Productcategorymodel.fromJson(e.data()))
           .toList();
-
     } catch (e) {
       debugPrint("fetch product category error: $e");
     }
@@ -71,31 +91,44 @@ class Datafeed extends ChangeNotifier {
     loadingproductcategory = false;
     notifyListeners();
   }
-  selectSupplier(String suplylierId)
-  {
-    selectedSupplier = suppliers.firstWhere( (sup) => sup.id == suplylierId,
-      orElse: () => Supplier(id: '', supplier: '', staff: '', contact: '', company: '', companyid: '', datecreated: Timestamp.now()), );
+
+  selectSupplier(String suplylierId) {
+    selectedSupplier = suppliers.firstWhere(
+      (sup) => sup.id == suplylierId,
+      orElse: () => Supplier(
+        id: '',
+        supplier: '',
+        staff: '',
+        contact: '',
+        company: '',
+        companyid: '',
+        datecreated: Timestamp.now(),
+      ),
+    );
     notifyListeners();
   }
 
-   selectBranch(String branchId)
-  {
-    selectedBranch = branches.firstWhere( (branch) => branch.id == branchId,
-      orElse: () => BranchModel(), );
+  selectBranch(String branchId) {
+    selectedBranch = branches.firstWhere(
+      (branch) => branch.id == branchId,
+      orElse: () => BranchModel(),
+    );
     notifyListeners();
   }
-
 
   Future<void> fetchWarehouses() async {
     try {
       loadingWarehouses = true;
       notifyListeners();
 
-      final snap = await db.collection('warehouse').where('companyid', isEqualTo: companyid).get();
+      final snap = await db
+          .collection('warehouse')
+          .where('companyid', isEqualTo: companyid)
+          .get();
 
-      warehouses = snap.docs.map((e) => WarehouseModel.fromMap(e.data()))
+      warehouses = snap.docs
+          .map((e) => WarehouseModel.fromMap(e.data()))
           .toList();
-
     } catch (e) {
       debugPrint("Fetch warehouses error: $e");
     }
@@ -116,13 +149,13 @@ class Datafeed extends ChangeNotifier {
     notifyListeners();
     Navigator.pushNamedAndRemoveUntil(context, Routes.login, (route) => false);
   }
+
   String normalizeAndSanitize(dynamic value) {
     if (value == null) return "na";
 
     String result = value.toString().trim();
 
-    if (result.isEmpty)
-      return "n_a";
+    if (result.isEmpty) return "n_a";
 
     result = result
         .replaceAll('/', '')
@@ -139,9 +172,7 @@ class Datafeed extends ChangeNotifier {
 
     if (branch.id.isNotEmpty) {
       docId = branch.id;
-    }
-
-    else {
+    } else {
       docId = "${branch.companyid}${branch.branchname}"
           .toLowerCase()
           .replaceAll(RegExp(r'\s+'), '_');
@@ -154,14 +185,13 @@ class Datafeed extends ChangeNotifier {
         .doc(docId)
         .set(branch.toMap(), SetOptions(merge: true));
   }
+
   Future<void> addOrUpdateCategory(Productcategorymodel category) async {
     String docId;
 
     if (category.id.isNotEmpty) {
       docId = category.id;
-    }
-
-    else {
+    } else {
       docId = "${category.companyid}${category.productname}"
           .toLowerCase()
           .replaceAll(RegExp(r'\s+'), '_');
@@ -174,14 +204,13 @@ class Datafeed extends ChangeNotifier {
         .doc(docId)
         .set(category.toMap(), SetOptions(merge: true));
   }
+
   Future<void> addOrUpdatePaymentDuration(PaymentDurationModel payment) async {
     String docId;
 
     if (payment.id.isNotEmpty) {
       docId = payment.id;
-    }
-
-    else {
+    } else {
       docId = "${payment.companyid}${payment.paymentname}"
           .toLowerCase()
           .replaceAll(RegExp(r'\s+'), '_');
@@ -195,20 +224,20 @@ class Datafeed extends ChangeNotifier {
         .set(payment.toMap(), SetOptions(merge: true));
   }
 
-
   Future<void> deleteBranch(String id) async {
     final db = FirebaseFirestore.instance;
     await db.collection('branches').doc(id).delete();
   }
+
   Future<void> deleteCategory(String id) async {
     final db = FirebaseFirestore.instance;
     await db.collection('productcategoryreg').doc(id).delete();
   }
+
   Future<void> deletePaymentDuration(String id) async {
     final db = FirebaseFirestore.instance;
     await db.collection('paymentdurationreg').doc(id).delete();
   }
-
 
   Future<void> forgotPassword(String email, BuildContext context) async {
     try {
@@ -282,6 +311,4 @@ class Datafeed extends ChangeNotifier {
 
     notifyListeners();
   }
-
-
 }
