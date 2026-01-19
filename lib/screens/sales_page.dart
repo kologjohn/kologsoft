@@ -160,11 +160,9 @@ class _SalesPageState extends State<SalesPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final isSmallScreen = constraints.maxWidth < 900;
-
                     final double itemWidth = isSmallScreen
                         ? constraints.maxWidth
                         : (constraints.maxWidth / 2) - 24;
-
                     return Wrap(
                       spacing: 16,
                       runSpacing: 16,
