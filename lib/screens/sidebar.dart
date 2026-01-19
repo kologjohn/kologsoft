@@ -95,6 +95,19 @@ class Sidebar extends StatelessWidget {
                     ),
                    // onTap: onViewStaff,
                   ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.people_outline,
+                      color: Colors.white,
+                    ),
+                    title: const Text(
+                      'Sales',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                   onTap: (){
+                      Navigator.pushNamed(context, Routes.sales);
+                   },
+                  ),
                 ],
               ),
               const Divider(color: Colors.white24),
