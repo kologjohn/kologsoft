@@ -259,17 +259,14 @@ class Datafeed extends ChangeNotifier {
   }
 
   Future<void> deleteBranch(String id) async {
-    final db = FirebaseFirestore.instance;
     await db.collection('branches').doc(id).delete();
   }
 
   Future<void> deleteCategory(String id) async {
-    final db = FirebaseFirestore.instance;
     await db.collection('productcategoryreg').doc(id).delete();
   }
 
   Future<void> deletePaymentDuration(String id) async {
-    final db = FirebaseFirestore.instance;
     await db.collection('paymentdurationreg').doc(id).delete();
   }
 

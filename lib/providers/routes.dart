@@ -5,6 +5,7 @@ import 'package:kologsoft/screens/payment_duration_reg.dart';
 import 'package:kologsoft/screens/payment_duration_view.dart';
 import 'package:kologsoft/screens/product_category_reg.dart';
 import 'package:kologsoft/screens/productcategory_view.dart';
+import 'package:kologsoft/screens/sales_page.dart';
 import 'package:kologsoft/screens/staff_profile.dart';
 import 'package:kologsoft/providers/route_guard.dart';
 
@@ -44,6 +45,7 @@ class Routes {
   static const String newstock = '/newstock';
   static const String staffreg = '/staffreg';
   static const String staffprofile = '/staffprofile';
+  static const String sales = '/sales';
 }
 
 final pages = {
@@ -71,7 +73,7 @@ final pages = {
   Routes.paymentdurationview: (context) =>
       RouteGuard(child: PaymentDurationView()),
   Routes.newstock: (context) => RouteGuard(child: NewStock()),
-  Routes.staffreg: (context) =>
-      RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager']),
+  Routes.staffreg: (context) => RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager']),
   Routes.staffprofile: (context) => const RouteGuard(child: StaffProfile()),
+  Routes.sales: (context) => const RouteGuard(child: SalesPage()),
 };
