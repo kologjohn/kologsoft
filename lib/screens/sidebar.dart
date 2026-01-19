@@ -30,7 +30,7 @@ class Sidebar extends StatelessWidget {
                     Icon(Icons.factory, size: 48, color: Colors.white),
                     const SizedBox(height: 8),
                     Text(
-                      'NWC SMS',
+                      'KologSoft POS',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -81,7 +81,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      Navigator.pushNamed(context, Routes.branchreg);
+                      Navigator.pushNamed(context, Routes.staffreg);
                     },
                   ),
                   ListTile(
