@@ -81,7 +81,7 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      Navigator.pushNamed(context, Routes.branchreg);
+                      //Navigator.pushNamed(context, Routes.branchreg);
                     },
                   ),
                   ListTile(
@@ -94,19 +94,6 @@ class Sidebar extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                    // onTap: onViewStaff,
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.people_outline,
-                      color: Colors.white,
-                    ),
-                    title: const Text(
-                      'Sales',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                   onTap: (){
-                      Navigator.pushNamed(context, Routes.sales);
-                   },
                   ),
                 ],
               ),
@@ -227,16 +214,39 @@ class Sidebar extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
-                      'Survey ',
+                      'Transfers',
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: (){
-                    //  Navigator.pushNamed(context, Routes.usersurvey);
+                      Navigator.pushNamed(context, Routes.transfers);
                     },
                   ),
 
 
 
+
+                ],
+              ),
+              const Divider(color: Colors.white24),
+              ExpansionTile(
+                iconColor: Colors.white,
+                collapsedIconColor: Colors.white,
+                leading: const Icon(Icons.shopping_cart, color: Colors.white),
+                title: const Text(
+                  'Transactions',
+                  style: TextStyle(color: Colors.white),
+                ),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add_business, color: Colors.white54),
+                    title: const Text(
+                      'Sales ',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                    onTap: (){
+                      Navigator.pushNamed(context, Routes.sales);
+                    },
+                  ),
 
                 ],
               ),

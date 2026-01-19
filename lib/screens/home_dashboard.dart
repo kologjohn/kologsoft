@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
@@ -6,6 +8,7 @@ import 'package:kologsoft/widgets/offline_indicator.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/routes.dart';
+import 'debtpage.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -491,7 +494,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             ? screenWidth * 0.15
                             : screenWidth * 0.16,
                       ),
-                      MiddleWidget(
+                      MomoKpiWidget(
                         cwidth: isMobile
                             ? screenWidth * 0.95
                             : isSmallTablet
@@ -503,8 +506,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             : isBigTablet
                             ? screenWidth * 0.15
                             : screenWidth * 0.16,
+                        todayAmount: 2890.70,
+                        yesterdayAmount: 1980.00,
                       ),
-                      CsatWidget(
+
+                      // MiddleWidget(
+                      //   cwidth: isMobile
+                      //       ? screenWidth * 0.95
+                      //       : isSmallTablet
+                      //       ? screenWidth * 0.47
+                      //       : isMediumTablet
+                      //       ? screenWidth * 0.21
+                      //       : isTablet
+                      //       ? screenWidth * 0.48
+                      //       : isBigTablet
+                      //       ? screenWidth * 0.15
+                      //       : screenWidth * 0.16,
+                      // ),
+                      // CsatWidget(
+                      //   cwidth: isMobile
+                      //       ? screenWidth * 0.95
+                      //       : isSmallTablet
+                      //       ? screenWidth * 0.47
+                      //       : isMediumTablet
+                      //       ? screenWidth * 0.21
+                      //       : isTablet
+                      //       ? screenWidth * 0.48
+                      //       : isBigTablet
+                      //       ? screenWidth * 0.15
+                      //       : screenWidth * 0.16,
+                      // ),
+                      TotalDebtWidget(
                         cwidth: isMobile
                             ? screenWidth * 0.95
                             : isSmallTablet
@@ -516,7 +548,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             : isBigTablet
                             ? screenWidth * 0.15
                             : screenWidth * 0.16,
+                            totalDebt: 18850.50,
                       ),
+
                       TopWidget(
                         cwidth: isMobile
                             ? screenWidth * 0.95
@@ -527,6 +561,65 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             : isBigTablet
                             ? screenWidth * 0.24
                             : screenWidth * 0.22,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 15),
+                  Wrap(
+                    spacing: 15,
+                    runSpacing: 15,
+                    children: [
+                      _statCard(
+                        title: "Stock value",
+                        value: "41000",
+                        subtitle: "+12% from yesterday",
+                        icon: Icons.trending_up,
+                        iconColor: Colors.green,
+                      ),
+
+                      _statCard(
+                        title: "Total discount",
+                        value: "0.00",
+                        subtitle: "+8% from yesterday",
+                        icon: Icons.people_outline,
+                        iconColor: Colors.blue,
+                      ),
+
+                      _statCard(
+                        title: "Re-order",
+                        value: "7",
+                        subtitle: "Requires attention",
+                        icon: Icons.warning_amber_rounded,
+                        iconColor: Colors.orange,
+                      ),
+
+                      _statCard(
+                        title: "Expiring Soon",
+                        value: "12",
+                        subtitle: "Within 30 days",
+                        icon: Icons.schedule,
+                        iconColor: Colors.redAccent,
+                      ),
+                      _statCard(
+                        title: "Finished Stock",
+                        value: "12",
+                        subtitle: "Within 30 days",
+                        icon: Icons.security_update_good_sharp,
+                        iconColor: Colors.lightBlue,
+                      ),
+                      _statCard(
+                        title: "Available",
+                        value: "12",
+                        subtitle: "Within 30 days",
+                        icon: Icons.new_label_sharp,
+                        iconColor: Colors.lightGreen,
+                      ),
+                      _statCard(
+                        title: "VAT",
+                        value: "12",
+                        subtitle: "Within 30 days",
+                        icon: Icons.schedule,
+                        iconColor: Colors.redAccent,
                       ),
                     ],
                   ),
@@ -713,7 +806,7 @@ class PieChartWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Statistics',
+                'Last week and current sales comparison',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 14,
@@ -734,13 +827,13 @@ class PieChartWidget extends StatelessWidget {
           Expanded(
             child: LineChart(
               LineChartData(
-                minX: 9,
-                maxX: 15,
+                minX: 1,
+                maxX: 7,
                 minY: 0,
                 maxY: 35,
                 gridData: FlGridData(
                   show: true,
-                  drawVerticalLine: false,
+                  drawVerticalLine: true,
                   horizontalInterval: 5,
                   getDrawingHorizontalLine: (value) =>
                       FlLine(color: Colors.white12, strokeWidth: 1),
@@ -762,29 +855,35 @@ class PieChartWidget extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: 3,
+                      interval: 1,
                       getTitlesWidget: (value, _) {
+                        final style = const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 12,
+                        );
+
                         switch (value.toInt()) {
-                          case 9:
-                            return const Text(
-                              '09:00',
-                              style: TextStyle(color: Colors.white60),
-                            );
-                          case 12:
-                            return const Text(
-                              '12:00',
-                              style: TextStyle(color: Colors.white60),
-                            );
-                          case 15:
-                            return const Text(
-                              '15:00',
-                              style: TextStyle(color: Colors.white60),
-                            );
+                          case 1:
+                            return Text('Mon', style: style);
+                          case 2:
+                            return Text('Tue', style: style);
+                          case 3:
+                            return Text('Wed', style: style);
+                          case 4:
+                            return Text('Thu', style: style);
+                          case 5:
+                            return Text('Fri', style: style);
+                          case 6:
+                            return Text('Sat', style: style);
+                          case 7:
+                            return Text('Sun', style: style);
+                          default:
+                            return const SizedBox.shrink();
                         }
-                        return const SizedBox.shrink();
                       },
                     ),
                   ),
+
                   rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
@@ -796,14 +895,15 @@ class PieChartWidget extends StatelessWidget {
                 lineBarsData: [
                   LineChartBarData(
                     spots: const [
-                      FlSpot(9, 19),
-                      FlSpot(10, 15),
-                      FlSpot(11, 11),
-                      FlSpot(12, 23),
-                      FlSpot(13, 24),
-                      FlSpot(14, 30),
-                      FlSpot(15, 31),
+                      FlSpot(1, 19), // Mon
+                      FlSpot(2, 15), // Tue
+                      FlSpot(3, 11), // Wed
+                      FlSpot(4, 23), // Thu
+                      FlSpot(5, 24), // Fri
+                      FlSpot(6, 30), // Sat
+                      FlSpot(7, 31), // Sun
                     ],
+
                     isCurved: true,
                     color: const Color(0xFF4FC3F7),
                     barWidth: 3,
@@ -812,14 +912,15 @@ class PieChartWidget extends StatelessWidget {
 
                   LineChartBarData(
                     spots: const [
-                      FlSpot(9, 11),
-                      FlSpot(10, 20),
-                      FlSpot(11, 12),
-                      FlSpot(12, 15),
-                      FlSpot(13, 20),
-                      FlSpot(14, 26),
-                      FlSpot(15, 24),
+                      FlSpot(1, 11),
+                      FlSpot(2, 20),
+                      FlSpot(3, 12),
+                      FlSpot(4, 15),
+                      FlSpot(5, 20),
+                      FlSpot(6, 26),
+                      FlSpot(7, 24),
                     ],
+
                     isCurved: true,
                     color: const Color(0xFFF5D76E),
                     barWidth: 3,
@@ -854,7 +955,7 @@ class MonthlyRevenueWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Monthly Revenue',
+              'Best 10 financial performing Items',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
@@ -867,7 +968,7 @@ class MonthlyRevenueWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
                 Text(
-                  'Month',
+                  'Item Name',
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 Text(
@@ -881,23 +982,22 @@ class MonthlyRevenueWidget extends StatelessWidget {
 
             Expanded(
               child: ListView.separated(
-                itemCount: 12,
+                itemCount: 10,
                 separatorBuilder: (_, __) =>
                     const Divider(color: Colors.white24, height: 1),
                 itemBuilder: (context, index) {
                   final data = [
-                    {'name': 'January', 'amount': '37'},
-                    {'name': 'February', 'amount': '34'},
-                    {'name': 'March', 'amount': '27'},
-                    {'name': 'April', 'amount': '24'},
-                    {'name': 'May', 'amount': '23'},
-                    {'name': 'June', 'amount': '21'},
-                    {'name': 'July', 'amount': '21'},
-                    {'name': 'August', 'amount': '21'},
-                    {'name': 'September', 'amount': '21'},
-                    {'name': 'October', 'amount': '21'},
-                    {'name': 'November', 'amount': '21'},
-                    {'name': 'December', 'amount': '21'},
+                    {'name': 'Milk', 'amount': 'GHC 37'},
+                    {'name': 'Malt', 'amount': 'GHC 34'},
+                    {'name': 'Cooker', 'amount': 'GHC 27'},
+                    {'name': 'Kettle', 'amount': 'GHC 24'},
+                    {'name': 'Detergents', 'amount': 'GHC 23'},
+                    {'name': 'Milk', 'amount': 'GHC 37'},
+                    {'name': 'Malt', 'amount': 'GHC 34'},
+                    {'name': 'Cooker', 'amount': 'GHC 27'},
+                    {'name': 'Kettle', 'amount': 'GHC 24'},
+                    {'name': 'Detergents', 'amount': 'GHC 23'},
+
                   ][index];
 
                   return Padding(
@@ -952,7 +1052,7 @@ class TopWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Top Compliance',
+              'Best 10 qtys Performing Items',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
@@ -965,11 +1065,11 @@ class TopWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
                 Text(
-                  'Business Name',
+                  'Item Name',
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 Text(
-                  'Score',
+                  'Qty',
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
@@ -984,12 +1084,12 @@ class TopWidget extends StatelessWidget {
                     const Divider(color: Colors.white24, height: 1),
                 itemBuilder: (context, index) {
                   final data = [
-                    {'name': 'Reece Martin', 'solved': '37'},
-                    {'name': 'Robyn Mers', 'solved': '34'},
-                    {'name': 'Julia Smith', 'solved': '27'},
-                    {'name': 'Ebeneezer Grey', 'solved': '24'},
-                    {'name': 'Marlon Brown', 'solved': '23'},
-                    {'name': 'Heather Banks', 'solved': '21'},
+                    {'name': 'Milk', 'solved': '37'},
+                    {'name': 'Bread', 'solved': '34'},
+                    {'name': 'Electric Stove', 'solved': '27'},
+                    {'name': 'Malt', 'solved': '24'},
+                    {'name': 'Brown Sugar', 'solved': '23'},
+                    {'name': 'Detergents', 'solved': '21'},
                   ][index];
 
                   return Padding(
@@ -1147,7 +1247,7 @@ class MiddleWidget extends StatelessWidget {
             text: const TextSpan(
               children: [
                 TextSpan(
-                  text: "95",
+                  text: "950",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 42,
@@ -1155,11 +1255,11 @@ class MiddleWidget extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: "%\n",
+                  text: "GHC\n",
                   style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 TextSpan(
-                  text: "CSAT today",
+                  text: "MOMO today",
                   style: TextStyle(color: Colors.white60, fontSize: 13),
                 ),
               ],
@@ -1188,37 +1288,45 @@ class RespWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Resp. time today",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Expense",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Icon(Icons.receipt_long, color: Colors.blue,)
+            ],
           ),
 
           const SizedBox(height: 16),
 
-          RichText(
-            text: const TextSpan(
-              children: [
-                TextSpan(
-                  text: "9",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
+          FittedBox(
+            child: RichText(
+              text: const TextSpan(
+                children: [
+                  TextSpan(
+                    text: "90,000,00.00",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 35,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: "m\n",
-                  style: TextStyle(color: Colors.white, fontSize: 20),
-                ),
-                TextSpan(
-                  text: "FRT",
-                  style: TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-              ],
+                  TextSpan(
+                    text: "GHC\n",
+                    style: TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                  TextSpan(
+                    text: "January",
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -1234,7 +1342,7 @@ class RespWidget extends StatelessWidget {
               ),
               SizedBox(width: 4),
               Text(
-                "vs yesterday",
+                "vs last month",
                 style: TextStyle(color: Colors.white60, fontSize: 12),
               ),
             ],
@@ -1246,10 +1354,10 @@ class RespWidget extends StatelessWidget {
             text: const TextSpan(
               children: [
                 TextSpan(
-                  text: "95",
+                  text: "5",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 42,
+                    fontSize: 35,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1258,7 +1366,7 @@ class RespWidget extends StatelessWidget {
                   style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
                 TextSpan(
-                  text: "Within SLA",
+                  text: "Within this month",
                   style: TextStyle(color: Colors.white60, fontSize: 13),
                 ),
               ],
@@ -1278,7 +1386,7 @@ class WorkPlaceWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: cwidth,
-      //height: 200,
+      height: 235,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF182232),
@@ -1287,27 +1395,35 @@ class WorkPlaceWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Workplaces",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Sales Today",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Icon(Icons.shopping_cart, color: Colors.greenAccent)
+            ],
           ),
 
           //const SizedBox(height: 12),
-          const Text(
-            "23",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
+          FittedBox(
+            child: Text(
+              "30,000,088.00",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 35,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
 
           const Text(
-            "Assigned",
+            "Cash",
             style: TextStyle(color: Colors.white60, fontSize: 14),
           ),
 
@@ -1329,16 +1445,16 @@ class WorkPlaceWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text(
-                      "16",
+                      "10,023,000.00",
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 32,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
-                      "Unassigned",
+                      "Credit",
                       style: TextStyle(color: Colors.white60, fontSize: 13),
                     ),
                   ],
@@ -1395,4 +1511,239 @@ class _LegendDot extends StatelessWidget {
       ],
     );
   }
+}
+
+
+class MomoKpiWidget extends StatefulWidget {
+  final double cwidth;
+  final double todayAmount;
+  final double yesterdayAmount;
+
+  const MomoKpiWidget({
+    super.key,
+    required this.cwidth,
+    required this.todayAmount,
+    required this.yesterdayAmount,
+  });
+
+  @override
+  State<MomoKpiWidget> createState() => _MomoKpiWidgetState();
+}
+
+class _MomoKpiWidgetState extends State<MomoKpiWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _amountAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _amountAnim = Tween<double>(
+      begin: 0,
+      end: widget.todayAmount,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+  }
+
+  double get difference => widget.todayAmount - widget.yesterdayAmount;
+
+  double get percentage =>
+      widget.yesterdayAmount == 0
+          ? 0
+          : (difference / widget.yesterdayAmount) * 100;
+
+  bool get isIncrease => difference >= 0;
+
+  Color get trendColor => isIncrease ? Colors.greenAccent : Colors.redAccent;
+
+  IconData get trendIcon =>
+      isIncrease ? Icons.trending_up : Icons.trending_down;
+
+  String get percentLabel =>
+      "${isIncrease ? '+' : '-'}${percentage.abs().toStringAsFixed(1)}%";
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: widget.cwidth,
+      height: 235,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF182232),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Total MOMO",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Icon(Icons.phone_android, color: Colors.greenAccent),
+            ],
+          ),
+
+          const Spacer(),
+
+
+          AnimatedBuilder(
+            animation: _amountAnim,
+            builder: (context, child) {
+              return FittedBox(
+                child: Text(
+                  "GHS ${_amountAnim.value.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 6),
+
+          const Text(
+            "Today",
+            style: TextStyle(fontSize: 12, color: Colors.white54),
+          ),
+
+          const SizedBox(height: 14),
+
+
+          Row(
+            children: [
+              Icon(trendIcon, color: trendColor, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                percentLabel,
+                style: TextStyle(
+                  color: trendColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                "vs yesterday",
+                style: TextStyle(fontSize: 11, color: Colors.white60),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              minHeight: 6,
+              value: min(percentage.abs() / 100, 1),
+              backgroundColor: Colors.white12,
+              valueColor: AlwaysStoppedAnimation(trendColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+Widget _statCard({
+  required String title,
+  required String value,
+  required String subtitle,
+  required IconData icon,
+  required Color iconColor,
+}) {
+  return Container(
+    width: 200,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: Color(0xFF182232),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title + Icon
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white70
+              ),
+            ),
+            Icon(icon, color: iconColor, size: 20),
+          ],
+        ),
+
+        const SizedBox(height: 4),
+
+        // Value
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 23,
+            fontWeight: FontWeight.bold,
+            color: Colors.white
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        // Subtitle
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white54,
+          ),
+        ),
+      ],
+    ),
+  );
 }
