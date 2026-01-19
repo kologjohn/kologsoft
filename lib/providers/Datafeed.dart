@@ -6,6 +6,7 @@ import 'package:kologsoft/models/paymentdurationmodel.dart';
 import 'package:kologsoft/models/productcategorymodel.dart';
 import 'package:kologsoft/models/staffmodel.dart';
 import 'package:kologsoft/providers/routes.dart';
+import 'package:kologsoft/services/item_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/branch.dart';
 import '../models/companymodel.dart';
@@ -15,7 +16,9 @@ import '../models/warehousemodel.dart';
 class Datafeed extends ChangeNotifier {
   final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
+  final ItemCacheService itemCache = ItemCacheService();
   bool authenticated = false;
+  bool isOffline = false;
   String company = "";
   String companytype = "both";
   String companyid = "";
@@ -34,7 +37,30 @@ class Datafeed extends ChangeNotifier {
   CompanyModel? currentCompany;
 
   Datafeed() {
-    //_initSync();
+    _initSync();
+    _initItemCache();
+  }
+
+  Future<void> _initItemCache() async {
+    try {
+      await itemCache.init();
+      debugPrint('✅ Item cache initialized');
+    } catch (e) {
+      debugPrint('❌ Error initializing item cache: $e');
+    }
+  }
+
+  void _initSync() {
+    // Listen to Firestore snapshots metadata to detect offline/online status
+    db
+        .collection('_connection_check')
+        .limit(1)
+        .snapshots(includeMetadataChanges: true)
+        .listen((snapshot) {
+          isOffline = snapshot.metadata.isFromCache;
+          notifyListeners();
+          debugPrint(isOffline ? '📴 App is OFFLINE' : '📶 App is ONLINE');
+        });
   }
 
   fetchBranches() async {
@@ -42,7 +68,7 @@ class Datafeed extends ChangeNotifier {
       final snap = await db
           .collection('branches')
           .where("companyId", isEqualTo: companyid)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
       final fetchedBranches = snap.docs.map((doc) {
         return BranchModel.fromJson(doc.data());
       }).toList();
@@ -61,13 +87,13 @@ class Datafeed extends ChangeNotifier {
       final snap = await db
           .collection('suppliers')
           .where("companyid", isEqualTo: companyid)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
       suppliers = snap.docs.map((doc) {
         return Supplier.fromMap(doc.data());
       }).toList();
       notifyListeners();
     } catch (e) {
-      debugPrint("Error fetching branches: $e");
+      debugPrint("Error fetching suppliers: $e");
     }
   }
 
@@ -79,7 +105,7 @@ class Datafeed extends ChangeNotifier {
       final snap = await db
           .collection('productcategoryreg')
           .where('companyId', isEqualTo: companyid)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
 
       productcategory = snap.docs
           .map((e) => Productcategorymodel.fromJson(e.data()))
@@ -330,6 +356,10 @@ class Datafeed extends ChangeNotifier {
         companyid = currentStaff!.companyId;
       }
       await getdata();
+
+      // Sync items cache after successful login
+      _syncItemsCache();
+
       notifyListeners();
       Navigator.pushNamed(context, Routes.home);
     } on FirebaseAuthException catch (e) {
@@ -367,5 +397,36 @@ class Datafeed extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  // Sync items cache in background
+  void _syncItemsCache() async {
+    if (companyid.isEmpty) return;
+
+    try {
+      debugPrint('🔄 Starting background item sync...');
+      await itemCache.syncItems(companyid);
+      final stats = itemCache.getCacheStats();
+      debugPrint('✅ Item cache synced: ${stats['totalItems']} items');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error syncing item cache: $e');
+    }
+  }
+
+  // Force sync items cache
+  Future<void> forceSyncItems() async {
+    if (companyid.isEmpty) return;
+
+    try {
+      debugPrint('🔄 Force syncing items...');
+      await itemCache.syncItems(companyid, forceSync: true);
+      final stats = itemCache.getCacheStats();
+      debugPrint('✅ Items force synced: ${stats['totalItems']} items');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error force syncing items: $e');
+      rethrow;
+    }
   }
 }

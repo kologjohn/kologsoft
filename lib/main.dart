@@ -1,5 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:kologsoft/models/itemregmodel.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:kologsoft/providers/survey_controller.dart';
@@ -11,10 +15,54 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
+  await Hive.initFlutter();
+
+  // Register Hive adapters
+ // Hive.registerAdapter(ItemModelAdapter());
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Enable Firestore offline persistence
+  await _enableFirestoreOffline();
+
   // Initialize storage service
 
   runApp(MyApp());
+}
+
+Future<void> _enableFirestoreOffline() async {
+  try {
+    final firestore = FirebaseFirestore.instance;
+
+    // Enable offline persistence for mobile and desktop platforms
+    if (!kIsWeb) {
+      await firestore.enableNetwork();
+
+      // Configure persistence settings
+      firestore.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+
+      debugPrint('✅ Firestore offline persistence enabled');
+    } else {
+      // For web, enable persistence differently
+      try {
+        firestore.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        debugPrint('✅ Firestore web persistence enabled');
+      } catch (e) {
+        debugPrint('⚠️ Web persistence may already be enabled: $e');
+      }
+    }
+  } catch (e) {
+    debugPrint('⚠️ Firestore persistence error: $e');
+    // Persistence can fail if already enabled, which is fine
+  }
 }
 
 class MyApp extends StatelessWidget {
