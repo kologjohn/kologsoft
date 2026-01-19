@@ -408,7 +408,7 @@ class _SalesPageState extends State<SalesPage> {
                             width: itemWidth,
                             child: Container(
                               color: Color(0xFF182232),
-                              height: 300,
+                              //height: 300,
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
@@ -418,6 +418,96 @@ class _SalesPageState extends State<SalesPage> {
                                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                                     const Divider(color: Colors.white24),
                                     SizedBox(height: 15),
+
+                                    Table(
+                                      border: TableBorder.all(color: Colors.grey),
+                                      columnWidths: const {
+                                        0: FixedColumnWidth(40),
+                                        1: FlexColumnWidth(2),
+                                        2: FlexColumnWidth(1),
+                                        3: FlexColumnWidth(1),
+                                        4: FlexColumnWidth(1),
+                                        5: FlexColumnWidth(1),
+                                      },
+                                      children: [
+                                        _tableRow([
+                                          "#",
+                                          "Item",
+                                          "Quantity",
+                                          "Price",
+                                          "Total",
+                                          "Action"
+                                        ], isHeader: true,),
+                                        _tableRow(["", "Taxable Total", "", "", "0.00", ""]),
+                                        _tableRow(["", "Payable Amount", "", "", "0.00", ""]),
+                                      ],
+                                    ),
+
+
+                                    SizedBox(height: 20),
+                                    Wrap(
+                                      spacing: 10,
+                                      runSpacing: 10,
+                                      children: [
+                                        SizedBox(
+                                          width: 100,
+                                          child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.teal,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: (){},
+                                              child: Text("POS PRINT", style: TextStyle(color: Colors.white),)
+                                          ),
+                                        ),
+
+                                        SizedBox(
+                                          width: 100,
+                                          child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: (){},
+                                              child: Text("MOMO", style: TextStyle(color: Colors.white))
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 150,
+                                          child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.lightBlue,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: (){},
+                                              child: Text("NEW TRANSACTION", style: TextStyle(color: Colors.white))
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 100,
+                                          child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.orange,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: (){},
+                                              child: Text("Customer Info", style: TextStyle(color: Colors.white))
+                                          ),
+                                        ),
+                                      ],
+                                    )
 
                                   ],
                                 ),
@@ -436,5 +526,27 @@ class _SalesPageState extends State<SalesPage> {
       ),
     );
   }
+
+
+
+  TableRow _tableRow(List<String> cells, {bool isHeader = false}) {
+    return TableRow(
+      children: cells
+          .map(
+            (e) => Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(
+            e,
+            textAlign: isHeader ? TextAlign.center : TextAlign.left,
+            style: TextStyle(
+              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal, color: Colors.white
+            ),
+          ),
+        ),
+      )
+          .toList(),
+    );
+  }
+
 
 }
