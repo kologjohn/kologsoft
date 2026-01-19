@@ -344,19 +344,19 @@ class _NewStockState extends State<NewStock> {
                                             final headerData = {
                                               'invoice': invoicenumber,
                                               'waybill': waybillnumber,
-                                              'supplierId': value.selectedSupplier?.id ?? '',
-                                              'supplierName': value.selectedSupplier?.supplier ?? '',
-                                              'branchId': branchId,
-                                              'branchName': branchName,
-                                              'purchaseType': purchasetype!,
+                                              'supplierid': value.selectedSupplier?.id ?? '',
+                                              'suppliername': value.selectedSupplier?.supplier ?? '',
+                                              'branchid': branchId,
+                                              'branchname': branchName,
+                                              'purchasetype': purchasetype!,
                                               'docid': docid,
-                                              'createdAt': DateTime.now(),
-                                              'createdBy': value.staff,
-                                              'editedBy': "",
-                                              'editedAt': "",
-                                              'deletedBy': "",
-                                              'deletedAt': "",
-                                              'companyId': value.companyid,
+                                              'createdat': DateTime.now(),
+                                              'createdby': value.staff,
+                                              'editedby': "",
+                                              'editedat': "",
+                                              'deletedby': "",
+                                              'deletedat': "",
+                                              'companyid': value.companyid,
                                               'company': value.company,
                                             };
 
@@ -620,12 +620,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
           'quantity': quantity,
           'price': price,
           'discount': discount,
-          'taxType': _selectedTaxType ?? '',
-          'taxValue': taxValue,
-          'taxAmount': taxAmount,
+          'taxtype': _selectedTaxType ?? '',
+          'taxvalue': taxValue,
+          'taxamount': taxAmount,
           'total': total,
-          'stockingMode': _selectedStockMode ?? '',
-          'modeQty': modeQty,
+          'stockingmode': _selectedStockMode ?? '',
+          'modeqty': modeQty,
           'pieces': pieces,
           'barcode': _barcodeController.text.trim(),
         });
@@ -647,12 +647,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
                 'quantity': it['quantity'],
                 'price': it['price'],
                 'discount': it['discount'],
-                'taxType': it['taxType'],
-                'taxValue': it['taxValue'],
-                'taxAmount': it['taxAmount'],
+                'taxtype': it['taxtype'],
+                'taxvalue': it['taxvalue'],
+                'taxamount': it['taxamount'],
                 'total': it['total'],
-                'stockingMode': it['stockingMode'],
-                'modeQty': it['modeQty'],
+                'stockingmode': it['stockingmode'],
+                'modeqty': it['modeqty'],
                 'pieces': it['pieces'],
               }
           };
@@ -736,12 +736,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
           'quantity': it['quantity'],
           'price': it['price'],
           'discount': it['discount'],
-          'taxType': it['taxType'],
-          'taxValue': it['taxValue'],
-          'taxAmount': it['taxAmount'],
+          'taxtype': it['taxtype'],
+          'taxvalue': it['taxvalue'],
+          'taxamount': it['taxamount'],
           'total': it['total'],
-          'stockingMode': it['stockingMode'],
-          'modeQty': it['modeQty'],
+          'stockingmode': it['stockingmode'],
+          'modeqty': it['modeqty'],
           'pieces': it['pieces'],
         }
     };
@@ -749,7 +749,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
     final Map<String, dynamic> docData = {
       ...widget.headerData,
       'transactionId': widget.transactionId,
-      'items': itemsByBarcode, // ✅ now keyed by barcode
+      'items': itemsByBarcode,
       'totals': totals,
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -1266,15 +1266,15 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         final discountText = (item['discount'] != null)
                                             ? (item['discount'] as double).toStringAsFixed(2)
                                             : '0.00';
-                                        final taxText = (item['taxAmount'] != null)
-                                            ? (item['taxAmount'] as double).toStringAsFixed(2)
+                                        final taxText = (item['taxamount'] != null)
+                                            ? (item['taxamount'] as double).toStringAsFixed(2)
                                             : '0.00';
 
                                         return TableRow(
                                           children: [
                                             _cell((idx + 1).toString()),
                                             _cell(item['item']?.toString() ?? ''),
-                                            _cell(item['salesMode']?.toString() ?? ''),
+                                            _cell(item['stockingmode']?.toString() ?? ''),
                                             _cell(item['quantity']?.toString() ?? '0', alignRight: true),
                                             _cell(item['pieces']?.toString() ?? '0', alignRight: true),
                                             _cell(priceText, alignRight: true),
