@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:kologsoft/screens/sidebar.dart';
+import 'package:kologsoft/widgets/offline_indicator.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/routes.dart';
@@ -22,7 +23,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<Datafeed>().getdata();
     });
-
   }
 
   void _showLogoutDialog(BuildContext context, Datafeed datafeed) {
@@ -460,6 +460,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const OfflineIndicator(),
                   Wrap(
                     runSpacing: 15,
                     spacing: 15,
