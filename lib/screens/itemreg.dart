@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -14,6 +16,7 @@ import 'package:screenshot/screenshot.dart';
 import 'package:mobile_scanner/mobile_scanner.dart' hide Barcode;
 
 import '../providers/Datafeed.dart';
+import '../models/itemregmodel.dart';
 
 class ItemRegPage extends StatefulWidget {
   final String? docId;
@@ -49,6 +52,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final _wholesaleMinQtyController = TextEditingController();
   final _supplierMinQtyController = TextEditingController();
   Map<String, TextEditingController> stockingControllers = {};
+  // Local search for cached items
+  final _searchController = TextEditingController();
+  List<ItemModel> _searchResults = [];
+  Timer? _searchDebounce;
   String? _productType;
   String? _pricingMode;
   String? _productCategory;
@@ -69,14 +76,82 @@ class _ItemRegPageState extends State<ItemRegPage> {
       context.read<Datafeed>().fetchproductcategory();
     });
 
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // no-op: rely on Datafeed.itemCache being ready
+    });
+
     if (widget.data != null) {
       final d = widget.data!;
+      // Basic fields
       _existingLogoUrl = d['imageurl'];
       _nameController.text = d['name'] ?? '';
       _barcodeController.text = d['barcode'] ?? '';
       _costController.text = d['costprice'] ?? '';
+      _productCategory= d['pcategory'];
       _productType = d['producttype'];
-      _productCategory = d['productcategory'];
+      _costController.text = d['cp'];
+      _supplierMinQtyController.text = d['sminqty'];
+
+      // Enable box pricing switch
+      _enableBoxPricing = d['modemore'] == true;
+
+      // ----- LOAD MODES -----
+      final modes = d['modes'] as Map<String, dynamic>? ?? {};
+
+      // Single
+      final single = modes['single'] ?? {};
+      _retail_price.text = single['rp'] ?? '';
+
+      // Pack
+      final pack = modes['pack'] ?? {};
+      _packQtyController.text = pack['qty'] ?? '';
+      _packprice_controller.text = pack['rp'] ?? '';
+
+      // Quarter
+      final quarter = modes['quarter'] ?? {};
+      _quarterqty_controller.text = quarter['qty'] ?? '';
+      _quarterprice_controller.text = quarter['rp'] ?? '';
+
+      // Half
+      final half = modes['half'] ?? {};
+      _halfboxqty_controller.text = half['qty'] ?? '';
+      _halfboxprice_controller.text = half['rp'] ?? '';
+
+      // Carton (Full Box)
+      final carton = modes['carton'] ?? {};
+      _boxQtyController.text = carton['qty'] ?? '';
+      _supplierPriceController.text = carton['sp'] ?? '';
+      _wholesalePriceController.text = carton['wp'] ?? '';
+
+
+      // pricingStep: 0 = none, 1 = half, 2 = quarter, 3 = pack
+      int step = 0;
+      if (modes.containsKey('half')) step = 1;
+      if (modes.containsKey('quarter')) step = 2;
+      if (modes.containsKey('pack')) step = 3;
+      pricingStep = step;
+
+
+      _enableBoxPricing = modes.isNotEmpty && (modes.containsKey('carton') || modes.containsKey('half') || modes.containsKey('quarter') || modes.containsKey('pack'));
+      _showBoxPricingSwitch = _enableBoxPricing;
+
+
+      try {
+        final boxQtyVal = int.tryParse(_boxQtyController.text) ?? 0;
+        if (boxQtyVal == 1) {
+          final retail = _retail_price.text;
+          _wholesalePriceController.text = retail;
+          _supplierPriceController.text = retail;
+        }
+      } catch (_) {}
+    }
+
+    @override
+    void dispose() {
+      _searchDebounce?.cancel();
+      _searchController.dispose();
+      super.dispose();
     }
   }
 
@@ -112,7 +187,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _logoBytes = null;
       _logoFile = null;
       _existingLogoUrl = null;
-
       // Reset form validation
       _formKey.currentState?.reset();
     });
@@ -139,7 +213,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
   Future<String?> uploadLogo(String itemId) async {
     if (_logoFile == null && _logoBytes == null) {
-      return _existingLogoUrl; // unchanged
+      return _existingLogoUrl;
     }
 
     final ref = FirebaseStorage.instance
@@ -282,16 +356,49 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           }
                           _formKey.currentState?.validate();
                         },
+                        // validator: (v) {
+                        //   if (v == null || v.isEmpty) return 'Required';
+                        //
+                        //   final retailPrice = double.tryParse(v) ?? 0;
+                        //   final costPrice =
+                        //       double.tryParse(_costController.text) ?? 0;
+                        //
+                        //   if (costPrice > 0 && retailPrice <= costPrice) {
+                        //     return 'Retail price must be greater than Unit Cost Price';
+                        //   }
+                        //   return null;
+                        // },
                         validator: (v) {
                           if (v == null || v.isEmpty) return 'Required';
 
                           final retailPrice = double.tryParse(v) ?? 0;
-                          final costPrice =
-                              double.tryParse(_costController.text) ?? 0;
+                          final unitCost = double.tryParse(_costController.text) ?? 0;
+                          final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                          final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                          final boxQty = int.tryParse(_boxQtyController.text) ?? 1;
 
-                          if (costPrice > 0 && retailPrice <= costPrice) {
-                            return 'Retail price must be greater than Unit Cost Price';
+                          if (retailPrice <= 0) {
+                            return 'Enter a valid retail price';
                           }
+                          if (unitCost > 0 && retailPrice <= unitCost) {
+                            return 'Retail price must be greater than Unit Cost';
+                          }
+                          if (boxQty > 1) {
+                            final totalUnitCost = unitCost * boxQty;
+
+                            if (retailPrice <= boxPrice) {
+                              return 'Retail price must be greater than Box Price';
+                            }
+
+                            if (retailPrice <= supplierPrice) {
+                              return 'Retail price must be greater than Supplier Price';
+                            }
+
+                            if (retailPrice <= totalUnitCost) {
+                              return 'Retail price must be greater than Unit Cost × Box Qty';
+                            }
+                          }
+
                           return null;
                         },
                       ),
@@ -382,11 +489,9 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               enabled:
                                   double.tryParse(_boxQtyController.text) != 1,
                               validator: (v) {
-                                final boxQty =
-                                    double.tryParse(_boxQtyController.text) ??
-                                    0;
+                                final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
                                 if (boxQty == 1)
-                                  return null; // Skip validation when box qty is 1
+                                  return null;
                                 if (v == null || v.isEmpty) return 'Required';
                                 final boxPrice = double.tryParse(v) ?? 0;
                                 final boxQtyVal =
@@ -421,14 +526,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled:
-                                  double.tryParse(_boxQtyController.text) != 1,
+                              enabled: double.tryParse(_boxQtyController.text) != 1,
                               validator: (v) {
                                 final boxQty =
                                     double.tryParse(_boxQtyController.text) ??
                                     0;
                                 if (boxQty == 1)
-                                  return null; // Skip validation when box qty is 1
+                                  return null;
 
                                 if (v == null || v.isEmpty) return 'Required';
 
@@ -452,38 +556,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                       Row(
                         children: [
-                          // Expanded(
-                          //   child: _buildField(
-                          //     _wholesaleMinQtyController,
-                          //     'Wholesale Min Qty',
-                          //     onChanged: (value) {
-                          //       _formKey.currentState?.validate();
-                          //     },
-                          //     validator: (v) {
-                          //       // If wholesale is empty, always pass
-                          //       if (v == null || v.isEmpty) return null;
-                          //
-                          //       final wholesaleQty = int.tryParse(v) ?? 0;
-                          //       final supplierText = _supplierMinQtyController.text.trim();
-                          //
-                          //       // If supplier is empty, always pass
-                          //       if (supplierText.isEmpty) return null;
-                          //
-                          //       final supplierQty = int.tryParse(supplierText) ?? 0;
-                          //
-                          //       // Skip validation when either is 1
-                          //       if (wholesaleQty == 1 || supplierQty == 1) return null;
-                          //
-                          //       if (wholesaleQty > supplierQty) {
-                          //         return 'Cannot exceed Supplier Min Qty';
-                          //       }
-                          //
-                          //       return null;
-                          //     },
-                          //     Icons.numbers,
-                          //     isNumber: true,
-                          //   ),
-                          // ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildField(
@@ -810,7 +882,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       const SizedBox(height: 10),
 
                       DropdownButtonFormField<String>(
-                        value: _productType,
+                        initialValue: _productType,
                         dropdownColor: Color(0xFF1B263B),
                         style: TextStyle(color: Colors.white70),
                         decoration: _buildDropdownDecoration('Product Type'),
@@ -902,15 +974,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     final barcode = _barcodeController.text
                                         .trim();
 
-                                    // Check for duplicates only if creating a new item (not editing)
+
                                     if (widget.docId == null) {
-                                      // Check for duplicate name with same companyid
-                                      final nameQuery = await _db
-                                          .collection('itemsreg')
-                                          .where(
-                                            'companyid',
-                                            isEqualTo: companyId,
-                                          )
+                                      final nameQuery = await _db.collection('itemsreg')
+                                          .where('companyid',isEqualTo: companyId,)
                                           .where('name', isEqualTo: itemName)
                                           .limit(1)
                                           .get();
@@ -938,10 +1005,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       // Check for duplicate barcode with same companyid
                                       final barcodeQuery = await _db
                                           .collection('itemsreg')
-                                          .where(
-                                            'companyid',
-                                            isEqualTo: companyId,
-                                          )
+                                          .where('companyid',isEqualTo: companyId,)
                                           .where('barcode', isEqualTo: barcode)
                                           .limit(1)
                                           .get();
@@ -968,27 +1032,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     }
 
                                     String sanitize(String input) {
-                                      return input
-                                          .trim()
-                                          .toLowerCase()
-                                          .replaceAll(RegExp(r'\s+'), '')
-                                          .replaceAll(
+                                      return input.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll(
                                             RegExp(r'[^a-z0-9_]'),
                                             '',
                                           );
                                     }
 
-                                    final docId =
-                                        widget.docId ??
-                                        '${sanitize(companyId)}_${sanitize(itemName)}';
-                                    final docRef = _db
-                                        .collection('itemsreg')
-                                        .doc(docId);
+                                    final docId =widget.docId ??'${sanitize(companyId)}_${sanitize(itemName)}';
+                                    final docRef = _db.collection('itemsreg').doc(docId);
                                     final imageUrl = await uploadLogo(docId);
-                                    final wholesaleText =
-                                        _wholesaleMinQtyController.text.trim();
-                                    final supplierText =
-                                        _supplierMinQtyController.text.trim();
+                                    final wholesaleText =_wholesaleMinQtyController.text.trim();
+                                    final supplierText = _supplierMinQtyController.text.trim();
 
                                     Map<String, dynamic> modesMap = {
                                       "single": {
@@ -999,10 +1053,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         'qty': '1',
                                       },
                                     };
-                                    double boxqty =
-                                        _boxQtyController.text.isNotEmpty
-                                        ? double.parse(_boxQtyController.text)
-                                        : 0;
+                                    double boxqty =_boxQtyController.text.isNotEmpty
+                                        ? double.parse(_boxQtyController.text): 0;
                                     if (boxqty >= 2) {
                                       modesMap["carton"] = {
                                         'name': 'carton',
@@ -1094,6 +1146,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       'barcode': _barcodeController.text.trim(),
                                       'cp': _costController.text.trim(),
                                       'pcategory': _productCategory,
+                                      'producttype': _productType,
                                       'imageurl': imageUrl,
                                       'updatedat': null,
                                       'updatedby': null,
@@ -1101,26 +1154,44 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       'deletedat': null,
                                       'modemore': _enableBoxPricing,
                                       'modes': modesMap,
-                                      'wminqty':
-                                          _wholesaleMinQtyController.text,
+                                      'wminqty': _wholesaleMinQtyController.text,
                                       'sminqty': _supplierMinQtyController.text,
+                                      'staff':datafeed.staff,
                                     };
 
                                     if (widget.docId == null) {
-                                      data['createdat'] =
-                                          FieldValue.serverTimestamp();
+                                      data['createdat'] = FieldValue.serverTimestamp();
+                                    } else {
+                                      if (widget.data != null && widget.data!['name'] != itemName) {
+                                        final oldName = widget.data!['name'] ?? '';
+                                        final oldNamesMap = (widget.data!['oldnames'] as Map<String, dynamic>?) ?? {};
+                                        
+                                        // Generate unique key for this name change
+                                        final changeKey = 'change_${DateTime.now().millisecondsSinceEpoch}';
+                                        
+                                        oldNamesMap[changeKey] = {
+                                          'name': oldName,
+                                          'namenew': itemName,
+                                          'changedby': datafeed.staff ?? '',
+                                          'changedat': FieldValue.serverTimestamp(),
+                                        };
+                                        
+                                        data['oldnames'] = oldNamesMap;
+                                      }
+                                      
+                                      data['updatedat'] = FieldValue.serverTimestamp();
+                                      data['updatedby'] = datafeed.staff ?? '';
                                     }
-
-                                    await docRef.set(
-                                      data,
-                                      SetOptions(merge: true),
-                                    );
-
-                                    // Show success message
+                                   // await docRef.set(data,SetOptions(merge: true),);
+                                   // Save to Firestore
+                                    if (widget.docId == null) {
+                                      data['createdat'] = FieldValue.serverTimestamp();
+                                      await docRef.set(data);
+                                    } else {
+                                      await docRef.update(data);
+                                    }
                                     if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
+                                      ScaffoldMessenger.of(context,).showSnackBar(
                                         SnackBar(
                                           content: Text(
                                             widget.docId == null
@@ -1132,7 +1203,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         ),
                                       );
 
-                                      // Clear all input fields only if it's a new item (not editing)
                                       if (widget.docId == null) {
                                         _clearAllFields();
                                       }
@@ -1155,7 +1225,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                   setState(() => _loading = false);
                                 },
-                          child: _loading
+                              child: _loading
                               ? const CircularProgressIndicator(
                                   color: Colors.white,
                                 )

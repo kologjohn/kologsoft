@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'itemreg.dart';
 
-class ItemListPage extends StatelessWidget {
-  ItemListPage({super.key});
+class ItemListPage extends StatefulWidget {
+  const ItemListPage({super.key});
 
+  @override
+  State<ItemListPage> createState() => _ItemListPageState();
+}
+
+class _ItemListPageState extends State<ItemListPage> {
   final FirebaseFirestore db = FirebaseFirestore.instance;
+  String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
@@ -14,8 +20,6 @@ class ItemListPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Registered Items"),
       ),
-
-      /// ADD NEW ITEM
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF415A77),
         child: const Icon(Icons.add),
@@ -26,41 +30,104 @@ class ItemListPage extends StatelessWidget {
           );
         },
       ),
-
       /// ITEMS STREAM
-      body: StreamBuilder<QuerySnapshot>(
-        stream: db.collection('itemsreg').orderBy('name').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "No items registered yet",
-                style: TextStyle(color: Colors.white70),
+      body: Column(
+        children: [
+          /// SEARCH BAR
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              child: TextFormField(
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value.toLowerCase();
+                  });
+                },
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  fillColor: Color(0xFF22304A),
+                  hintText: 'Search  ...',
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                  suffixIcon: searchQuery.isNotEmpty ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.white54),
+                          onPressed: () {
+                            setState(() {
+                              searchQuery = "";
+                            });
+                          },
+                        ) : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.white10),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.white24),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
+                ),
               ),
-            );
-          }
+            ),
+          ),
 
-          final docs = snapshot.data!.docs;
+          /// LIST VIEW
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: db.collection('itemsreg').orderBy('name').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "No items registered yet",
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+
+                final allDocs = snapshot.data!.docs;
+
+                // Filter documents based on search query - search all fields
+                final filteredDocs = allDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  
+                  // Search through all fields in the document
+                  return data.values.any((value) {
+                    if (value == null) return false;
+                    return value.toString().toLowerCase().contains(searchQuery);
+                  });
+                }).toList();
+
+                if (filteredDocs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      searchQuery.isEmpty
+                          ? "No items registered yet"
+                          : "No items found matching '$searchQuery'",
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: filteredDocs.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredDocs[index];
               final data = doc.data() as Map<String, dynamic>;
 
-              final retailMarkup = (data['retailmarkup'] ?? '').toString();
-              final wholesaleMarkup = (data['wholesalemarkup'] ?? '').toString();
-
-              final bool retailActive =
-                  retailMarkup.isNotEmpty && wholesaleMarkup.isEmpty;
-
-              final bool wholesaleActive = !retailActive;
-
+              // Extract modes data
+              final modesMap = data['modes'] as Map<String, dynamic>? ?? {};
+              final singleMode = modesMap['single'] as Map<String, dynamic>? ?? {};
+              final cartonMode = modesMap['carton'] as Map<String, dynamic>? ?? {};
+              
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(18),
@@ -101,11 +168,10 @@ class ItemListPage extends StatelessWidget {
                           ),
 
                           const SizedBox(height: 6),
-
                           /// BASIC INFO
                           Text(
                             "Barcode: ${data['barcode'] ?? ''}\n"
-                                "Cost Price: ${data['costprice'] ?? ''}",
+                             "Cost Price: ${data['cp'] ?? ''}",
                             style: const TextStyle(
                               color: Colors.white70,
                               height: 1.4,
@@ -113,41 +179,33 @@ class ItemListPage extends StatelessWidget {
                           ),
 
                           const SizedBox(height: 6),
+                          /// SINGLE MODE INFO
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: modesMap.entries.map((entry) {
+                              final modeData = entry.value as Map<String, dynamic>;
+                              final modeName = modeData['name'] ?? entry.key;
+                              final qty = modeData['qty'] ?? '';
+                              final rp = modeData['rp'] ?? '';
+                              final wp = modeData['wp'] ?? '';
+                              final sp = modeData['sp'] ?? '';
 
-                          /// RETAIL INFO
-                          Text(
-                            "Retail Markup: ${data['retailmarkup'] ?? ''}  →  "
-                                "Retail Price: ${data['retailprice'] ?? ''}",
-                            style: TextStyle(
-                              color: retailActive
-                                  ? Colors.white70
-                                  : Colors.white38,
-                              height: 1.4,
-                            ),
+                              return Text(
+                                "$modeName  Qty: $qty | RPrice: $rp  | WPrice: $wp |  SPrice: $sp",
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  height: 1.4,
+                                ),
+                              );
+                            }).toList(),
                           ),
-
-                          /// WHOLESALE INFO
-                          Text(
-                            "Wholesale Markup: ${data['wholesalemarkup'] ?? ''}  →  "
-                                "Wholesale Price: ${data['wholesaleprice'] ?? ''}",
-                            style: TextStyle(
-                              color: wholesaleActive
-                                  ? Colors.white70
-                                  : Colors.white38,
-                              height: 1.4,
-                            ),
-                          ),
-
                           const SizedBox(height: 6),
-
                           /// EXTRA INFO
                           Text(
-                            "Opening Stock: ${data['openingstock'] ?? ''}\n"
-                                "Product Type: ${data['producttype'] ?? ''}\n"
-                                "Pricing Mode: ${data['pricingmode'] ?? ''}\n"
-                                "Category: ${data['productcategory'] ?? ''}\n"
-                                "Warehouse: ${data['warehouse'] ?? ''}\n"
-                                "Company: ${data['company'] ?? ''}",
+                            "Product Type: ${data['producttype'] ?? ''}\n"
+                            "Category: ${data['pcategory'] ?? ''}\n"
+                            "Company: ${data['company'] ?? ''}\n"
+                            "Box Pricing: ${data['modemore'] == true ? 'Enabled' : 'Disabled'}",
                             style: const TextStyle(
                               color: Colors.white38,
                               height: 1.4,
@@ -176,7 +234,7 @@ class ItemListPage extends StatelessWidget {
                     /// DELETE BUTTON
                     IconButton(
                       icon: const Icon(Icons.delete,
-                          color: Colors.redAccent),
+                      color: Colors.redAccent),
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
@@ -187,13 +245,11 @@ class ItemListPage extends StatelessWidget {
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, false),
+                                onPressed: () => Navigator.pop(context, false),
                                 child: const Text("Cancel"),
                               ),
                               ElevatedButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, true),
+                                onPressed: () => Navigator.pop(context, true),
                                 child: const Text("Delete"),
                               ),
                             ],
@@ -201,25 +257,26 @@ class ItemListPage extends StatelessWidget {
                         );
 
                         if (confirm == true) {
-                          await db
-                              .collection('items')
-                              .doc(doc.id)
-                              .delete();
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Item deleted successfully"),
-                            ),
-                          );
+                          await db.collection('itemsreg').doc(doc.id).delete();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Item deleted successfully"),
+                              ),
+                            );
+                          }
                         }
                       },
                     ),
                   ],
                 ),
               );
-            },
-          );
-        },
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
