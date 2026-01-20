@@ -71,12 +71,46 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
     if (widget.data != null) {
       final d = widget.data!;
+      // Basic fields
       _existingLogoUrl = d['imageurl'];
       _nameController.text = d['name'] ?? '';
       _barcodeController.text = d['barcode'] ?? '';
       _costController.text = d['costprice'] ?? '';
+      _productCategory= d['pcategory'];
       _productType = d['producttype'];
-      _productCategory = d['productcategory'];
+      _costController.text = d['cp'];
+      _supplierMinQtyController.text = d['sminqty'];
+
+      // Enable box pricing switch
+      _enableBoxPricing = d['modemore'] == true;
+
+      // ----- LOAD MODES -----
+      final modes = d['modes'] as Map<String, dynamic>? ?? {};
+
+      // Single
+      final single = modes['single'] ?? {};
+      _retail_price.text = single['rp'] ?? '';
+
+      // Pack
+      final pack = modes['pack'] ?? {};
+      _packQtyController.text = pack['qty'] ?? '';
+      _packprice_controller.text = pack['rp'] ?? '';
+
+      // Quarter
+      final quarter = modes['quarter'] ?? {};
+      _quarterqty_controller.text = quarter['qty'] ?? '';
+      _quarterprice_controller.text = quarter['rp'] ?? '';
+
+      // Half
+      final half = modes['half'] ?? {};
+      _halfboxqty_controller.text = half['qty'] ?? '';
+      _halfboxprice_controller.text = half['rp'] ?? '';
+
+      // Carton (Full Box)
+      final carton = modes['carton'] ?? {};
+      _boxQtyController.text = carton['qty'] ?? '';
+      _supplierPriceController.text = carton['sp'] ?? '';
+      _wholesalePriceController.text = carton['wp'] ?? '';
     }
   }
 
@@ -112,7 +146,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _logoBytes = null;
       _logoFile = null;
       _existingLogoUrl = null;
-
       // Reset form validation
       _formKey.currentState?.reset();
     });
@@ -139,7 +172,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
   Future<String?> uploadLogo(String itemId) async {
     if (_logoFile == null && _logoBytes == null) {
-      return _existingLogoUrl; // unchanged
+      return _existingLogoUrl;
     }
 
     final ref = FirebaseStorage.instance
@@ -282,16 +315,49 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           }
                           _formKey.currentState?.validate();
                         },
+                        // validator: (v) {
+                        //   if (v == null || v.isEmpty) return 'Required';
+                        //
+                        //   final retailPrice = double.tryParse(v) ?? 0;
+                        //   final costPrice =
+                        //       double.tryParse(_costController.text) ?? 0;
+                        //
+                        //   if (costPrice > 0 && retailPrice <= costPrice) {
+                        //     return 'Retail price must be greater than Unit Cost Price';
+                        //   }
+                        //   return null;
+                        // },
                         validator: (v) {
                           if (v == null || v.isEmpty) return 'Required';
 
                           final retailPrice = double.tryParse(v) ?? 0;
-                          final costPrice =
-                              double.tryParse(_costController.text) ?? 0;
+                          final unitCost = double.tryParse(_costController.text) ?? 0;
+                          final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                          final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                          final boxQty = int.tryParse(_boxQtyController.text) ?? 1;
 
-                          if (costPrice > 0 && retailPrice <= costPrice) {
-                            return 'Retail price must be greater than Unit Cost Price';
+                          if (retailPrice <= 0) {
+                            return 'Enter a valid retail price';
                           }
+                          if (unitCost > 0 && retailPrice <= unitCost) {
+                            return 'Retail price must be greater than Unit Cost';
+                          }
+                          if (boxQty > 1) {
+                            final totalUnitCost = unitCost * boxQty;
+
+                            if (retailPrice <= boxPrice) {
+                              return 'Retail price must be greater than Box Price';
+                            }
+
+                            if (retailPrice <= supplierPrice) {
+                              return 'Retail price must be greater than Supplier Price';
+                            }
+
+                            if (retailPrice <= totalUnitCost) {
+                              return 'Retail price must be greater than Unit Cost × Box Qty';
+                            }
+                          }
+
                           return null;
                         },
                       ),
@@ -382,11 +448,9 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               enabled:
                                   double.tryParse(_boxQtyController.text) != 1,
                               validator: (v) {
-                                final boxQty =
-                                    double.tryParse(_boxQtyController.text) ??
-                                    0;
+                                final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
                                 if (boxQty == 1)
-                                  return null; // Skip validation when box qty is 1
+                                  return null;
                                 if (v == null || v.isEmpty) return 'Required';
                                 final boxPrice = double.tryParse(v) ?? 0;
                                 final boxQtyVal =
@@ -421,14 +485,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled:
-                                  double.tryParse(_boxQtyController.text) != 1,
+                              enabled: double.tryParse(_boxQtyController.text) != 1,
                               validator: (v) {
                                 final boxQty =
                                     double.tryParse(_boxQtyController.text) ??
                                     0;
                                 if (boxQty == 1)
-                                  return null; // Skip validation when box qty is 1
+                                  return null;
 
                                 if (v == null || v.isEmpty) return 'Required';
 
@@ -452,38 +515,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                       Row(
                         children: [
-                          // Expanded(
-                          //   child: _buildField(
-                          //     _wholesaleMinQtyController,
-                          //     'Wholesale Min Qty',
-                          //     onChanged: (value) {
-                          //       _formKey.currentState?.validate();
-                          //     },
-                          //     validator: (v) {
-                          //       // If wholesale is empty, always pass
-                          //       if (v == null || v.isEmpty) return null;
-                          //
-                          //       final wholesaleQty = int.tryParse(v) ?? 0;
-                          //       final supplierText = _supplierMinQtyController.text.trim();
-                          //
-                          //       // If supplier is empty, always pass
-                          //       if (supplierText.isEmpty) return null;
-                          //
-                          //       final supplierQty = int.tryParse(supplierText) ?? 0;
-                          //
-                          //       // Skip validation when either is 1
-                          //       if (wholesaleQty == 1 || supplierQty == 1) return null;
-                          //
-                          //       if (wholesaleQty > supplierQty) {
-                          //         return 'Cannot exceed Supplier Min Qty';
-                          //       }
-                          //
-                          //       return null;
-                          //     },
-                          //     Icons.numbers,
-                          //     isNumber: true,
-                          //   ),
-                          // ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildField(
@@ -810,7 +841,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       const SizedBox(height: 10),
 
                       DropdownButtonFormField<String>(
-                        value: _productType,
+                        initialValue: _productCategory,
                         dropdownColor: Color(0xFF1B263B),
                         style: TextStyle(color: Colors.white70),
                         decoration: _buildDropdownDecoration('Product Type'),

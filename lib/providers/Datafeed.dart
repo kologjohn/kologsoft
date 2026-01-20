@@ -6,10 +6,12 @@ import 'package:kologsoft/models/paymentdurationmodel.dart';
 import 'package:kologsoft/models/productcategorymodel.dart';
 import 'package:kologsoft/models/staffmodel.dart';
 import 'package:kologsoft/providers/routes.dart';
+import 'package:kologsoft/screens/stocking_mode.dart';
 import 'package:kologsoft/services/item_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/branch.dart';
 import '../models/companymodel.dart';
+import '../models/stocking_modeModel.dart';
 import '../models/suppliermodel.dart';
 import '../models/warehousemodel.dart';
 
@@ -30,11 +32,13 @@ class Datafeed extends ChangeNotifier {
   List<Productcategorymodel> productcategory = [];
   List<BranchModel> branches = [];
   List<Supplier> suppliers = [];
+  List<stockingModeModel> stockingModes = [];
   bool loadingWarehouses = false;
   BranchModel? selectedBranch;
   Supplier? selectedSupplier;
   StaffModel? currentStaff;
   CompanyModel? currentCompany;
+  stockingModeModel? selectedStockingMode;
 
   Datafeed() {
     _initSync();
@@ -97,6 +101,21 @@ class Datafeed extends ChangeNotifier {
     }
   }
 
+  fetchStockingModes() async {
+    try {
+      final snap = await db
+          .collection('stockingmode')
+          .where("companyid", isEqualTo: companyid)
+          .get(const GetOptions(source: Source.serverAndCache));
+      stockingModes = snap.docs.map((doc) {
+        return stockingModeModel.fromJson(doc.data());
+      }).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error fetching stocking modes: $e");
+    }
+  }
+
   Future<void> fetchproductcategory() async {
     loadingproductcategory = true;
     notifyListeners();
@@ -138,6 +157,14 @@ class Datafeed extends ChangeNotifier {
     selectedBranch = branches.firstWhere(
       (branch) => branch.id == branchId,
       orElse: () => BranchModel(),
+    );
+    notifyListeners();
+  }
+
+  selectstockingMode(String modeid) {
+    selectedStockingMode = stockingModes.firstWhere(
+          (stockmode) => stockmode.id == modeid,
+      orElse: () => stockingModeModel(name: '', staff: '', id: '', date: DateTime.now(), companyid: '', company: ''),
     );
     notifyListeners();
   }
