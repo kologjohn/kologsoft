@@ -1313,7 +1313,7 @@ class RespWidget extends StatelessWidget {
                     text: "90,000,00.00",
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 35,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1357,7 +1357,7 @@ class RespWidget extends StatelessWidget {
                   text: "5",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 35,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1410,13 +1410,13 @@ class WorkPlaceWidget extends StatelessWidget {
             ],
           ),
 
-          //const SizedBox(height: 12),
+          const SizedBox(height: 12),
           FittedBox(
             child: Text(
               "30,000,088.00",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 35,
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1448,7 +1448,7 @@ class WorkPlaceWidget extends StatelessWidget {
                       "10,023,000.00",
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 30,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1608,8 +1608,7 @@ class _MomoKpiWidgetState extends State<MomoKpiWidget>
             ],
           ),
 
-          const Spacer(),
-
+          const SizedBox(height: 14),
 
           AnimatedBuilder(
             animation: _amountAnim,
@@ -1634,7 +1633,7 @@ class _MomoKpiWidgetState extends State<MomoKpiWidget>
             style: TextStyle(fontSize: 12, color: Colors.white54),
           ),
 
-          const SizedBox(height: 14),
+          const Spacer(),
 
 
           Row(
