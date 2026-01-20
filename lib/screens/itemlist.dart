@@ -144,11 +144,18 @@ class _ItemListPageState extends State<ItemListPage> {
                 ),
                 child: Row(
                   children: [
-                    /// ITEM ICON
-                    const CircleAvatar(
+                    /// ITEM NUMBER
+                    CircleAvatar(
                       radius: 28,
-                      backgroundColor: Color(0xFF22304A),
-                      child: Icon(Icons.inventory, color: Colors.white70),
+                      backgroundColor: const Color(0xFF415A77),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 16),
 
