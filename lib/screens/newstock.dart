@@ -468,7 +468,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
   String? _selectedTaxType;
   final List<String> _taxType = ['Flat', 'standard', 'No vat'];
   Map<String, dynamic>? _itemModes; // Store the modes from selected item
-
+  bool _loading=false;
   List<Map<String, dynamic>> _suggestions = [];
   bool _showSuggestions = false;
   Map<String, dynamic>? _selectedItem;
@@ -628,61 +628,8 @@ class _StockItemsFormState extends State<StockItemsForm> {
           'modeqty': modeQty,
           'pieces': pieces,
           'barcode': _barcodeController.text.trim(),
+          'itemid': _selectedItem != null ? _selectedItem!['id'] ?? '' : '',
         });
-        Future<void> _saveRecords() async {
-          if (_items.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No items to save')),
-            );
-            return;
-          }
-
-          final totals = _calculateTotals();
-
-          // 🔑 Convert list of items into a map keyed by barcode
-          final Map<String, dynamic> itemsByBarcode = {
-            for (final it in _items)
-              it['barcode']: {
-                'item': it['item'],
-                'quantity': it['quantity'],
-                'price': it['price'],
-                'discount': it['discount'],
-                'taxtype': it['taxtype'],
-                'taxvalue': it['taxvalue'],
-                'taxamount': it['taxamount'],
-                'total': it['total'],
-                'stockingmode': it['stockingmode'],
-                'modeqty': it['modeqty'],
-                'pieces': it['pieces'],
-              }
-          };
-
-          final Map<String, dynamic> docData = {
-            ...widget.headerData,
-            'transactionId': widget.transactionId,
-            'items': itemsByBarcode, // ✅ now keyed by barcode
-            'totals': totals,
-            'createdAt': FieldValue.serverTimestamp(),
-          };
-
-          try {
-            await FirebaseFirestore.instance
-                .collection('stock_transactions')
-                .doc(widget.transactionId)
-                .set(docData);
-
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Records saved')),
-            );
-            Navigator.of(context).pop();
-          } catch (e) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Save failed: $e')),
-            );
-          }
-        }
 
         // Clear item and quantity for next entry (keeping price/mode/tax if desired)
         _itemController.clear();
@@ -711,10 +658,10 @@ class _StockItemsFormState extends State<StockItemsForm> {
     }
     final double payable = baseTotal - discountTotal + taxTotal;
     return {
-      'base': baseTotal,
+      'gross': baseTotal,
       'discount': discountTotal,
       'tax': taxTotal,
-      'payable': payable,
+      'netval': payable,
     };
   }
 
@@ -728,30 +675,11 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
     final totals = _calculateTotals();
 
-    // 🔑 Convert list of items into a map keyed by barcode
-    final Map<String, dynamic> itemsByBarcode = {
-      for (final it in _items)
-        it['barcode']: {
-          'item': it['item'],
-          'quantity': it['quantity'],
-          'price': it['price'],
-          'discount': it['discount'],
-          'taxtype': it['taxtype'],
-          'taxvalue': it['taxvalue'],
-          'taxamount': it['taxamount'],
-          'total': it['total'],
-          'stockingmode': it['stockingmode'],
-          'modeqty': it['modeqty'],
-          'pieces': it['pieces'],
-        }
-    };
-
     final Map<String, dynamic> docData = {
       ...widget.headerData,
       'transactionId': widget.transactionId,
-      'items': itemsByBarcode,
+      'items': _items,
       'totals': totals,
-      'createdAt': FieldValue.serverTimestamp(),
     };
 
     try {
@@ -1030,6 +958,11 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                             Expanded(
                                               child: TextFormField(
                                                 controller: _priceController,
+                                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                inputFormatters:
+                                                [
+                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                                ],
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                 ),
@@ -1086,7 +1019,11 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         TextFormField(
                                           controller: _quantityController,
                                           style: const TextStyle(color: Colors.white),
-                                          keyboardType: TextInputType.number,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          inputFormatters:
+                                          [
+                                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                          ],
                                           decoration: InputDecoration(
                                             labelText: 'Quantity',
                                             labelStyle: const TextStyle(color: Colors.white70),
@@ -1105,7 +1042,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           validator: (value) => value == null || value.isEmpty ? 'Enter quantity' : null,
                                         ),
                                         const SizedBox(height: 10),
-                                       DropdownButtonFormField<String>(
+                                        DropdownButtonFormField<String>(
                                           value: _selectedTaxType,
                                           dropdownColor: const Color(0xFF22304A),
                                           style: const TextStyle(color: Colors.white),
@@ -1132,8 +1069,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           controller: _discountController,
                                           style: const TextStyle(color: Colors.white),
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          inputFormatters:
+                                          [
+                                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                          ],
                                           decoration: InputDecoration(
-                                            labelText: 'Discount',
+                                            labelText: 'Purchase Discount',
                                             labelStyle: const TextStyle(color: Colors.white70),
                                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                             enabledBorder: OutlineInputBorder(
@@ -1330,7 +1271,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           "",
                                           totals['discount']!.toStringAsFixed(2),
                                           totals['tax']!.toStringAsFixed(2),
-                                          totals['payable']!.toStringAsFixed(2),
+                                          totals['netval']!.toStringAsFixed(2),
                                           ""
                                         ]);
                                       })(),
@@ -1338,18 +1279,39 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                   ),
                                   const SizedBox(height: 20),
                                   Center(
-                                    child: SizedBox(
-                                      width: 150,
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.lightBlue,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
-                                        onPressed: _saveRecords,
-                                        child: const Text("SAVE RECORDS", style: TextStyle(color: Colors.white)),
-                                      ),
-                                    ),
+
+                   child: SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: _loading
+                    ? null // disable while loading
+                        : () async {
+                    setState(() => _loading = true);
+                    await _saveRecords();
+                    if (mounted) setState(() => _loading = false);
+                    },
+                    child: _loading
+                    ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                    ),
+                    )
+                        : const Text(
+                    "SAVE RECORDS",
+                    style: TextStyle(color: Colors.white),
+                    ),
+                    ),
+                    )
+
+
                                   ),
                                 ],
                               ),
