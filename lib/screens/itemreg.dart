@@ -368,39 +368,114 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         //   }
                         //   return null;
                         // },
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Required';
+                        // validator: (v) {
+                        //   if (v == null || v.isEmpty) return 'Required';
+                        //
+                        //   final retailPrice = double.tryParse(v) ?? 0;
+                        //   final unitCost = double.tryParse(_costController.text) ?? 0;
+                        //   final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                        //   final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                        //   final boxQty = int.tryParse(_boxQtyController.text) ?? 1;
+                        //
+                        //   if (retailPrice <= 0) {
+                        //     return 'Enter a valid retail price';
+                        //   }
+                        //   if (unitCost > 0 && retailPrice <= unitCost) {
+                        //     return 'Retail price must be greater than Unit Cost';
+                        //   }
+                        //   if (boxQty > 1) {
+                        //     final totalUnitCost = unitCost * boxQty;
+                        //
+                        //     if (retailPrice <= boxPrice) {
+                        //       return 'Retail price must be greater than Box Price';
+                        //     }
+                        //
+                        //     if (retailPrice <= supplierPrice) {
+                        //       return 'Retail price must be greater than Supplier Price';
+                        //     }
+                        //
+                        //     if (retailPrice <= totalUnitCost) {
+                        //       return 'Retail price must be greater than Unit Cost × Box Qty';
+                        //     }
+                        //   }
+                        //
+                        //   return null;
+                        // },
+                        //   validator: (v) {
+                        //     if (v == null || v.isEmpty) return 'Required';
+                        //
+                        //     final retailPrice = double.tryParse(v) ?? 0;
+                        //     final unitCost = double.tryParse(_costController.text) ?? 0;
+                        //     final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                        //     final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                        //     final boxQty = double.tryParse(_boxQtyController.text) ?? 1;
+                        //
+                        //     // Basic retail price check
+                        //     if (retailPrice <= 0) return 'Enter a valid retail price';
+                        //
+                        //     // Must be greater than unit cost
+                        //     if (unitCost > 0 && retailPrice <= unitCost) {
+                        //       return 'Retail price must be greater than Unit Cost';
+                        //     }
+                        //
+                        //     // Box quantity rules
+                        //     if (boxQty > 1) {
+                        //       final totalUnitCost = unitCost * boxQty;
+                        //
+                        //
+                        //
+                        //       if (retailPrice < supplierPrice) {
+                        //         return 'Retail price must be equal to or greater than Supplier Price';
+                        //       }
+                        //
+                        //       if (retailPrice < totalUnitCost) {
+                        //         return 'Retail price must be equal to or greater than Unit Cost × Box Qty';
+                        //       }
+                        //     }
+                        //
+                        //     return null; // valid
+                        //   }
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Required';
 
-                          final retailPrice = double.tryParse(v) ?? 0;
-                          final unitCost = double.tryParse(_costController.text) ?? 0;
-                          final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                          final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
-                          final boxQty = int.tryParse(_boxQtyController.text) ?? 1;
+                            final retailPrice = double.tryParse(v) ?? 0;
+                            final unitCost = double.tryParse(_costController.text) ?? 0;
+                            final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                            final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                            final boxQty = double.tryParse(_boxQtyController.text) ?? 1;
 
-                          if (retailPrice <= 0) {
-                            return 'Enter a valid retail price';
-                          }
-                          if (unitCost > 0 && retailPrice <= unitCost) {
-                            return 'Retail price must be greater than Unit Cost';
-                          }
-                          if (boxQty > 1) {
-                            final totalUnitCost = unitCost * boxQty;
+                            // Basic retail price check
+                            if (retailPrice <= 0) return 'Enter a valid retail price';
 
-                            if (retailPrice <= boxPrice) {
-                              return 'Retail price must be greater than Box Price';
+                            // Retail price must be greater than unit cost
+                            if (unitCost > 0 && retailPrice <= unitCost) {
+                              return 'Retail price must be greater than Unit Cost';
                             }
 
-                            if (retailPrice <= supplierPrice) {
-                              return 'Retail price must be greater than Supplier Price';
+                            // Box quantity rules
+                            if (boxQty > 1) {
+                              final totalRetail = retailPrice * boxQty;
+                              final totalUnitCost = unitCost * boxQty;
+
+                              if (totalRetail < boxPrice) {
+                                return 'Retail price × Box Qty must be equal to or greater than Box Price';
+                              }
+
+                              if (totalRetail < supplierPrice) {
+                                return 'Retail price × Box Qty must be equal to or greater than Supplier Price';
+                              }
+
+                              if (retailPrice <= unitCost) {
+                                return 'Retail price must be greater than Unit Cost';
+                              }
+
+                              if (totalRetail < totalUnitCost) {
+                                return 'Retail price × Box Qty must be equal to or greater than Unit Cost × Box Qty';
+                              }
                             }
 
-                            if (retailPrice <= totalUnitCost) {
-                              return 'Retail price must be greater than Unit Cost × Box Qty';
-                            }
+                            return null; // valid
                           }
-
-                          return null;
-                        },
                       ),
                       SizedBox(height: 10),
 
