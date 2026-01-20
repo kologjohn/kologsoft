@@ -364,6 +364,154 @@ exports.notifyUnreadStaff = onDocumentWritten('collection_updates/{collectionId}
   }
 });
 
+// Update itemsreg openingstock when stock_transactions items map changes
+exports.syncStockTransactionsToItemsreg = onDocumentWritten("stock_transactions/{transactionId}", async (event) => {
+  const before = event.data?.before ? event.data.before.data() : null;
+  const after = event.data?.after ? event.data.after.data() : null;
+  const transactionId = event.params.transactionId;
 
+  try {
+    const db = admin.firestore();
+    const batch = db.batch();
+    const updates = [];
 
+    // Case 1: Document deleted - reverse all stock additions
+    if (before && !after) {
+      logger.info(`Stock transaction ${transactionId} deleted, reversing stock changes`);
+      
+      const items = before.items || {};
+      const branchId = before.branchId || before.branchid || before.branch_id || before.branch || before.warehouse;
+      const branchName = before.branchName || before.branchname || before.branch_name || before.warehouseName || branchId;
+      const updatedBy = before.createdby || before.createdBy || before.updatedBy || before.updatedby || 'system';
 
+      if (!branchId) {
+        logger.error(`No branch/warehouse ID found in deleted transaction ${transactionId}`);
+        return null;
+      }
+
+      for (const [itemKey, itemData] of Object.entries(items)) {
+        if (!itemData || typeof itemData !== 'object') continue;
+
+        const itemId = itemData.itemid || itemData.itemId || itemKey;
+        const quantity = parseFloat(itemData.quantity || 0) || 0;
+        const pieces = parseFloat(itemData.pieces || 0) || 0;
+        const modeqty = parseFloat(itemData.modeqty || 0) || 0;
+
+        if (!itemId) continue;
+
+        // Use itemid as the document key in itemsreg - NO READ, just update with increment
+        const itemRegRef = db.collection('itemsreg').doc(itemId);
+        
+        batch.update(itemRegRef, {
+          [`branchbalance.${branchId}.quantity`]: admin.firestore.FieldValue.increment(-quantity),
+          [`branchbalance.${branchId}.pieces`]: admin.firestore.FieldValue.increment(-pieces),
+          [`branchbalance.${branchId}.name`]: branchName,
+          [`branchbalance.${branchId}.lastupdate`]: admin.firestore.FieldValue.serverTimestamp(),
+          [`branchbalance.${branchId}.updatedby`]: updatedBy,
+          lastModified: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info(`Reversing stock for item ${itemId} in branch ${branchName} (${branchId}): -${quantity} qty, -${pieces} pcs`);
+      }
+
+      await batch.commit();
+      return null;
+    }
+
+    // Case 2: Document created or updated
+    if (after) {
+      const beforeItems = before?.items || {};
+      const afterItems = after.items || {};
+      const branchId = after.branchId || after.branchid || after.branch_id || after.branch || after.warehouse;
+      const branchName = after.branchName || after.branchname || after.branch_name || after.warehouseName || branchId;
+      const updatedBy = after.createdby || after.createdBy || after.updatedBy || after.updatedby || 'system';
+
+      if (!branchId) {
+        logger.error(`No branch/warehouse ID found in transaction ${transactionId}`);
+        return null;
+      }
+
+      // Get all item keys from both before and after
+      const allItemKeys = new Set([...Object.keys(beforeItems), ...Object.keys(afterItems)]);
+
+      for (const itemKey of allItemKeys) {
+        const beforeItemData = beforeItems[itemKey] || {};
+        const afterItemData = afterItems[itemKey] || {};
+        const itemId = afterItemData.itemid || afterItemData.itemId || beforeItemData.itemid || beforeItemData.itemId || itemKey;
+        if (!itemId) continue;
+        
+        // Calculate before and after quantities and pieces
+        const beforeQty = parseFloat(beforeItemData.quantity || 0) || 0;
+        const beforePieces = parseFloat(beforeItemData.pieces || 0) || 0;
+
+        const afterQty = parseFloat(afterItemData.quantity || 0) || 0;
+        const afterPieces = parseFloat(afterItemData.pieces || 0) || 0;
+
+        // Calculate the differences
+        const qtyDifference = afterQty - beforeQty;
+        const piecesDifference = afterPieces - beforePieces;
+
+        if (qtyDifference === 0 && piecesDifference === 0) continue; // No change
+
+        // Use itemid as the document key in itemsreg - NO READ, just update with increment
+        const itemRegRef = db.collection('itemsreg').doc(itemId);
+        
+        batch.update(itemRegRef, {
+          [`branchbalance.${branchId}.quantity`]: admin.firestore.FieldValue.increment(qtyDifference),
+          [`branchbalance.${branchId}.pieces`]: admin.firestore.FieldValue.increment(piecesDifference),
+          [`branchbalance.${branchId}.name`]: branchName,
+          [`branchbalance.${branchId}.lastupdate`]: admin.firestore.FieldValue.serverTimestamp(),
+          [`branchbalance.${branchId}.updatedby`]: updatedBy,
+          lastModified: admin.firestore.FieldValue.serverTimestamp(),
+          lastStockTransactionId: transactionId,
+        });
+
+        updates.push({
+          itemId,
+          branchId,
+          branchName,
+          itemName: afterItemData.item || beforeItemData.item || '',
+          qtyChange: qtyDifference,
+          piecesChange: piecesDifference,
+        });
+
+        logger.info(
+          `Updated item ${itemId} in branch ${branchName} (${branchId}): ` +
+          `${qtyDifference > 0 ? '+' : ''}${qtyDifference} qty, ${piecesDifference > 0 ? '+' : ''}${piecesDifference} pcs`
+        );
+      }
+
+      if (updates.length > 0) {
+        await batch.commit();
+
+        await db.collection('stock_transactions').doc(transactionId).update({
+          processed: true,
+          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+          itemsUpdated: updates.length,
+          updates,
+        });
+
+        logger.info(`Processed stock transaction ${transactionId}. Updated ${updates.length} items.`);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error(`Error syncing stock transaction ${transactionId}:`, error);
+    
+    // Mark transaction as failed
+    if (after) {
+      await admin
+        .firestore()
+        .collection('stock_transactions')
+        .doc(transactionId)
+        .update({
+          processed: false,
+          processingError: error.message,
+          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+    
+    return null;
+  }
+});
