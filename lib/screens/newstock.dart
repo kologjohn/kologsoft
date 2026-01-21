@@ -466,7 +466,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
   List<String> _stockMode = [];
   String? _selectedPriceMode;
   String? _selectedTaxType;
-  final List<String> _taxType = ['Flat', 'standard', 'No vat'];
+  final List<String> _taxType = ['No vat','Flat', 'standard'];
   Map<String, dynamic>? _itemModes; // Store the modes from selected item
   bool _loading=false;
   List<Map<String, dynamic>> _suggestions = [];
@@ -1318,6 +1318,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                             ),
                           ),
                         ),
+
                       ],
                     );
                   },

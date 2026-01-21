@@ -15,6 +15,8 @@ class _ItemListPageState extends State<ItemListPage> {
 
   @override
   Widget build(BuildContext context) {
+    //bool isWideScreen = constraints.maxWidth > 500;
+    final screenwidth =MediaQuery.sizeOf(context).width;
     return Scaffold(
       backgroundColor: const Color(0xFF101624),
       appBar: AppBar(
@@ -280,6 +282,7 @@ class _ItemListPageState extends State<ItemListPage> {
               );
                   },
                 );
+
               },
             ),
           ),

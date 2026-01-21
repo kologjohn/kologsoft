@@ -343,8 +343,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                          // Retail price must be greater than unit cost
                         if (unitCost > 0 && retailPrice < unitCost) {
-                                return 'Retail price GHS$retailPrice must be greater than Unit Cost GHS$unitCost ';
-                              }
+                             return 'Retail price GHS$_retail_price must be greater than\n Unit Cost which is GHS${boxPrice/boxQty} ';
+                            }
 
                         // Box quantity rules
                         if (boxQty > 1) {
@@ -352,19 +352,19 @@ class _ItemRegPageState extends State<ItemRegPage> {
                            final totalUnitCost = unitCost * boxQty;
 
                         if (totalRetail <= boxPrice) {
-                           return 'Retail price GHS$totalRetail must be equal to or greater than Box Price GHS$boxPrice';
+                           return 'Retail price GHS$totalRetail must be equal to \n or greater than Box Price GHS$boxPrice';
                          }
 
                         if (totalRetail <= supplierPrice) {
-                         return 'Retail price GHS$totalRetail must be equal to or greater than Supplier Price';
+                         return 'Retail price GHS$totalRetail must be equal \n to or greater than Supplier Price';
                         }
 
                         if (retailPrice <= unitCost) {
-                         return 'Retail price GHS$retailPrice must be greater than or equal to Unit Cost GHS$unitCost';
+                         return 'Retail price GHS$retailPrice must be greater than\n or equal to Unit Cost GHS$unitCost';
                          }
 
                         if (totalRetail <= totalUnitCost) {
-                        return 'Retail price GHS$totalRetail must be equal to or greater than  Cost GHS$totalUnitCost';
+                        return 'Retail price GHS$totalRetail must be \n equal to or greater than  Cost GHS$totalUnitCost';
                               }
                          }
 
@@ -483,11 +483,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                 if (pricePerUnit > retailPrice) {
 
-                                  return 'Box Price GHS$boxPrice / $boxQtyVal Qty cannot be less than Retail Price';
+                                  return 'Price per unit which is GHS${boxPrice/boxQtyVal} \n Qty cannot be less than Retail Price';
                                 }
 
                                 if (pricePerUnit < costPrice) {
-                                  return 'Box Price GHS$boxPrice / $boxQtyVal Qty cannot be less than Unit Cost Price';
+                                  return ' Price per unit which is GHS${boxPrice/boxQtyVal} \n Qty cannot be less than Unit Cost Price';
                                 }
 
                                 return null;
@@ -505,7 +505,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               onChanged: (v){
                              _formKey.currentState!.validate();
                                },
-                           validator: (v) {
+                              validator: (v) {
                                   final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
 
                                   if (boxQty <= 0) return null;
@@ -519,7 +519,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   // Box Qty = 1 → All prices must match
                                   if (boxQty == 1) {
                                     if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
-                                      return 'When Box Qty is 1, all prices must be equal';
+                                      return 'Prices should be equal because Box Qty is 1,';
                                     }
                                     return null;
                                   }
@@ -529,12 +529,12 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                   // Supplier must be ≥ Unit Cost × Box Qty
                                   if (supplierPrice < minSupplierPrice) {
-                                    return 'Supplier Price GHS$supplierPrice must be ≥ Unit Cost × Box Qty (${minSupplierPrice.toStringAsFixed(2)})';
+                                    return 'Supplier Price GHS$supplierPrice must be more\n or equal to  (${minSupplierPrice.toStringAsFixed(2)})';
                                   }
 
                                   // Supplier must be ≤ Box Price
                                   if (supplierPrice > boxPrice) {
-                                    return 'Supplier Price must be less than or equal to Box Price';
+                                    return 'Supplier Price must be less than \n or equal to Box Price';
                                   }
 
                                   return null;
@@ -669,7 +669,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove Half Box Price pricing modes?\n'
-                                            'This action cannot be undone.',
+                                            'This action cannot be undone.',style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
@@ -817,7 +817,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove Quarter Qty pricing modes?\n'
-                                            'This action cannot be undone.',
+                                            'This action cannot be undone.', style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
@@ -943,12 +943,16 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
                                     final packQty = int.tryParse(_packQtyController.text) ?? 0;
 
-                                    if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null; // skip if missing
+                                   if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null;
 
-                                    final totalFromPacks = (boxQty / packQty) * packPrice;
+                                    final packsPerBox = boxQty / packQty;
+                                    final totalFromPacks = packsPerBox * packPrice;
 
-                                    if (totalFromPacks < boxPrice) {
-                                      return 'Pack Price too low: total must be ≥ Box Price';
+                                    final requiredPackPrice = boxPrice / packsPerBox;
+
+                                    if ((totalFromPacks - boxPrice).abs() > 0.01) {
+                                      return 'Pack price must be at least ${requiredPackPrice.toStringAsFixed(2)} '
+                                          '\n so total equals box price';
                                     }
 
                                     return null;
@@ -971,7 +975,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove quarter modes?\n'
-                                            'This action cannot be undone.',
+                                            'This action cannot be undone.',style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
