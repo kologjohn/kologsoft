@@ -343,7 +343,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                          // Retail price must be greater than unit cost
                         if (unitCost > 0 && retailPrice < unitCost) {
-                             return 'Retail price GHS$_retail_price must be greater than\n Unit Cost which is GHS${boxPrice/boxQty} ';
+                             return 'Retail price GHS$retailPrice must be greater than\n Unit Cost which is GHS${boxPrice/boxQty} ';
                             }
 
                         // Box quantity rules
@@ -352,11 +352,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
                            final totalUnitCost = unitCost * boxQty;
 
                         if (totalRetail <= boxPrice) {
-                           return 'Retail price GHS$totalRetail must be equal to \n or greater than Box Price GHS$boxPrice';
+                           return 'Retail price GHS$retailPrice must be equal to \n or greater than Box Price GHS${boxPrice/boxQty}';
                          }
 
                         if (totalRetail <= supplierPrice) {
-                         return 'Retail price GHS$totalRetail must be equal \n to or greater than Supplier Price';
+                         return 'Unit retail price GHS$retailPrice must be equal \n to or greater than Supplier Price ${supplierPrice/boxQty}';
                         }
 
                         if (retailPrice <= unitCost) {
@@ -364,7 +364,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                          }
 
                         if (totalRetail <= totalUnitCost) {
-                        return 'Retail price GHS$totalRetail must be \n equal to or greater than  Cost GHS$totalUnitCost';
+                        return 'Retail price GHS$retailPrice must be \n equal to or greater than  Cost GHS${totalUnitCost/boxQty}';
                               }
                          }
 
