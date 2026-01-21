@@ -77,7 +77,7 @@ final pages = {
   Routes.paymentdurationview: (context) =>
       RouteGuard(child: PaymentDurationView()),
   Routes.newstock: (context) => RouteGuard(child: NewStock()),
-  Routes.staffreg: (context) => RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager']),
+  Routes.staffreg: (context) => RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager','super admin']),
   Routes.staffprofile: (context) => const RouteGuard(child: StaffProfile()),
   Routes.sales: (context) => const RouteGuard(child: SalesPage()),
   Routes.transfers: (context) => const RouteGuard(child: Transfers()),

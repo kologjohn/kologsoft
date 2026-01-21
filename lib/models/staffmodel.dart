@@ -13,6 +13,8 @@ class StaffModel {
   final Timestamp? deletedAt;
   final String? deletedBy;
   final String companyId;
+  final String company;
+  final int position;
 
   StaffModel({
     this.id = '',
@@ -23,10 +25,12 @@ class StaffModel {
     this.pricingmode = const [],
     this.readUpdates,
     required this.createdAt,
+    required this.company,
     this.createdBy = '',
     this.deletedAt,
     this.deletedBy,
     this.companyId = '',
+    this.position = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -42,6 +46,8 @@ class StaffModel {
     'deletedAt': deletedAt,
     'deletedBy': deletedBy,
     'companyId': companyId,
+    'position': position,
+    'company': company,
   };
 
   factory StaffModel.fromMap(Map<String, dynamic> map) {
@@ -96,6 +102,7 @@ class StaffModel {
     return StaffModel(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
+      company: map['company'] ?? '',
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
       accesslevel: map['accesslevel'] ?? '',
@@ -112,6 +119,7 @@ class StaffModel {
           : null,
       deletedBy: map['deletedBy'] ?? map['deletedby'],
       companyId: map['companyId'] ?? map['companyId'] ?? '',
+      position: map['position'] ?? 0,
     );
   }
 }

@@ -381,6 +381,7 @@ class _StaffState extends State<Staff> {
 
                                     // build StaffModel
                                     final staffModel = StaffModel(
+                                      company: datafeed.company,
                                       id: id,
                                       name: name,
                                       email: email,
@@ -407,7 +408,7 @@ class _StaffState extends State<Staff> {
 
                                     await _db
                                         .collection('staff')
-                                        .doc(id)
+                                        .doc(email.toLowerCase())
                                         .set(record);
 
                                     ScaffoldMessenger.of(context).showSnackBar(

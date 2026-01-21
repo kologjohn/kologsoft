@@ -27,6 +27,7 @@ class Datafeed extends ChangeNotifier {
   String companyemail = "";
   String companyphone = "";
   String staff = "";
+  int staffPosition = 0;
   List<WarehouseModel> warehouses = [];
   bool loadingproductcategory = false;
   List<Productcategorymodel> productcategory = [];
@@ -44,8 +45,6 @@ class Datafeed extends ChangeNotifier {
     _initSync();
     _initItemCache();
   }
-
-
 
   Future<void> _initItemCache() async {
     try {
@@ -127,12 +126,11 @@ class Datafeed extends ChangeNotifier {
           .collection('productcategoryreg')
           .where('companyId', isEqualTo: companyid)
           .get(const GetOptions(source: Source.serverAndCache));
-     print("the category lenth is ${snap.docs.length} $companyid");
+      print("the category lenth is ${snap.docs.length} $companyid");
       productcategory = snap.docs
           .map((e) => Productcategorymodel.fromJson(e.data()))
           .toList();
-    }
-    catch (e) {
+    } catch (e) {
       debugPrint("fetch product category error: $e");
     }
 
@@ -166,8 +164,15 @@ class Datafeed extends ChangeNotifier {
 
   selectstockingMode(String modeid) {
     selectedStockingMode = stockingModes.firstWhere(
-          (stockmode) => stockmode.id == modeid,
-      orElse: () => stockingModeModel(name: '', staff: '', id: '', date: DateTime.now(), companyid: '', company: ''),
+      (stockmode) => stockmode.id == modeid,
+      orElse: () => stockingModeModel(
+        name: '',
+        staff: '',
+        id: '',
+        date: DateTime.now(),
+        companyid: '',
+        company: '',
+      ),
     );
     notifyListeners();
   }
@@ -203,6 +208,7 @@ class Datafeed extends ChangeNotifier {
     companyemail = "";
     companyphone = "";
     staff = "";
+    staffPosition = 0;
     currentStaff = null;
     currentCompany = null;
     notifyListeners();
@@ -375,8 +381,9 @@ class Datafeed extends ChangeNotifier {
         spref.setString('phone', currentStaff!.phone);
         spref.setString('companyid', currentStaff!.companyId);
         spref.setString('companyphone', currentCompany!.phone);
-        spref.setString('company', currentCompany!.name);
+        spref.setString('company', currentCompany!.company);
         spref.setString('companyemail', currentCompany!.email);
+        spref.setInt('staffPosition', currentStaff!.position);
 
         // Update display name
         auth.currentUser!.updateDisplayName(currentStaff!.name);
@@ -384,6 +391,7 @@ class Datafeed extends ChangeNotifier {
         // Update local state
         staff = currentStaff!.name;
         companyid = currentStaff!.companyId;
+        staffPosition = currentStaff!.position;
       }
       await getdata();
 
@@ -421,6 +429,7 @@ class Datafeed extends ChangeNotifier {
       companyemail = spref.getString('companyemail')!;
       companyphone = spref.getString('companyphone')!;
       staff = spref.getString('staff')!;
+      staffPosition = spref.getInt('staffPosition') ?? 0;
       print(company);
     } catch (e) {
       print(e);

@@ -193,6 +193,58 @@ exports.staffAuthOnCreate = onDocumentCreated("staff/{staffId}", async (event) =
   }
 });
 
+// Trigger: Assign sequential position number to staff when created (GLOBAL counter)
+exports.assignStaffPosition = onDocumentCreated("staff/{staffId}", async (event) => {
+  const staffData = event.data.data();
+  const staffId = event.params.staffId;
+
+  const db = admin.firestore();
+
+  try {
+    // Use a transaction to ensure unique position numbers globally
+    await db.runTransaction(async (transaction) => {
+      const counterRef = db.collection('counters').doc('global_staff_position');
+      const counterDoc = await transaction.get(counterRef);
+
+      let position = 1;
+      if (counterDoc.exists) {
+        position = (counterDoc.data().lastPosition || 0) + 1;
+      }
+
+      // Update the global counter
+      transaction.set(counterRef, {
+        lastPosition: position,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      // Update the staff document with position
+      const staffRef = db.collection('staff').doc(staffId);
+      transaction.update(staffRef, {
+        position: position,
+        positionAssignedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      logger.info(`Assigned global position ${position} to staff ${staffId}`);
+    });
+
+    return null;
+  } catch (error) {
+    logger.error(`Error assigning position to staff ${staffId}:`, error);
+    
+    // Try to log the error in the staff document
+    try {
+      await db.collection('staff').doc(staffId).update({
+        positionError: error.message,
+        positionErrorAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (updateError) {
+      logger.error(`Failed to update staff document with error:`, updateError);
+    }
+    
+    return null;
+  }
+});
+
 // API Endpoint: Send SMS via POST request
 exports.sendSmsApi = onRequest(async (req, res) => {
   if (req.method !== "POST") {

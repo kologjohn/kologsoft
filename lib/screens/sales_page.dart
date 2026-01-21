@@ -36,14 +36,28 @@ class _SalesPageState extends State<SalesPage> {
   Map<String, dynamic>? _selectedItem;
   String _searchQuery = '';
 
-  // Sales preview items
-  List<Map<String, dynamic>> _salesItems = [];
+  // Multi-cart system for handling multiple customers
+  Map<String, List<Map<String, dynamic>>> _customerCarts = {};
+  String _currentCartId = 'cart_1';
+  int _cartCounter = 1;
+
+  // Helper to get current cart's items
+  List<Map<String, dynamic>> get _salesItems {
+    return _customerCarts[_currentCartId] ?? [];
+  }
+
+  // Helper to set current cart's items
+  set _salesItems(List<Map<String, dynamic>> items) {
+    _customerCarts[_currentCartId] = items;
+  }
 
   @override
   void initState() {
     super.initState();
     _barcodeController.addListener(_onBarcodeChanged);
     _quantityController.addListener(_onQuantityChanged);
+    // Initialize first cart
+    _customerCarts[_currentCartId] = [];
   }
 
   @override
@@ -103,7 +117,7 @@ class _SalesPageState extends State<SalesPage> {
       };
 
       setState(() {
-        _salesItems.add(salesItem);
+        _customerCarts[_currentCartId] = [..._salesItems, salesItem];
       });
 
       // Clear form
@@ -140,7 +154,49 @@ class _SalesPageState extends State<SalesPage> {
 
   void _removeFromSalesPreview(int index) {
     setState(() {
-      _salesItems.removeAt(index);
+      final items = List<Map<String, dynamic>>.from(_salesItems);
+      items.removeAt(index);
+      _customerCarts[_currentCartId] = items;
+    });
+  }
+
+  void _createNewCart() {
+    setState(() {
+      _cartCounter++;
+      _currentCartId = 'cart_$_cartCounter';
+      _customerCarts[_currentCartId] = [];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('New transaction created: Cart $_cartCounter'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _switchCart(String cartId) {
+    setState(() {
+      _currentCartId = cartId;
+    });
+  }
+
+  void _deleteCart(String cartId) {
+    if (_customerCarts.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot delete the last cart'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _customerCarts.remove(cartId);
+      if (_currentCartId == cartId) {
+        _currentCartId = _customerCarts.keys.first;
+      }
     });
   }
 
@@ -150,6 +206,90 @@ class _SalesPageState extends State<SalesPage> {
       total += double.tryParse(item['totalAmount'] ?? '0') ?? 0;
     }
     return total;
+  }
+
+  Future<void> _saveSale() async {
+    if (_salesItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No items to save'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final datafeed = Provider.of<Datafeed>(context, listen: false);
+      final companyId = datafeed.companyid;
+      final staffPosition = datafeed.staffPosition;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Default to cash sale (no customer)
+      final transMode = 'cash';
+
+      // Create document ID: companyid + staffposition + timestamp
+      final docId = '${companyId}_${staffPosition}_$timestamp';
+
+      // Create receipt number: staffposition + timestamp (no underscore)
+      final receiptNumber = '$staffPosition$timestamp';
+
+      // Prepare items map
+      final Map<String, dynamic> itemsMap = {};
+      for (int i = 0; i < _salesItems.length; i++) {
+        itemsMap['item_$i'] = _salesItems[i];
+      }
+
+      // Prepare sale document (cash sale, no customer)
+      final saleData = {
+        'companyId': companyId,
+        'staffPosition': staffPosition,
+        'receiptNumber': receiptNumber,
+        'transMode': transMode,
+        'items': itemsMap,
+        'totalAmount': _calculateTaxableTotal(),
+        'itemCount': _salesItems.length,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+        'createdBy': datafeed.staff,
+        'timestamp': timestamp,
+      };
+
+      // Save to Firestore
+      await FirebaseFirestore.instance
+          .collection('sales')
+          .doc(docId)
+          .set(saleData);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('CASH sale saved! Receipt: $receiptNumber'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // Remove current cart after successful save
+      setState(() {
+        _customerCarts.remove(_currentCartId);
+
+        // If there are remaining carts, switch to the first one
+        if (_customerCarts.isNotEmpty) {
+          _currentCartId = _customerCarts.keys.first;
+        } else {
+          // Create a new cart if all were removed
+          _cartCounter++;
+          _currentCartId = 'cart_$_cartCounter';
+          _customerCarts[_currentCartId] = [];
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving sale: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showMomoDialog() {
@@ -166,14 +306,24 @@ class _SalesPageState extends State<SalesPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => Dialog(
           backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width > 600
+                  ? 600
+                  : double.infinity,
+            ),
             child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              contentPadding: const EdgeInsets.all(24),
+              contentPadding: EdgeInsets.all(
+                MediaQuery.of(context).size.width > 600 ? 24 : 16,
+              ),
               title: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -528,24 +678,43 @@ class _SalesPageState extends State<SalesPage> {
   void _showCustomerInfoDialog() {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController phoneController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController addressController = TextEditingController();
-    String? selectedCustomerType;
+    String paymentMethod = 'credit'; // Default to credit
     bool isSaving = false;
+
+    // Check if there are items to save
+    if (_salesItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add items to the sale first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => Dialog(
           backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width > 600
+                  ? 600
+                  : double.infinity,
+            ),
             child: AlertDialog(
               backgroundColor: const Color(0xFF1A2332),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              contentPadding: const EdgeInsets.all(24),
+              contentPadding: EdgeInsets.all(
+                MediaQuery.of(context).size.width > 600 ? 24 : 16,
+              ),
               title: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -659,70 +828,11 @@ class _SalesPageState extends State<SalesPage> {
                         filled: true,
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
-                    // Customer Type Dropdown
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF22304A),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedCustomerType,
-                          isExpanded: true,
-                          hint: const Text(
-                            'Customer Type *',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.white70,
-                          ),
-                          dropdownColor: const Color(0xFF22304A),
-                          style: const TextStyle(color: Colors.white),
-                          items:
-                              [
-                                    'Retail',
-                                    'Wholesale',
-                                    'Distributor',
-                                    'Corporate',
-                                  ]
-                                  .map(
-                                    (type) => DropdownMenuItem<String>(
-                                      value: type,
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            type == 'Retail'
-                                                ? Icons.shopping_bag
-                                                : type == 'Wholesale'
-                                                ? Icons.business_center
-                                                : type == 'Distributor'
-                                                ? Icons.local_shipping
-                                                : Icons.corporate_fare,
-                                            color: Colors.blue,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(type),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedCustomerType = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     const Text(
-                      'Additional Information',
+                      'Payment Method',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
@@ -730,66 +840,58 @@ class _SalesPageState extends State<SalesPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: emailController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email (Optional)',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: 'customer@email.com',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(
-                          Icons.email,
-                          color: Color(0xFF2196F3),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2196F3),
-                          ),
-                        ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF22304A),
+                        border: Border.all(color: Colors.white24),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: addressController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Address (Optional)',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: 'Enter customer address',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(
-                          Icons.location_on,
-                          color: Color(0xFFF44336),
-                        ),
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFF44336),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'Credit',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              value: 'credit',
+                              groupValue: paymentMethod,
+                              onChanged: (value) {
+                                setState(() {
+                                  paymentMethod = value!;
+                                });
+                              },
+                              activeColor: const Color(0xFFFF9800),
+                            ),
                           ),
-                        ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
+                          Expanded(
+                            child: RadioListTile<String>(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'Cash',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              value: 'cash',
+                              groupValue: paymentMethod,
+                              onChanged: (value) {
+                                setState(() {
+                                  paymentMethod = value!;
+                                });
+                              },
+                              activeColor: const Color(0xFF4CAF50),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -830,15 +932,6 @@ class _SalesPageState extends State<SalesPage> {
                             );
                             return;
                           }
-                          if (selectedCustomerType == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please select customer type'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
 
                           setState(() {
                             isSaving = true;
@@ -861,7 +954,7 @@ class _SalesPageState extends State<SalesPage> {
                               branchid: provider.selectedBranch?.id ?? '',
                               name: nameController.text,
                               contact: phoneController.text,
-                              customertype: selectedCustomerType!,
+                              customertype: 'Retail',
                               creditlimit: null,
                               paymentduration: null,
                               companyid: provider.companyid,
@@ -872,15 +965,52 @@ class _SalesPageState extends State<SalesPage> {
                               deletedat: null,
                             );
 
-                            // Save customer with additional fields
-                            final customerData = customer.toMap();
-                            customerData['email'] = emailController.text;
-                            customerData['address'] = addressController.text;
-
                             await FirebaseFirestore.instance
                                 .collection('customers')
                                 .doc(docId)
-                                .set(customerData);
+                                .set(customer.toMap());
+
+                            // Now save the sale with customer info
+                            final companyId = provider.companyid;
+                            final staffPosition = provider.staffPosition;
+                            final timestamp =
+                                DateTime.now().millisecondsSinceEpoch;
+
+                            // Create document ID: companyid + staffposition + timestamp
+                            final saleDocId =
+                                '${companyId}_${staffPosition}_$timestamp';
+
+                            // Create receipt number: staffposition + timestamp (no underscore)
+                            final receiptNumber = '$staffPosition$timestamp';
+
+                            // Prepare items map
+                            final Map<String, dynamic> itemsMap = {};
+                            for (int i = 0; i < _salesItems.length; i++) {
+                              itemsMap['item_$i'] = _salesItems[i];
+                            }
+
+                            // Prepare sale document with customer info
+                            final saleData = {
+                              'companyId': companyId,
+                              'staffPosition': staffPosition,
+                              'receiptNumber': receiptNumber,
+                              'transMode': paymentMethod,
+                              'items': itemsMap,
+                              'totalAmount': _calculateTaxableTotal(),
+                              'itemCount': _salesItems.length,
+                              'createdAt': Timestamp.fromDate(DateTime.now()),
+                              'createdBy': provider.staff,
+                              'timestamp': timestamp,
+                              'customerId': docId,
+                              'customerName': nameController.text,
+                              'customerPhone': phoneController.text,
+                            };
+
+                            // Save to Firestore
+                            await FirebaseFirestore.instance
+                                .collection('sales')
+                                .doc(saleDocId)
+                                .set(saleData);
 
                             if (context.mounted) {
                               Navigator.pop(context);
@@ -894,7 +1024,7 @@ class _SalesPageState extends State<SalesPage> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Customer ${nameController.text} saved successfully',
+                                        '${paymentMethod.toUpperCase()} sale saved! Receipt: $receiptNumber',
                                       ),
                                     ],
                                   ),
@@ -905,6 +1035,21 @@ class _SalesPageState extends State<SalesPage> {
                                   ),
                                 ),
                               );
+
+                              // Remove current cart after successful save
+                              this.setState(() {
+                                _customerCarts.remove(_currentCartId);
+
+                                // If there are remaining carts, switch to the first one
+                                if (_customerCarts.isNotEmpty) {
+                                  _currentCartId = _customerCarts.keys.first;
+                                } else {
+                                  // Create a new cart if all were removed
+                                  _cartCounter++;
+                                  _currentCartId = 'cart_$_cartCounter';
+                                  _customerCarts[_currentCartId] = [];
+                                }
+                              });
                             }
                           } catch (e) {
                             setState(() {
@@ -954,6 +1099,178 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
+  Future<Map<String, dynamic>?> _showCustomerSelectionDialog() async {
+    final datafeed = Provider.of<Datafeed>(context, listen: false);
+    final companyId = datafeed.companyid;
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1A2332),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF6F00), Color(0xFFFF9800)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.people, color: Colors.white, size: 28),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Select Customer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('customers')
+                    .where('companyId', isEqualTo: companyId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    );
+                  }
+
+                  final customers = snapshot.data?.docs ?? [];
+
+                  if (customers.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.person_off,
+                            size: 64,
+                            color: Colors.white38,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No customers found',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showCustomerInfoDialog();
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add New Customer'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: customers.length,
+                    itemBuilder: (context, index) {
+                      final customer =
+                          customers[index].data() as Map<String, dynamic>;
+                      customer['id'] = customers[index].id;
+
+                      return Card(
+                        color: const Color(0xFF22304A),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.orange,
+                            child: Text(
+                              (customer['name'] ?? 'U')[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            customer['name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Phone: ${customer['phone'] ?? 'N/A'}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (customer['email'] != null &&
+                                  customer['email'].toString().isNotEmpty)
+                                Text(
+                                  'Email: ${customer['email']}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.orange,
+                            size: 16,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, customer);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _selectItem(Map<String, dynamic> item) {
     setState(() {
       _selectedItem = item;
@@ -969,6 +1286,13 @@ class _SalesPageState extends State<SalesPage> {
           final modeData = _itemModes![key] as Map<String, dynamic>?;
           return modeData?['name'] as String? ?? key;
         }).toList();
+
+        // Ensure 'Single' is always first if it exists
+        _salesMode.sort((a, b) {
+          if (a.toLowerCase() == 'single') return -1;
+          if (b.toLowerCase() == 'single') return 1;
+          return 0;
+        });
 
         // Set the first mode as default and update price
         if (_salesMode.isNotEmpty) {
@@ -1710,6 +2034,58 @@ class _SalesPageState extends State<SalesPage> {
                                             filled: true,
                                           ),
                                         ),
+                                        SizedBox(height: 10),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(
+                                              0.1,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.green.withOpacity(
+                                                0.5,
+                                              ),
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.money,
+                                                color: Colors.green,
+                                                size: 20,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Cash Sale (Default)',
+                                                      style: TextStyle(
+                                                        color: Colors.green,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      'Click "Customer Info" below to add customer and choose payment method',
+                                                      style: TextStyle(
+                                                        color: Colors.white54,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
                                         SizedBox(height: 20),
                                         const Divider(color: Colors.white24),
                                         Wrap(
@@ -1813,13 +2189,115 @@ class _SalesPageState extends State<SalesPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    "SALES PREVIEW",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        "SALES PREVIEW",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      // Cart switcher
+                                      if (_customerCarts.length > 1)
+                                        PopupMenuButton<String>(
+                                          icon: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.shopping_cart,
+                                                color: Colors.orange,
+                                                size: 20,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Cart ${_currentCartId.split('_')[1]} (${_customerCarts.length})',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              Icon(
+                                                Icons.arrow_drop_down,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                            ],
+                                          ),
+                                          color: Color(0xFF22304A),
+                                          itemBuilder: (context) {
+                                            return _customerCarts.keys.map((
+                                              cartId,
+                                            ) {
+                                              final cartNum = cartId.split(
+                                                '_',
+                                              )[1];
+                                              final itemCount =
+                                                  _customerCarts[cartId]
+                                                      ?.length ??
+                                                  0;
+                                              final isActive =
+                                                  cartId == _currentCartId;
+                                              return PopupMenuItem<String>(
+                                                value: cartId,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      isActive
+                                                          ? Icons
+                                                                .radio_button_checked
+                                                          : Icons
+                                                                .radio_button_unchecked,
+                                                      color: isActive
+                                                          ? Colors.orange
+                                                          : Colors.white70,
+                                                      size: 18,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Cart $cartNum ($itemCount items)',
+                                                        style: TextStyle(
+                                                          color: isActive
+                                                              ? Colors.orange
+                                                              : Colors.white,
+                                                          fontWeight: isActive
+                                                              ? FontWeight.bold
+                                                              : FontWeight
+                                                                    .normal,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (!isActive &&
+                                                        _customerCarts.length >
+                                                            1)
+                                                      IconButton(
+                                                        icon: Icon(
+                                                          Icons.delete,
+                                                          color: Colors.red,
+                                                          size: 18,
+                                                        ),
+                                                        onPressed: () {
+                                                          Navigator.pop(
+                                                            context,
+                                                          );
+                                                          _deleteCart(cartId);
+                                                        },
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            BoxConstraints(),
+                                                      ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList();
+                                          },
+                                          onSelected: _switchCart,
+                                        ),
+                                    ],
                                   ),
                                   const Divider(color: Colors.white24),
                                   SizedBox(height: 15),
@@ -1897,7 +2375,7 @@ class _SalesPageState extends State<SalesPage> {
                                                   BorderRadius.circular(8),
                                             ),
                                           ),
-                                          onPressed: () {},
+                                          onPressed: _saveSale,
                                           child: Text(
                                             "POS PRINT",
                                             style: TextStyle(
@@ -1942,7 +2420,7 @@ class _SalesPageState extends State<SalesPage> {
                                                   BorderRadius.circular(8),
                                             ),
                                           ),
-                                          onPressed: () {},
+                                          onPressed: _createNewCart,
                                           child: Text(
                                             "NEW TRANSACTION",
                                             style: TextStyle(

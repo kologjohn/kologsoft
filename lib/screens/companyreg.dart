@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -10,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/companymodel.dart';
+import '../models/staffmodel.dart';
 import '../providers/Datafeed.dart';
 
 class CompanyRegPage extends StatefulWidget {
@@ -59,7 +59,9 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
   }
 
   String normalizeKey(String input) {
-    return input.trim().toLowerCase()
+    return input
+        .trim()
+        .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
         .replaceAll(RegExp(r'\s+'), '_');
   }
@@ -93,11 +95,15 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
     UploadTask uploadTask;
 
     if (kIsWeb) {
-      uploadTask = ref.putData(_logoBytes!,
-          SettableMetadata(contentType: 'image/png'));
+      uploadTask = ref.putData(
+        _logoBytes!,
+        SettableMetadata(contentType: 'image/png'),
+      );
     } else {
-      uploadTask = ref.putFile(_logoFile!,
-          SettableMetadata(contentType: 'image/png'));
+      uploadTask = ref.putFile(
+        _logoFile!,
+        SettableMetadata(contentType: 'image/png'),
+      );
     }
 
     final snapshot = await uploadTask;
@@ -107,17 +113,18 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final formWidth =
-    screenWidth > 900 ? screenWidth * 0.6 : screenWidth * 0.95;
+    final formWidth = screenWidth > 900
+        ? screenWidth * 0.6
+        : screenWidth * 0.95;
 
     return Consumer<Datafeed>(
       builder: (context, datafeed, child) {
         return Scaffold(
           backgroundColor: const Color(0xFF101624),
           appBar: AppBar(
-            title: Text(widget.docId == null
-                ? "Register Company"
-                : "Edit Company"),
+            title: Text(
+              widget.docId == null ? "Register Company" : "Edit Company",
+            ),
           ),
           body: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
@@ -138,14 +145,14 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                       key: _formKey,
                       child: Column(
                         children: [
-
                           /// LOGO PICKER + PREVIEW
                           Text(
                             "Upload Company Logo",
                             style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500),
+                              color: Colors.white70,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 5),
                           GestureDetector(
@@ -160,28 +167,41 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                                   : _existingLogoUrl != null
                                   ? NetworkImage(_existingLogoUrl!)
                                   : null,
-                              child: (_logoBytes == null &&
-                                  _logoFile == null &&
-                                  _existingLogoUrl == null)
-                                  ? const Icon(Icons.camera_alt,
-                                  color: Colors.white70, size: 30)
+                              child:
+                                  (_logoBytes == null &&
+                                      _logoFile == null &&
+                                      _existingLogoUrl == null)
+                                  ? const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white70,
+                                      size: 30,
+                                    )
                                   : null,
                             ),
                           ),
                           const SizedBox(height: 20),
 
-                          _buildField(_companyController, "Company Name",
-                              Icons.business),
+                          _buildField(
+                            _companyController,
+                            "Company Name",
+                            Icons.business,
+                          ),
                           const SizedBox(height: 14),
-                          _buildField(_nameController, "Contact Person",
-                              Icons.person),
+                          _buildField(
+                            _nameController,
+                            "Contact Person",
+                            Icons.person,
+                          ),
                           const SizedBox(height: 14),
                           _buildField(_phoneController, "Phone", Icons.phone),
                           const SizedBox(height: 14),
                           _buildField(_emailController, "Email", Icons.email),
                           const SizedBox(height: 14),
                           _buildField(
-                              _addressController, "Address", Icons.location_on),
+                            _addressController,
+                            "Address",
+                            Icons.location_on,
+                          ),
                           const SizedBox(height: 20),
 
                           /// DROPDOWN: Branch mode
@@ -190,19 +210,23 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                             style: const TextStyle(color: Colors.white70),
                             decoration: InputDecoration(
                               labelText: "Branch",
-                              labelStyle: const TextStyle(color: Colors.white70),
+                              labelStyle: const TextStyle(
+                                color: Colors.white70,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                const BorderSide(color: Colors.white24),
+                                borderSide: const BorderSide(
+                                  color: Colors.white24,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                const BorderSide(color: Colors.blue),
+                                borderSide: const BorderSide(
+                                  color: Colors.blue,
+                                ),
                               ),
                               fillColor: const Color(0xFF22304A),
                               filled: true,
@@ -210,13 +234,17 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                             value: _mode,
                             items: const [
                               DropdownMenuItem(
-                                  value: "single", child: Text("Single")),
+                                value: "single",
+                                child: Text("Single"),
+                              ),
                               DropdownMenuItem(
-                                  value: "multiple", child: Text("Multiple")),
+                                value: "multiple",
+                                child: Text("Multiple"),
+                              ),
                             ],
                             onChanged: (val) => setState(() => _mode = val),
                             validator: (val) =>
-                            val == null ? "Please select a mode" : null,
+                                val == null ? "Please select a mode" : null,
                           ),
 
                           const SizedBox(height: 20),
@@ -230,24 +258,30 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                           ),
 
                           RadioListTile(
-                            title: const Text("Retail",
-                                style: TextStyle(color: Colors.white70)),
+                            title: const Text(
+                              "Retail",
+                              style: TextStyle(color: Colors.white70),
+                            ),
                             value: "retail",
                             groupValue: _branchType,
                             onChanged: (v) =>
                                 setState(() => _branchType = v.toString()),
                           ),
                           RadioListTile(
-                            title: const Text("Wholesale",
-                                style: TextStyle(color: Colors.white70)),
+                            title: const Text(
+                              "Wholesale",
+                              style: TextStyle(color: Colors.white70),
+                            ),
                             value: "wholesale",
                             groupValue: _branchType,
                             onChanged: (v) =>
                                 setState(() => _branchType = v.toString()),
                           ),
                           RadioListTile(
-                            title: const Text("Both",
-                                style: TextStyle(color: Colors.white70)),
+                            title: const Text(
+                              "Both",
+                              style: TextStyle(color: Colors.white70),
+                            ),
                             value: "both",
                             groupValue: _branchType,
                             onChanged: (v) =>
@@ -261,8 +295,9 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF415A77),
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -270,130 +305,181 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
                               onPressed: _loading
                                   ? null
                                   : () async {
-                                if (!_formKey.currentState!.validate())
-                                  return;
+                                      if (!_formKey.currentState!.validate())
+                                        return;
 
-                                setState(() => _loading = true);
-                                final staff = datafeed.staff;
-                                final companyName =
-                                _companyController.text.trim();
+                                      setState(() => _loading = true);
+                                      final staff = datafeed.staff;
+                                      final companyName = _companyController
+                                          .text
+                                          .trim();
 
-                                try {
-                                  /// ================= EDIT MODE =================
-                                  if (widget.docId != null) {
-                                    final id = widget.docId!;
-                                    final logoUrl = await uploadLogo(id);
+                                      try {
+                                        /// ================= EDIT MODE =================
+                                        if (widget.docId != null) {
+                                          final id = widget.docId!;
+                                          final logoUrl = await uploadLogo(id);
 
-                                    await _db
-                                        .collection('companies')
-                                        .doc(id)
-                                        .update({
-                                      'company': companyName,
-                                      'name': _nameController.text.trim(),
-                                      'phone': _phoneController.text.trim(),
-                                      'email': _emailController.text.trim(),
-                                      'address':
-                                      _addressController.text.trim(),
-                                      'branchType': _branchType,
-                                      'branch': _mode,
-                                      'logo': logoUrl ?? "",
-                                      'updatedAt': DateTime.now(),
-                                      'updatedBy': staff,
-                                    });
-                                  }
+                                          await _db
+                                              .collection('companies')
+                                              .doc(id)
+                                              .update({
+                                                'company': companyName,
+                                                'name': _nameController.text
+                                                    .trim(),
+                                                'phone': _phoneController.text
+                                                    .trim(),
+                                                'email': _emailController.text
+                                                    .trim(),
+                                                'address': _addressController
+                                                    .text
+                                                    .trim(),
+                                                'branchType': _branchType,
+                                                'branch': _mode,
+                                                'logo': logoUrl ?? "",
+                                                'updatedAt': DateTime.now(),
+                                                'updatedBy': staff,
+                                              });
+                                        }
+                                        /// ================= NEW REGISTRATION =================
+                                        else {
+                                          final existing = await _db
+                                              .collection('companies')
+                                              .where(
+                                                'company',
+                                                isEqualTo: companyName,
+                                              )
+                                              .limit(1)
+                                              .get();
 
-                                  /// ================= NEW REGISTRATION =================
-                                  else {
-                                    final existing = await _db
-                                        .collection('companies')
-                                        .where('company',
-                                        isEqualTo: companyName)
-                                        .limit(1)
-                                        .get();
+                                          if (existing.docs.isNotEmpty) {
+                                            throw Exception(
+                                              "Company already exists",
+                                            );
+                                          }
 
-                                    if (existing.docs.isNotEmpty) {
-                                      throw Exception(
-                                          "Company already exists");
-                                    }
+                                          /// Transaction to generate unique KS00 ID
+                                          await _db.runTransaction((tx) async {
+                                            final counterRef = _db
+                                                .collection('counters')
+                                                .doc('company_ids');
 
-                                    /// Transaction to generate unique KS00 ID
-                                    await _db.runTransaction((tx) async {
-                                      final counterRef = _db
-                                          .collection('counters')
-                                          .doc('company_ids');
+                                            final counterSnap = await tx.get(
+                                              counterRef,
+                                            );
 
-                                      final counterSnap =
-                                      await tx.get(counterRef);
+                                            int last = counterSnap.exists
+                                                ? (counterSnap['last'] ?? 0)
+                                                : 0;
+                                            final next = last + 1;
 
-                                      int last = counterSnap.exists
-                                          ? (counterSnap['last'] ?? 0)
-                                          : 0;
-                                      final next = last + 1;
+                                            tx.set(counterRef, {'last': next});
 
-                                      tx.set(counterRef, {'last': next});
+                                            final newId = "KS00$next";
 
-                                      final newId = "KS00$next";
+                                            /// Upload logo using final ID
+                                            final logoUrl = await uploadLogo(
+                                              newId,
+                                            );
 
-                                      /// Upload logo using final ID
-                                      final logoUrl = await uploadLogo(newId);
+                                            final model = CompanyModel(
+                                              id: newId,
+                                              company: companyName,
+                                              companyid: newId,
+                                              name: _nameController.text.trim(),
+                                              phone: _phoneController.text
+                                                  .trim(),
+                                              email: _emailController.text
+                                                  .trim(),
+                                              address: _addressController.text
+                                                  .trim(),
+                                              branch: _mode!,
+                                              type: _branchType,
+                                              logo: logoUrl ?? "",
+                                              createdAt: DateTime.now(),
+                                              updatedAt: DateTime.now(),
+                                              updatedBy: staff,
+                                            );
 
-                                      final model = CompanyModel(
-                                        id: newId,
-                                        company: companyName,
-                                        companyid: newId,
-                                        name:
-                                        _nameController.text.trim(),
-                                        phone:
-                                        _phoneController.text.trim(),
-                                        email:
-                                        _emailController.text.trim(),
-                                        address:
-                                        _addressController.text.trim(),
-                                        branch: _mode!,
-                                        type: _branchType,
-                                        logo: logoUrl ?? "",
-                                        createdAt: DateTime.now(),
-                                        updatedAt: DateTime.now(),
-                                        updatedBy: staff,
-                                      );
+                                            tx.set(
+                                              _db
+                                                  .collection('companies')
+                                                  .doc(newId),
+                                              model.toMap(),
+                                            );
 
-                                      tx.set(
-                                        _db
-                                            .collection('companies')
-                                            .doc(newId),
-                                        model.toMap(),
-                                      );
-                                    });
-                                  }
+                                            /// Create staff record from company contact person
+                                            final staffId = _db
+                                                .collection('staff')
+                                                .doc()
+                                                .id;
+                                            final staffModel = StaffModel(
+                                              company: companyName,
+                                              id: staffId,
+                                              name: _nameController.text.trim(),
+                                              email: _emailController.text
+                                                  .trim(),
+                                              phone: _phoneController.text
+                                                  .trim(),
+                                              accesslevel:
+                                                  'admin', // Default to admin for company owner
+                                              pricingmode:
+                                                  _branchType == 'retail'
+                                                  ? ['retail']
+                                                  : _branchType == 'wholesale'
+                                                  ? ['wholesale']
+                                                  : ['retail', 'wholesale'],
+                                              createdAt: Timestamp.now(),
+                                              createdBy: staff,
+                                              companyId: newId,
+                                            );
 
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
-                                    SnackBar(
-                                      content: Text(widget.docId == null
-                                          ? "Company Registered Successfully"
-                                          : "Company Updated Successfully"),
-                                    ),
-                                  );
+                                            tx.set(_db.collection('staff')
+                                                  .doc(_emailController.text.toString().toLowerCase()),
+                                              staffModel.toMap(),
+                                            );
+                                          });
+                                        }
 
-                                  Navigator.pop(context);
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              widget.docId == null
+                                                  ? "Company and Staff Registered Successfully"
+                                                  : "Company Updated Successfully",
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: const Duration(
+                                              seconds: 3,
+                                            ),
+                                          ),
+                                        );
 
-                                setState(() => _loading = false);
-                              },
+                                        Navigator.pop(context);
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(content: Text(e.toString())),
+                                        );
+                                      }
+
+                                      setState(() => _loading = false);
+                                    },
                               child: _loading
                                   ? const CircularProgressIndicator(
-                                  color: Colors.white)
+                                      color: Colors.white,
+                                    )
                                   : Text(
-                                widget.docId == null
-                                    ? "Register"
-                                    : "Update",
-                                style: const TextStyle(
-                                    color: Colors.white70),
-                              ),
+                                      widget.docId == null
+                                          ? "Register"
+                                          : "Update",
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -410,7 +496,10 @@ class _CompanyRegPageState extends State<CompanyRegPage> {
   }
 
   TextFormField _buildField(
-      TextEditingController controller, String label, IconData icon) {
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
     return TextFormField(
       controller: controller,
       style: const TextStyle(color: Colors.white70),
