@@ -332,12 +332,12 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           isNumber: true,
                           validator: (v) {
                           if (v == null || v.isEmpty) return 'Required';
-                          final retailPrice = double.tryParse(v) ?? 0;
-                          final unitCost = double.tryParse(_costController.text) ?? 0;
-                          final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                          final supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
-                          final boxQty = double.tryParse(_boxQtyController.text) ?? 1;
-
+                          double retailPrice = double.tryParse(v) ?? 0;
+                          double unitCost = double.tryParse(_costController.text) ?? 0;
+                          double boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                          double supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
+                          double boxQty = double.tryParse(_boxQtyController.text) ?? 1;
+                          double boxunitprice= boxPrice/boxQty;
                          // Basic retail price check
                           if (retailPrice <= 0) return 'Enter a valid retail price';
 
@@ -351,21 +351,19 @@ class _ItemRegPageState extends State<ItemRegPage> {
                            final totalRetail = retailPrice * boxQty;
                            final totalUnitCost = unitCost * boxQty;
 
-                        if (totalRetail >= boxPrice) {
+                        if (retailPrice<boxunitprice) {
                            return 'Retail price GHS$retailPrice must be equal to \n or greater than Box unit Price GHS${boxPrice/boxQty}';
                          }
 
-                        if (totalRetail >= supplierPrice) {
+                        if (supplierPrice > 0 && retailPrice < (supplierPrice/boxQty)) {
                          return 'Unit retail price GHS$retailPrice must be equal \n to or greater than Supplier Price ${supplierPrice/boxQty}';
                         }
 
-                        if (retailPrice >= unitCost) {
+                        if (retailPrice < unitCost) {
                          return 'Retail price GHS$retailPrice must be greater than\n or equal to Unit Cost GHS$unitCost';
                          }
 
-                        if (totalRetail >= totalUnitCost) {
-                        return 'Retail price GHS$retailPrice must be \n equal to or greater than  Cost GHS${totalUnitCost/boxQty}';
-                              }
+
                          }
 
                         return null;
@@ -475,11 +473,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                 final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
                                 if (boxQty == 1)  return null;
                                 if (v == null || v.isEmpty) return 'Required';
-                                final boxPrice = double.tryParse(v) ?? 0;
-                                final boxQtyVal =  double.tryParse(_boxQtyController.text) ?? 1;
-                                final pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
-                                final retailPrice =   double.tryParse(_retail_price.text) ?? 0;
-                                final costPrice =    double.tryParse(_costController.text) ?? 0;
+                                double boxPrice = double.tryParse(v) ?? 0;
+                                double boxQtyVal =  double.tryParse(_boxQtyController.text) ?? 1;
+                                double pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
+                                double retailPrice =   double.tryParse(_retail_price.text) ?? 0;
+                                double costPrice =    double.tryParse(_costController.text) ?? 0;
 
                                 if (pricePerUnit > retailPrice) {
 
@@ -585,6 +583,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             children: [
                               Expanded(
                                 child: _buildField(
+                                  enabled: false,
                                   _halfboxqty_controller,
                                   'Half Box Qty',
                                   Icons.inventory,
@@ -639,23 +638,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   },
                                 ),
                               ),
-                              // IconButton(
-                              //   icon: const Icon(
-                              //     Icons.remove_circle,
-                              //     color: Colors.red,
-                              //   ),
-                              //   onPressed: () {
-                              //     setState(() {
-                              //       pricingStep = 0;
-                              //       _halfboxqty_controller.clear();
-                              //       _halfboxprice_controller.clear();
-                              //       _quarterqty_controller.clear();
-                              //       _quarterprice_controller.clear();
-                              //       _packQtyController.clear();
-                              //       _packprice_controller.clear();
-                              //     });
-                              //   },
-                              // ),
                               IconButton(
                                 icon: const Icon(
                                   Icons.remove_circle,
@@ -736,6 +718,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             children: [
                               Expanded(
                                 child: _buildField(
+                                  enabled: false,
                                   _quarterqty_controller,
                                   'Quarter Qty',
                                   Icons.inventory,
@@ -940,19 +923,22 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                     final packPrice = double.tryParse(v) ?? 0;
                                     final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                    final packQty = int.tryParse(_packQtyController.text) ?? 0;
+                                    final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+                                    final packQty = double.tryParse(_packQtyController.text) ?? 0;
+                                    final retailprice = double.tryParse(_retail_price.text) ?? 0;
+                                    final unitcostprice = int.tryParse(_costController.text.toString()) ?? 0;
 
                                    if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null;
 
                                     final packsPerBox = boxQty / packQty;
                                     final totalFromPacks = packsPerBox * packPrice;
+                                    double unitboxprice = boxPrice/boxQty;
 
-                                    final requiredPackPrice = boxPrice / packsPerBox;
+                                    final requiredPackPrice = packPrice / packQty;
 
-                                    if ((totalFromPacks - boxPrice).abs() > 0.01) {
-                                      return 'Pack price must be at least ${requiredPackPrice.toStringAsFixed(2)} '
-                                          '\n so total equals box price';
+                                    if (requiredPackPrice>retailprice || requiredPackPrice<unitcostprice || requiredPackPrice<unitboxprice) {
+                                      return 'Please check Unit(box/cost/retail) price ';
+
                                     }
 
                                     return null;
@@ -1483,11 +1469,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
   }
 
   // ================= FIELDS =================
-  Widget _priceField(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-  ) {
+  Widget _priceField(TextEditingController controller, String label, IconData icon) {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1497,14 +1479,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
   }
 
   TextFormField _buildField(
+
     TextEditingController controller,
     String label,
     IconData icon, {
+      bool enabled = true,
     bool isNumber = false,
     Function(String)? onChanged,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
+      enabled: enabled,
       controller: controller,
       keyboardType: isNumber
           ? const TextInputType.numberWithOptions(decimal: true)

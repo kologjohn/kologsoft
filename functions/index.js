@@ -484,13 +484,6 @@ exports.syncStockTransactionsToItemsreg = onDocumentWritten("stock_transactions/
       if (updates.length > 0) {
         await batch.commit();
 
-        await db.collection('stock_transactions').doc(transactionId).update({
-          processed: true,
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
-          itemsUpdated: updates.length,
-          updates,
-        });
-
         logger.info(`Processed stock transaction ${transactionId}. Updated ${updates.length} items.`);
       }
     }
@@ -498,19 +491,6 @@ exports.syncStockTransactionsToItemsreg = onDocumentWritten("stock_transactions/
     return null;
   } catch (error) {
     logger.error(`Error syncing stock transaction ${transactionId}:`, error);
-    
-    // Mark transaction as failed
-    if (after) {
-      await admin
-        .firestore()
-        .collection('stock_transactions')
-        .doc(transactionId)
-        .update({
-          processed: false,
-          processingError: error.message,
-          processedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-    }
     
     return null;
   }
