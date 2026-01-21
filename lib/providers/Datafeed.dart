@@ -45,6 +45,8 @@ class Datafeed extends ChangeNotifier {
     _initItemCache();
   }
 
+
+
   Future<void> _initItemCache() async {
     try {
       await itemCache.init();

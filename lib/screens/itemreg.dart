@@ -66,6 +66,242 @@ class _ItemRegPageState extends State<ItemRegPage> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final ImagePicker _picker = ImagePicker();
 
+  // ================= UNIFIED VALIDATION METHOD =================
+  String? _validateField(String fieldName, String? value) {
+    if (value == null || value.isEmpty) {
+      if (fieldName == 'supplierMinQty') return null; // Optional field
+      return 'Required';
+    }
+
+    switch (fieldName) {
+      case 'retailPrice':
+        double retailPrice = double.tryParse(value) ?? 0;
+        double unitCost = double.tryParse(_costController.text) ?? 0;
+        double boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+        double supplierPrice =
+            double.tryParse(_supplierPriceController.text) ?? 0;
+        double boxQty = double.tryParse(_boxQtyController.text) ?? 1;
+        double boxunitprice = boxPrice / boxQty;
+
+        if (retailPrice <= 0) return 'Enter a valid retail price';
+
+        if (unitCost > 0 && retailPrice < unitCost) {
+          return 'Retail price GHS$retailPrice must be greater than\n Unit Cost which is GHS${boxPrice / boxQty}';
+        }
+
+        if (boxQty > 1) {
+          if (retailPrice < boxunitprice) {
+            return 'Retail price GHS$retailPrice must be equal to \n or greater than Box unit Price GHS${boxPrice / boxQty}';
+          }
+
+          if (supplierPrice > 0 && retailPrice < (supplierPrice / boxQty)) {
+            return 'Unit retail price GHS$retailPrice must be equal \n to or greater than Supplier Price ${supplierPrice / boxQty}';
+          }
+
+          if (retailPrice < unitCost) {
+            return 'Retail price GHS$retailPrice must be greater than\n or equal to Unit Cost GHS$unitCost';
+          }
+        }
+        return null;
+
+      case 'costPrice':
+        final costPrice = double.tryParse(value) ?? 0;
+        final retailPrice = double.tryParse(_retail_price.text) ?? 0;
+
+        if (retailPrice > 0 && costPrice > retailPrice) {
+          return 'Unit Cost Price GHS$costPrice must be less than Retail Price GHS$retailPrice';
+        }
+        return null;
+
+      case 'boxQty':
+        final boxQty = int.tryParse(value) ?? 0;
+        if (boxQty < 1) {
+          return 'Box quantity must be at least 1';
+        }
+        return null;
+
+      case 'boxPrice':
+        final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+        if (boxQty == 1) return null;
+
+        double boxPrice = double.tryParse(value) ?? 0;
+        double boxQtyVal = double.tryParse(_boxQtyController.text) ?? 1;
+        double pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
+        double retailPrice = double.tryParse(_retail_price.text) ?? 0;
+        double costPrice = double.tryParse(_costController.text) ?? 0;
+
+        if (pricePerUnit > retailPrice) {
+          return 'Price per unit which is GHS${boxPrice / boxQtyVal} \n Qty cannot be less than Retail Price';
+        }
+
+        if (pricePerUnit < costPrice) {
+          return 'Price per unit which is GHS${boxPrice / boxQtyVal} \n Qty cannot be less than Unit Cost Price';
+        }
+        return null;
+
+      case 'supplierPrice':
+        final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+        if (boxQty <= 0) return null;
+
+        final supplierPrice = double.tryParse(value) ?? 0;
+        final unitCost = double.tryParse(_costController.text) ?? 0;
+        final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+        final retailPrice = double.tryParse(_retail_price.text) ?? 0;
+
+        if (boxQty == 1) {
+          if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
+            return 'Prices should be equal because Box Qty is 1,';
+          }
+          return null;
+        }
+
+        final minSupplierPrice = unitCost * boxQty;
+        if (supplierPrice < minSupplierPrice) {
+          return 'Supplier Price GHS$supplierPrice must be more\n or equal to  (${minSupplierPrice.toStringAsFixed(2)})';
+        }
+
+        if (supplierPrice > boxPrice) {
+          return 'Supplier Price must be less than \n or equal to Box Price';
+        }
+        return null;
+
+      case 'supplierMinQty':
+        final supplierQty = int.tryParse(value) ?? 0;
+        if (supplierQty == 1) return null;
+        return null;
+
+      case 'halfBoxQty':
+        final halfBoxQty = int.tryParse(value) ?? 0;
+        final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+
+        if (boxQty == 0) return null;
+
+        final requiredHalfQty = (boxQty / 2).ceil();
+        if (halfBoxQty > boxQty) {
+          return 'Half Box Qty cannot exceed Box Qty';
+        }
+        if (halfBoxQty < requiredHalfQty) {
+          return 'Half Box Qty must be at least $requiredHalfQty';
+        }
+        return null;
+
+      case 'halfBoxPrice':
+        final halfBoxPrice = double.tryParse(value) ?? 0;
+        final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+        if (boxPrice == 0) return null;
+
+        final requiredHalfPrice = boxPrice / 2;
+        if (halfBoxPrice > boxPrice) {
+          return 'Half Box Price cannot exceed Box Price';
+        }
+        if (halfBoxPrice < requiredHalfPrice) {
+          return 'Half Box Price must be at least ${requiredHalfPrice.toStringAsFixed(2)}';
+        }
+        return null;
+
+      case 'quarterQty':
+        final quarterQty = int.tryParse(value) ?? 0;
+        final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+        final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
+        final packQty = int.tryParse(_packQtyController.text) ?? 0;
+
+        if (boxQty == 0) return null;
+
+        final requiredQuarterQty = (boxQty / 4).ceil();
+        if (quarterQty > boxQty) {
+          return 'Quarter Qty cannot exceed Box Qty';
+        }
+        if (quarterQty < requiredQuarterQty) {
+          return 'Quarter Qty must be at least $requiredQuarterQty';
+        }
+        if (halfQty > 0 && quarterQty >= halfQty) {
+          return 'Quarter Qty must be less than Half Qty';
+        }
+        if (packQty > 0 && quarterQty <= packQty) {
+          return 'Quarter Qty must be greater than Pack Qty';
+        }
+        return null;
+
+      case 'quarterPrice':
+        final quarterPrice = double.tryParse(value) ?? 0;
+        final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+        final halfBoxPrice =
+            double.tryParse(_halfboxprice_controller.text) ?? 0;
+
+        if (boxPrice == 0) return null;
+
+        final requiredQuarterPrice = boxPrice / 4;
+        if (quarterPrice > boxPrice) {
+          return 'Quarter Price cannot exceed Box Price';
+        }
+        if (quarterPrice < requiredQuarterPrice) {
+          return 'Quarter Price must be at least ${requiredQuarterPrice.toStringAsFixed(2)}';
+        }
+        if (halfBoxPrice > 0 && quarterPrice >= halfBoxPrice) {
+          return 'Quarter Price must be less than Half Box Price';
+        }
+        return null;
+
+      case 'packQty':
+        if (!_enableBoxPricing) return null;
+
+        final packQty = int.tryParse(value) ?? 0;
+        final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
+        final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
+        final quarterQty = int.tryParse(_quarterqty_controller.text) ?? 0;
+
+        if (boxQty > 0 && packQty > 0 && boxQty % packQty != 0) {
+          return 'Box Qty must be divisible by Pack Qty';
+        }
+
+        if (boxQty > 0 && packQty > boxQty) {
+          return 'Pack Qty cannot exceed Box Qty';
+        }
+
+        if (halfQty > 0 && packQty >= halfQty) {
+          return 'Pack Qty must be less than Half Qty';
+        }
+
+        if (quarterQty > 0 && packQty >= quarterQty) {
+          return 'Pack Qty must be less than Quarter Qty';
+        }
+
+        final packUnitPrice = double.tryParse(_packprice_controller.text) ?? 0;
+        final unitCost = double.tryParse(_costController.text) ?? 0;
+        final totalPackPrice = packUnitPrice * boxQty;
+        final totalUnitCost = unitCost * boxQty;
+
+        if (totalPackPrice < totalUnitCost) {
+          return 'Pack unit price × Box Qty must be ≥ Unit Cost × Box Qty';
+        }
+        return null;
+
+      case 'packPrice':
+        final packPrice = double.tryParse(value) ?? 0;
+        final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+        final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+        final packQty = double.tryParse(_packQtyController.text) ?? 0;
+        final retailprice = double.tryParse(_retail_price.text) ?? 0;
+        final unitcostprice =
+            int.tryParse(_costController.text.toString()) ?? 0;
+
+        if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null;
+
+        double unitboxprice = boxPrice / boxQty;
+        final requiredPackPrice = packPrice / packQty;
+
+        if (requiredPackPrice > retailprice ||
+            requiredPackPrice < unitcostprice ||
+            requiredPackPrice < unitboxprice) {
+          return 'Please check Unit(box/cost/retail) price';
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -74,14 +310,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
     });
 
     if (widget.data != null) {
-
       final d = widget.data!;
       // Basic fields
       _existingLogoUrl = d['imageurl'];
       _nameController.text = d['name'] ?? '';
       _barcodeController.text = d['barcode'] ?? '';
       _costController.text = d['costprice'] ?? '';
-      _productCategory= d['pcategory'];
+      _productCategory = d['pcategory'];
       _productType = d['producttype'];
       _costController.text = d['cp'];
       _supplierMinQtyController.text = d['sminqty'];
@@ -117,7 +352,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _supplierPriceController.text = carton['sp'] ?? '';
       _wholesalePriceController.text = carton['wp'] ?? '';
       final int boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-      final double boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+      final double boxPrice =
+          double.tryParse(_wholesalePriceController.text) ?? 0;
       if (boxQty > 1 && boxPrice > 0) {
         // quantities
         final int halfQty = (boxQty / 2).ceil();
@@ -130,10 +366,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
         _halfboxqty_controller.text = halfQty.toString();
         _quarterqty_controller.text = quarterQty.toString();
 
-        _halfboxprice_controller.text =
-            halfPrice.toStringAsFixed(2);
-        _quarterprice_controller.text =
-            quarterPrice.toStringAsFixed(2);
+        _halfboxprice_controller.text = halfPrice.toStringAsFixed(2);
+        _quarterprice_controller.text = quarterPrice.toStringAsFixed(2);
       }
       // pricingStep: 0 = none, 1 = half, 2 = quarter, 3 = pack
       int step = 0;
@@ -142,10 +376,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
       if (modes.containsKey('pack')) step = 3;
       pricingStep = step;
 
-
-      _enableBoxPricing = modes.isNotEmpty && (modes.containsKey('carton') || modes.containsKey('half') || modes.containsKey('quarter') || modes.containsKey('pack'));
+      _enableBoxPricing =
+          modes.isNotEmpty &&
+          (modes.containsKey('carton') ||
+              modes.containsKey('half') ||
+              modes.containsKey('quarter') ||
+              modes.containsKey('pack'));
       _showBoxPricingSwitch = _enableBoxPricing;
-
 
       try {
         final boxQtyVal = int.tryParse(_boxQtyController.text) ?? 0;
@@ -157,6 +394,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
       } catch (_) {}
     }
   }
+
   void _clearAllFields() {
     // Reset form validation
     _formKey.currentState?.reset();
@@ -190,11 +428,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _logoBytes = null;
       _logoFile = null;
       _existingLogoUrl = null;
-
     });
   }
-
-
 
   Future<void> pickLogo() async {
     final XFile? picked = await _picker.pickImage(
@@ -290,9 +525,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                     children: [
                       _imagePickerSection(),
                       const SizedBox(height: 10),
-                      _buildField(_nameController, 'Item Name', Icons.label,
-                          onChanged: (v){
-                        _formKey.currentState!.validate();}
+                      _buildField(
+                        _nameController,
+                        'Item Name',
+                        Icons.label,
+                        onChanged: (v) {
+                          _formKey.currentState!.validate();
+                        },
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -330,46 +569,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           'Retail Price',
                           Icons.attach_money,
                           isNumber: true,
-                          validator: (v) {
-                          if (v == null || v.isEmpty) return 'Required';
-                          double retailPrice = double.tryParse(v) ?? 0;
-                          double unitCost = double.tryParse(_costController.text) ?? 0;
-                          double boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                          double supplierPrice = double.tryParse(_supplierPriceController.text) ?? 0;
-                          double boxQty = double.tryParse(_boxQtyController.text) ?? 1;
-                          double boxunitprice= boxPrice/boxQty;
-                         // Basic retail price check
-                          if (retailPrice <= 0) return 'Enter a valid retail price';
-
-                         // Retail price must be greater than unit cost
-                        if (unitCost > 0 && retailPrice < unitCost) {
-                             return 'Retail price GHS$retailPrice must be greater than\n Unit Cost which is GHS${boxPrice/boxQty} ';
-                            }
-
-                        // Box quantity rules
-                        if (boxQty > 1) {
-                           final totalRetail = retailPrice * boxQty;
-                           final totalUnitCost = unitCost * boxQty;
-
-                        if (retailPrice<boxunitprice) {
-                           return 'Retail price GHS$retailPrice must be equal to \n or greater than Box unit Price GHS${boxPrice/boxQty}';
-                         }
-
-                        if (supplierPrice > 0 && retailPrice < (supplierPrice/boxQty)) {
-                         return 'Unit retail price GHS$retailPrice must be equal \n to or greater than Supplier Price ${supplierPrice/boxQty}';
-                        }
-
-                        if (retailPrice < unitCost) {
-                         return 'Retail price GHS$retailPrice must be greater than\n or equal to Unit Cost GHS$unitCost';
-                         }
-
-
-                         }
-
-                        return null;
-                         },
+                          validator: (v) => _validateField('retailPrice', v),
                           onChanged: (value) {
-                            final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
+                            final boxQty =
+                                double.tryParse(_boxQtyController.text) ?? 0;
                             if (boxQty == 1) {
                               //_enableBoxPricing
                               setState(() {
@@ -379,7 +582,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             }
                             _formKey.currentState?.validate();
                           },
-
                         ),
                       ),
                       SizedBox(height: 10),
@@ -393,17 +595,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           onChanged: (_) {
                             _formKey.currentState?.validate();
                           },
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Required';
-
-                            final costPrice = double.tryParse(v) ?? 0;
-                            final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-
-                            if (retailPrice > 0 && costPrice > retailPrice) {
-                              return 'Unit Cost Price GHS$costPrice must be less than Retail Price GHS$retailPrice';
-                            }
-                            return null;
-                          },
+                          validator: (v) => _validateField('costPrice', v),
                         ),
                       ),
 
@@ -415,25 +607,28 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         Icons.attach_money,
                         isNumber: true,
                         onChanged: (value) {
-                        final qty = double.tryParse(value) ?? 0;
-                        if (qty > 1) {
-                        setState(() {
-                        _showBoxPricingSwitch = true;
-                        _enableBoxPricing = true;
-                        // auto calculate quantities
-                        _halfboxqty_controller.text = (qty / 2).ceil() .toString();
-                        _quarterqty_controller.text = (qty / 4).ceil().toString();
+                          final qty = double.tryParse(value) ?? 0;
+                          if (qty > 1) {
+                            setState(() {
+                              _showBoxPricingSwitch = true;
+                              _enableBoxPricing = true;
+                              // auto calculate quantities
+                              _halfboxqty_controller.text = (qty / 2)
+                                  .ceil()
+                                  .toString();
+                              _quarterqty_controller.text = (qty / 4)
+                                  .ceil()
+                                  .toString();
                             });
-                          }
-                        else if (qty == 1) {
-                        setState(() {
-                          _showBoxPricingSwitch = true;
-                          _enableBoxPricing = true;
+                          } else if (qty == 1) {
+                            setState(() {
+                              _showBoxPricingSwitch = true;
+                              _enableBoxPricing = true;
 
-                          // Sync prices: retail = wholesale = supplier
-                          final retailPrice = _retail_price.text;
-                          _wholesalePriceController.text = retailPrice;
-                          _supplierPriceController.text = retailPrice;
+                              // Sync prices: retail = wholesale = supplier
+                              final retailPrice = _retail_price.text;
+                              _wholesalePriceController.text = retailPrice;
+                              _supplierPriceController.text = retailPrice;
                             });
                           } else {
                             setState(() {
@@ -442,16 +637,9 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               pricingStep = 0;
                             });
                           }
-                        _formKey.currentState!.validate();
+                          _formKey.currentState!.validate();
                         },
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Required';
-                          final boxQty = int.tryParse(v) ?? 0;
-                          if (boxQty < 1) {
-                            return 'Box quantity must be at least 1';
-                          }
-                          return null;
-                        },
+                        validator: (v) => _validateField('boxQty', v),
                       ),
                       SizedBox(height: 10),
                       Row(
@@ -460,36 +648,19 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             child: _buildFieldWithEnabled(
                               onChanged: (val) {
                                 final price = double.tryParse(val) ?? 0;
-                              _halfboxprice_controller.text = (price / 2).toStringAsFixed(2);
-                              _quarterprice_controller.text = (price / 4).toStringAsFixed(2);
-                               _formKey.currentState?.validate();
+                                _halfboxprice_controller.text = (price / 2)
+                                    .toStringAsFixed(2);
+                                _quarterprice_controller.text = (price / 4)
+                                    .toStringAsFixed(2);
+                                _formKey.currentState?.validate();
                               },
                               _wholesalePriceController,
                               'Box Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled: double.tryParse(_boxQtyController.text) != 1,
-                              validator: (v) {
-                                final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-                                if (boxQty == 1)  return null;
-                                if (v == null || v.isEmpty) return 'Required';
-                                double boxPrice = double.tryParse(v) ?? 0;
-                                double boxQtyVal =  double.tryParse(_boxQtyController.text) ?? 1;
-                                double pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
-                                double retailPrice =   double.tryParse(_retail_price.text) ?? 0;
-                                double costPrice =    double.tryParse(_costController.text) ?? 0;
-
-                                if (pricePerUnit > retailPrice) {
-
-                                  return 'Price per unit which is GHS${boxPrice/boxQtyVal} \n Qty cannot be less than Retail Price';
-                                }
-
-                                if (pricePerUnit < costPrice) {
-                                  return ' Price per unit which is GHS${boxPrice/boxQtyVal} \n Qty cannot be less than Unit Cost Price';
-                                }
-
-                                return null;
-                              },
+                              enabled:
+                                  double.tryParse(_boxQtyController.text) != 1,
+                              validator: (v) => _validateField('boxPrice', v),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -499,45 +670,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled: double.tryParse(_boxQtyController.text) != 1,
-                              onChanged: (v){
-                             _formKey.currentState!.validate();
-                               },
-                              validator: (v) {
-                                  final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-
-                                  if (boxQty <= 0) return null;
-                                  if (v == null || v.isEmpty) return 'Required';
-
-                                  final supplierPrice = double.tryParse(v) ?? 0;
-                                  final unitCost = double.tryParse(_costController.text) ?? 0;
-                                  final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                                  final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-
-                                  // Box Qty = 1 → All prices must match
-                                  if (boxQty == 1) {
-                                    if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
-                                      return 'Prices should be equal because Box Qty is 1,';
-                                    }
-                                    return null;
-                                  }
-
-                                  // Box Qty > 1 rules
-                                  final minSupplierPrice = unitCost * boxQty;
-
-                                  // Supplier must be ≥ Unit Cost × Box Qty
-                                  if (supplierPrice < minSupplierPrice) {
-                                    return 'Supplier Price GHS$supplierPrice must be more\n or equal to  (${minSupplierPrice.toStringAsFixed(2)})';
-                                  }
-
-                                  // Supplier must be ≤ Box Price
-                                  if (supplierPrice > boxPrice) {
-                                    return 'Supplier Price must be less than \n or equal to Box Price';
-                                  }
-
-                                  return null;
-                                }
-
+                              enabled:
+                                  double.tryParse(_boxQtyController.text) != 1,
+                              onChanged: (v) {
+                                _formKey.currentState!.validate();
+                              },
+                              validator: (v) =>
+                                  _validateField('supplierPrice', v),
                             ),
                           ),
                         ],
@@ -557,22 +696,12 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               onChanged: (value) {
                                 _formKey.currentState?.validate();
                               },
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return null;
-
-                                final supplierQty = int.tryParse(v) ?? 0;
-
-                                // Skip validation when either is 1
-                                if (supplierQty == 1)
-                                  return null;
-
-                                return null;
-                              },
+                              validator: (v) =>
+                                  _validateField('supplierMinQty', v),
                             ),
                           ),
                         ],
                       ),
-
 
                       if (_enableBoxPricing) ...[
                         const SizedBox(height: 15),
@@ -588,27 +717,12 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Half Box Qty',
                                   Icons.inventory,
                                   isNumber: true,
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Required';
-
-                                    final halfBoxQty = int.tryParse(v) ?? 0;
-                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-
-                                    if (boxQty == 0) return null;
-
-                                    final requiredHalfQty = (boxQty / 2).ceil();
-                                    if (halfBoxQty > boxQty) {
-                                      return 'Half Box Qty cannot exceed Box Qty';
-                                    }
-                                    if (halfBoxQty < requiredHalfQty) {
-                                      return 'Half Box Qty must be at least $requiredHalfQty';
-                                    }
-                                    return null;
+                                  validator: (v) =>
+                                      _validateField('halfBoxQty', v),
+                                  onChanged: (value) {
+                                    //final qty = double.tryParse(value) ?? 0;
+                                    _formKey.currentState?.validate();
                                   },
-                                    onChanged: (value) {
-                                      //final qty = double.tryParse(value) ?? 0;
-                                      _formKey.currentState?.validate();
-                                    }
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -618,21 +732,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Half Box Price',
                                   Icons.attach_money,
                                   isNumber: true,
-                                  validator: (v) {
-
-                                    if (v == null || v.isEmpty) return 'Required';
-                                    final halfBoxPrice = double.tryParse(v) ?? 0;
-                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                                    if (boxPrice == 0) return null;
-                                    final requiredHalfPrice = boxPrice / 2;
-                                    if (halfBoxPrice > boxPrice) {
-                                      return 'Half Box Price cannot exceed Box Price';
-                                    }
-                                    if (halfBoxPrice < requiredHalfPrice) {
-                                      return 'Half Box Price must be at least ${requiredHalfPrice.toStringAsFixed(2)}';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (v) =>
+                                      _validateField('halfBoxPrice', v),
                                   onChanged: (value) {
                                     _formKey.currentState?.validate();
                                   },
@@ -651,16 +752,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove Half Box Price pricing modes?\n'
-                                            'This action cannot be undone.',style: TextStyle(color: Colors.white70),
+                                        'This action cannot be undone.',
+                                        style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                          onPressed: () => Navigator.pop(context, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
                                           child: const Text('Yes, Remove'),
                                         ),
                                       ],
@@ -668,7 +774,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   );
 
                                   if (confirm != true) return;
-                                     setState(() {
+                                  setState(() {
                                     pricingStep = 0;
 
                                     _halfboxqty_controller.clear();
@@ -682,13 +788,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   });
                                   if (widget.docId != null) {
                                     try {
-                                      await _db.collection('itemsreg').doc(widget.docId).update({
-                                        'modes.half': FieldValue.delete(),
-                                      });
-                                    if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                      await _db
+                                          .collection('itemsreg')
+                                          .doc(widget.docId)
+                                          .update({
+                                            'modes.half': FieldValue.delete(),
+                                          });
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Box pricing removed successfully'),
+                                            content: Text(
+                                              'Box pricing removed successfully',
+                                            ),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
                                           ),
@@ -696,9 +809,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to remove pricing modes: $e'),
+                                            content: Text(
+                                              'Failed to remove pricing modes: $e',
+                                            ),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
@@ -723,32 +840,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   'Quarter Qty',
                                   Icons.inventory,
                                   isNumber: true,
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Required';
-
-                                    final quarterQty = int.tryParse(v) ?? 0;
-                                    final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                    final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
-                                    final packQty = int.tryParse(_packQtyController.text) ?? 0;
-
-                                    if (boxQty == 0) return null;
-
-                                    final requiredQuarterQty = (boxQty / 4).ceil();
-                                    if (quarterQty > boxQty) {
-                                      return 'Quarter Qty cannot exceed Box Qty';
-                                    }
-                                    if (quarterQty < requiredQuarterQty) {
-                                      return 'Quarter Qty must be at least $requiredQuarterQty';
-                                    }
-                                    if (halfQty > 0 && quarterQty >= halfQty) {
-                                      return 'Quarter Qty must be less than Half Qty';
-                                    }
-                                    if (packQty > 0 && quarterQty <= packQty) {
-                                      return 'Quarter Qty must be greater than Pack Qty';
-                                    }
-
-                                    return null;
-                                  },
+                                  validator: (v) =>
+                                      _validateField('quarterQty', v),
                                   onChanged: (value) {
                                     _formKey.currentState?.validate();
                                   },
@@ -762,11 +855,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.attach_money,
                                   isNumber: true,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Required';
-                                    final quarterPrice = double.tryParse(v) ?? 0;
-                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
+                                    final quarterPrice =
+                                        double.tryParse(v) ?? 0;
+                                    final boxPrice =
+                                        double.tryParse(
+                                          _wholesalePriceController.text,
+                                        ) ??
+                                        0;
                                     final halfBoxPrice =
-                                        double.tryParse(_halfboxprice_controller.text) ?? 0;
+                                        double.tryParse(
+                                          _halfboxprice_controller.text,
+                                        ) ??
+                                        0;
 
                                     if (boxPrice == 0) return null;
 
@@ -777,7 +879,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     if (quarterPrice < requiredQuarterPrice) {
                                       return 'Quarter Price must be at least ${requiredQuarterPrice.toStringAsFixed(2)}';
                                     }
-                                    if (halfBoxPrice > 0 && quarterPrice >= halfBoxPrice) {
+                                    if (halfBoxPrice > 0 &&
+                                        quarterPrice >= halfBoxPrice) {
                                       return 'Quarter Price must be less than Half Box Price';
                                     }
                                     return null;
@@ -792,7 +895,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.remove_circle,
                                   color: Colors.red,
                                 ),
-                                onPressed: () async{
+                                onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     barrierDismissible: false,
@@ -800,16 +903,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove Quarter Qty pricing modes?\n'
-                                            'This action cannot be undone.', style: TextStyle(color: Colors.white70),
+                                        'This action cannot be undone.',
+                                        style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                          onPressed: () => Navigator.pop(context, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
                                           child: const Text('Yes, Remove'),
                                         ),
                                       ],
@@ -826,14 +934,22 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   });
                                   if (widget.docId != null) {
                                     try {
-                                      await _db.collection('itemsreg').doc(widget.docId).update({
-                                        'modes.quarter': FieldValue.delete(),
-                                      });
+                                      await _db
+                                          .collection('itemsreg')
+                                          .doc(widget.docId)
+                                          .update({
+                                            'modes.quarter':
+                                                FieldValue.delete(),
+                                          });
 
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Box pricing removed successfully'),
+                                            content: Text(
+                                              'Box pricing removed successfully',
+                                            ),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
                                           ),
@@ -841,9 +957,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to remove pricing modes: $e'),
+                                            content: Text(
+                                              'Failed to remove pricing modes: $e',
+                                            ),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
@@ -861,54 +981,78 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         if (pricingStep >= 3)
                           Row(
                             children: [
-                             Expanded(
-                             child: _buildField(
-                              _packQtyController,
-                              'Pack Qty',
-                              Icons.inventory,
-                              isNumber: true,
-                              validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Required';
-                                  if (!_enableBoxPricing) return null;
+                              Expanded(
+                                child: _buildField(
+                                  _packQtyController,
+                                  'Pack Qty',
+                                  Icons.inventory,
+                                  isNumber: true,
+                                  validator: (v) {
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
+                                    if (!_enableBoxPricing) return null;
 
-                                  final packQty = int.tryParse(v) ?? 0;
-                                  final boxQty = int.tryParse(_boxQtyController.text) ?? 0;
-                                  final halfQty = int.tryParse(_halfboxqty_controller.text) ?? 0;
-                                  final quarterQty = int.tryParse(_quarterqty_controller.text) ?? 0;
+                                    final packQty = int.tryParse(v) ?? 0;
+                                    final boxQty =
+                                        int.tryParse(_boxQtyController.text) ??
+                                        0;
+                                    final halfQty =
+                                        int.tryParse(
+                                          _halfboxqty_controller.text,
+                                        ) ??
+                                        0;
+                                    final quarterQty =
+                                        int.tryParse(
+                                          _quarterqty_controller.text,
+                                        ) ??
+                                        0;
 
-                                  // Quantity rules
-                                  if (boxQty > 0 && packQty > 0 && boxQty % packQty != 0) {
-                                    return 'Box Qty must be divisible by Pack Qty';
-                                  }
+                                    // Quantity rules
+                                    if (boxQty > 0 &&
+                                        packQty > 0 &&
+                                        boxQty % packQty != 0) {
+                                      return 'Box Qty must be divisible by Pack Qty';
+                                    }
 
-                                  if (boxQty > 0 && packQty > boxQty) {
-                                    return 'Pack Qty cannot exceed Box Qty';
-                                  }
+                                    if (boxQty > 0 && packQty > boxQty) {
+                                      return 'Pack Qty cannot exceed Box Qty';
+                                    }
 
-                                  if (halfQty > 0 && packQty >= halfQty) {
-                                    return 'Pack Qty must be less than Half Qty';
-                                  }
+                                    if (halfQty > 0 && packQty >= halfQty) {
+                                      return 'Pack Qty must be less than Half Qty';
+                                    }
 
-                                  if (quarterQty > 0 && packQty >= quarterQty) {
-                                    return 'Pack Qty must be less than Quarter Qty';
-                                  }
+                                    if (quarterQty > 0 &&
+                                        packQty >= quarterQty) {
+                                      return 'Pack Qty must be less than Quarter Qty';
+                                    }
 
-                                  // Price rule: pack unit price * total box qty ≥ unit cost * box qty
-                                  final packUnitPrice = double.tryParse(_packprice_controller.text) ?? 0;
-                                  final unitCost = double.tryParse(_costController.text) ?? 0;
+                                    // Price rule: pack unit price * total box qty ≥ unit cost * box qty
+                                    final packUnitPrice =
+                                        double.tryParse(
+                                          _packprice_controller.text,
+                                        ) ??
+                                        0;
+                                    final unitCost =
+                                        double.tryParse(_costController.text) ??
+                                        0;
 
-                                  final totalPackPrice = packUnitPrice * boxQty; // total revenue from pack
-                                  final totalUnitCost = unitCost * boxQty;       // total cost for the box
+                                    final totalPackPrice =
+                                        packUnitPrice *
+                                        boxQty; // total revenue from pack
+                                    final totalUnitCost =
+                                        unitCost *
+                                        boxQty; // total cost for the box
 
-                                  if (totalPackPrice < totalUnitCost) {
-                                    return 'Pack unit price × Box Qty must be ≥ Unit Cost × Box Qty';
-                                  }
+                                    if (totalPackPrice < totalUnitCost) {
+                                      return 'Pack unit price × Box Qty must be ≥ Unit Cost × Box Qty';
+                                    }
 
-                                  return null; // valid
-                                },
-                              onChanged:(v){
-                               _formKey.currentState!.validate();
-                             }
+                                    return null; // valid
+                                  },
+                                  onChanged: (v) {
+                                    _formKey.currentState!.validate();
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -919,26 +1063,51 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.attach_money,
                                   isNumber: true,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Required';
+                                    if (v == null || v.isEmpty)
+                                      return 'Required';
 
                                     final packPrice = double.tryParse(v) ?? 0;
-                                    final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-                                    final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-                                    final packQty = double.tryParse(_packQtyController.text) ?? 0;
-                                    final retailprice = double.tryParse(_retail_price.text) ?? 0;
-                                    final unitcostprice = int.tryParse(_costController.text.toString()) ?? 0;
+                                    final boxPrice =
+                                        double.tryParse(
+                                          _wholesalePriceController.text,
+                                        ) ??
+                                        0;
+                                    final boxQty =
+                                        double.tryParse(
+                                          _boxQtyController.text,
+                                        ) ??
+                                        0;
+                                    final packQty =
+                                        double.tryParse(
+                                          _packQtyController.text,
+                                        ) ??
+                                        0;
+                                    final retailprice =
+                                        double.tryParse(_retail_price.text) ??
+                                        0;
+                                    final unitcostprice =
+                                        int.tryParse(
+                                          _costController.text.toString(),
+                                        ) ??
+                                        0;
 
-                                   if (boxQty == 0 || packQty == 0 || boxPrice == 0) return null;
+                                    if (boxQty == 0 ||
+                                        packQty == 0 ||
+                                        boxPrice == 0)
+                                      return null;
 
                                     final packsPerBox = boxQty / packQty;
-                                    final totalFromPacks = packsPerBox * packPrice;
-                                    double unitboxprice = boxPrice/boxQty;
+                                    final totalFromPacks =
+                                        packsPerBox * packPrice;
+                                    double unitboxprice = boxPrice / boxQty;
 
-                                    final requiredPackPrice = packPrice / packQty;
+                                    final requiredPackPrice =
+                                        packPrice / packQty;
 
-                                    if (requiredPackPrice>retailprice || requiredPackPrice<unitcostprice || requiredPackPrice<unitboxprice) {
+                                    if (requiredPackPrice > retailprice ||
+                                        requiredPackPrice < unitcostprice ||
+                                        requiredPackPrice < unitboxprice) {
                                       return 'Please check Unit(box/cost/retail) price ';
-
                                     }
 
                                     return null;
@@ -953,7 +1122,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   Icons.remove_circle,
                                   color: Colors.red,
                                 ),
-                                onPressed: () async{
+                                onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     barrierDismissible: false,
@@ -961,16 +1130,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       title: const Text('Confirm removal'),
                                       content: const Text(
                                         'Are you sure you want to remove quarter modes?\n'
-                                            'This action cannot be undone.',style: TextStyle(color: Colors.white70),
+                                        'This action cannot be undone.',
+                                        style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                          onPressed: () => Navigator.pop(context, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
                                           child: const Text('Yes, Remove'),
                                         ),
                                       ],
@@ -985,13 +1159,21 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   });
                                   if (widget.docId != null) {
                                     try {
-                                      await _db.collection('itemsreg').doc(widget.docId).update({
-                                        'modes.quarter': FieldValue.delete(),
-                                      });
+                                      await _db
+                                          .collection('itemsreg')
+                                          .doc(widget.docId)
+                                          .update({
+                                            'modes.quarter':
+                                                FieldValue.delete(),
+                                          });
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Box pricing removed successfully'),
+                                            content: Text(
+                                              'Box pricing removed successfully',
+                                            ),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
                                           ),
@@ -999,9 +1181,13 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to remove pricing modes: $e'),
+                                            content: Text(
+                                              'Failed to remove pricing modes: $e',
+                                            ),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
@@ -1034,7 +1220,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                         onChanged: (v) => setState(() {
                           _productType = v;
                           _formKey.currentState?.validate();
-                        } ),
+                        }),
                         validator: (v) =>
                             v == null ? 'Select product type' : null,
                       ),
@@ -1062,15 +1248,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             decoration: _buildDropdownDecoration(
                               'Product category',
                             ),
-                            items: datafeed.productcategory.map((w) => DropdownMenuItem<String>(
-                             value: w.productname, child: Text(w.productname), ),).toList(),
-                            onChanged: (v) =>
-                                setState(() {
-                                  _productCategory = v;
-                                  _formKey.currentState?.validate();
-                                }
-                              ),
-                           validator: (v) => v == null ? 'Select product category' : null,
+                            items: datafeed.productcategory
+                                .map(
+                                  (w) => DropdownMenuItem<String>(
+                                    value: w.productname,
+                                    child: Text(w.productname),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) => setState(() {
+                              _productCategory = v;
+                              _formKey.currentState?.validate();
+                            }),
+                            validator: (v) =>
+                                v == null ? 'Select product category' : null,
                           );
                         },
                       ),
@@ -1083,20 +1274,30 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             foregroundColor: Colors.white70,
                             backgroundColor: Colors.blue,
                           ),
-                          onPressed: _loading ? null
+                          onPressed: _loading
+                              ? null
                               : () async {
-                                  if (!_formKey.currentState!.validate())return;
+                                  if (!_formKey.currentState!.validate())
+                                    return;
                                   setState(() => _loading = true);
                                   try {
                                     final datafeed = context.read<Datafeed>();
                                     final companyId = datafeed.companyid;
-                                    final itemName = _nameController.text.trim();
-                                    final barcode = _barcodeController.text.trim();
+                                    final itemName = _nameController.text
+                                        .trim();
+                                    final barcode = _barcodeController.text
+                                        .trim();
 
                                     if (widget.docId == null) {
-                                      final nameQuery = await _db.collection('itemsreg')
-                                      .where('companyid',isEqualTo: companyId,)
-                                      .where('name', isEqualTo: itemName).limit(1).get();
+                                      final nameQuery = await _db
+                                          .collection('itemsreg')
+                                          .where(
+                                            'companyid',
+                                            isEqualTo: companyId,
+                                          )
+                                          .where('name', isEqualTo: itemName)
+                                          .limit(1)
+                                          .get();
 
                                       if (nameQuery.docs.isNotEmpty) {
                                         if (mounted) {
@@ -1121,7 +1322,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       // Check for duplicate barcode with same companyid
                                       final barcodeQuery = await _db
                                           .collection('itemsreg')
-                                          .where('companyid',isEqualTo: companyId,)
+                                          .where(
+                                            'companyid',
+                                            isEqualTo: companyId,
+                                          )
                                           .where('barcode', isEqualTo: barcode)
                                           .limit(1)
                                           .get();
@@ -1148,17 +1352,25 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     }
 
                                     String sanitize(String input) {
-                                      return input.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll(
+                                      return input
+                                          .trim()
+                                          .toLowerCase()
+                                          .replaceAll(RegExp(r'\s+'), '')
+                                          .replaceAll(
                                             RegExp(r'[^a-z0-9_]'),
                                             '',
                                           );
                                     }
 
-                                    final docId =widget.docId ??'${sanitize(companyId)}_${sanitize(itemName)}';
-                                    final docRef = _db.collection('itemsreg').doc(docId);
+                                    final docId =
+                                        widget.docId ??
+                                        '${sanitize(companyId)}_${sanitize(itemName)}';
+                                    final docRef = _db
+                                        .collection('itemsreg')
+                                        .doc(docId);
                                     final imageUrl = await uploadLogo(docId);
 
-                                   // final supplierText = _supplierMinQtyController.text.trim();
+                                    // final supplierText = _supplierMinQtyController.text.trim();
 
                                     Map<String, dynamic> modesMap = {
                                       "single": {
@@ -1169,8 +1381,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         'qty': '1',
                                       },
                                     };
-                                    double boxqty =_boxQtyController.text.isNotEmpty
-                                        ? double.parse(_boxQtyController.text): 0;
+                                    double boxqty =
+                                        _boxQtyController.text.isNotEmpty
+                                        ? double.parse(_boxQtyController.text)
+                                        : 0;
                                     if (boxqty >= 2) {
                                       modesMap["carton"] = {
                                         'name': 'carton',
@@ -1186,26 +1400,43 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                     if (_enableBoxPricing) {
                                       // Half box
-                                      if (pricingStep >= 1 && _halfboxqty_controller.text.isNotEmpty && _halfboxprice_controller.text.isNotEmpty) {
+                                      if (pricingStep >= 1 &&
+                                          _halfboxqty_controller
+                                              .text
+                                              .isNotEmpty &&
+                                          _halfboxprice_controller
+                                              .text
+                                              .isNotEmpty) {
                                         modesMap["carton"] = {
                                           'name': 'carton',
-                                          'sp': _supplierPriceController.text.trim(),
-                                          'wp': _wholesalePriceController.text.trim(),
-                                          'rp': _wholesalePriceController.text.trim(),
+                                          'sp': _supplierPriceController.text
+                                              .trim(),
+                                          'wp': _wholesalePriceController.text
+                                              .trim(),
+                                          'rp': _wholesalePriceController.text
+                                              .trim(),
                                           'qty': _boxQtyController.text.trim(),
                                         };
                                         modesMap["half"] = {
                                           'name': 'Half carton',
-                                          'sp': _halfboxprice_controller.text.trim(),
-                                          'wp': _halfboxprice_controller.text.trim(),
-                                          'rp': _halfboxprice_controller.text.trim(),
-                                          'qty': _halfboxqty_controller.text .trim(),
+                                          'sp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'wp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'rp': _halfboxprice_controller.text
+                                              .trim(),
+                                          'qty': _halfboxqty_controller.text
+                                              .trim(),
                                         };
                                       }
 
                                       // Quarter box
-                                      if (pricingStep >= 2 && _quarterqty_controller.text.isNotEmpty &&
-                                          _quarterprice_controller.text
+                                      if (pricingStep >= 2 &&
+                                          _quarterqty_controller
+                                              .text
+                                              .isNotEmpty &&
+                                          _quarterprice_controller
+                                              .text
                                               .isNotEmpty) {
                                         modesMap["quarter"] = {
                                           'name': 'Quarter carton',
@@ -1220,11 +1451,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
 
                                       // Pack
-                                      if (pricingStep >= 3 && _packQtyController.text.isNotEmpty &&  _packprice_controller.text.isNotEmpty) {
+                                      if (pricingStep >= 3 &&
+                                          _packQtyController.text.isNotEmpty &&
+                                          _packprice_controller
+                                              .text
+                                              .isNotEmpty) {
                                         modesMap["pack"] = {
                                           'name': 'Pack',
-                                          'sp': _packprice_controller.text.trim(),
-                                          'wp': _packprice_controller.text.trim(),
+                                          'sp': _packprice_controller.text
+                                              .trim(),
+                                          'wp': _packprice_controller.text
+                                              .trim(),
                                           'rp': _retail_price.text.trim(),
                                           'qty': _packQtyController.text.trim(),
                                         };
@@ -1247,27 +1484,36 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       'deletedat': null,
                                       'modemore': _enableBoxPricing,
                                       'modes': modesMap,
-                                      'wminqty': _wholesaleMinQtyController.text,
+                                      'wminqty':
+                                          _wholesaleMinQtyController.text,
                                       'sminqty': _supplierMinQtyController.text,
-                                      'staff':datafeed.staff,
+                                      'staff': datafeed.staff,
                                     };
                                     if (widget.docId == null) {
-                                      data['createdat'] = FieldValue.serverTimestamp();
+                                      data['createdat'] =
+                                          FieldValue.serverTimestamp();
                                     }
-                                 await docRef.set(data, SetOptions(merge: true), );
+                                    await docRef.set(
+                                      data,
+                                      SetOptions(merge: true),
+                                    );
                                     _clearAllFields();
 
-                               if (mounted)
-                               {
-                                ScaffoldMessenger.of(context,).showSnackBar(SnackBar(content: Text(widget.docId == null
-                                  ? 'Item saved successfully!'
-                                  : 'Item updated successfully!',
-                                    ),
-                                backgroundColor: Colors.green,
-                                duration: const Duration(seconds: 2),
-                                  ),
-                                    );
-                                }
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            widget.docId == null
+                                                ? 'Item saved successfully!'
+                                                : 'Item updated successfully!',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
                                   } catch (e) {
                                     if (mounted) {
                                       ScaffoldMessenger.of(
@@ -1284,7 +1530,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
                                   setState(() => _loading = false);
                                 },
-                              child: _loading
+                          child: _loading
                               ? const CircularProgressIndicator(
                                   color: Colors.white,
                                 )
@@ -1297,7 +1543,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
               ),
             ),
           ),
-          floatingActionButton:   _enableBoxPricing && double.tryParse(_boxQtyController.text) != 1
+          floatingActionButton:
+              _enableBoxPricing && double.tryParse(_boxQtyController.text) != 1
               ? Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: Row(
@@ -1326,7 +1573,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       ),
                     ],
                   ),
-                ) : null,
+                )
+              : null,
         );
       },
     );
@@ -1469,7 +1717,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
   }
 
   // ================= FIELDS =================
-  Widget _priceField(TextEditingController controller, String label, IconData icon) {
+  Widget _priceField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1479,11 +1731,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
   }
 
   TextFormField _buildField(
-
     TextEditingController controller,
     String label,
     IconData icon, {
-      bool enabled = true,
+    bool enabled = true,
     bool isNumber = false,
     Function(String)? onChanged,
     String? Function(String?)? validator,
