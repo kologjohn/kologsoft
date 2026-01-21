@@ -351,19 +351,19 @@ class _ItemRegPageState extends State<ItemRegPage> {
                            final totalRetail = retailPrice * boxQty;
                            final totalUnitCost = unitCost * boxQty;
 
-                        if (totalRetail <= boxPrice) {
-                           return 'Retail price GHS$retailPrice must be equal to \n or greater than Box Price GHS${boxPrice/boxQty}';
+                        if (totalRetail >= boxPrice) {
+                           return 'Retail price GHS$retailPrice must be equal to \n or greater than Box unit Price GHS${boxPrice/boxQty}';
                          }
 
-                        if (totalRetail <= supplierPrice) {
+                        if (totalRetail >= supplierPrice) {
                          return 'Unit retail price GHS$retailPrice must be equal \n to or greater than Supplier Price ${supplierPrice/boxQty}';
                         }
 
-                        if (retailPrice <= unitCost) {
+                        if (retailPrice >= unitCost) {
                          return 'Retail price GHS$retailPrice must be greater than\n or equal to Unit Cost GHS$unitCost';
                          }
 
-                        if (totalRetail <= totalUnitCost) {
+                        if (totalRetail >= totalUnitCost) {
                         return 'Retail price GHS$retailPrice must be \n equal to or greater than  Cost GHS${totalUnitCost/boxQty}';
                               }
                          }
