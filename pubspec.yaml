@@ -64,6 +64,7 @@ dependencies:
   hive_flutter: ^1.1.0
   path_provider: ^2.0.14
   mobile_scanner: ^6.0.3
+  carousel_slider: ^5.1.1
 
 dev_dependencies:
   flutter_test:

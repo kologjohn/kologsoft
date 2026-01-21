@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
@@ -565,64 +566,73 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ],
                   ),
                   SizedBox(height: 15),
-                  Wrap(
-                    spacing: 15,
-                    runSpacing: 15,
-                    children: [
-                      _statCard(
-                        title: "Stock value",
-                        value: "41000",
-                        subtitle: "+12% from yesterday",
-                        icon: Icons.trending_up,
-                        iconColor: Colors.green,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 100, // adjust to your card height
+                    child: CarouselSlider(
+                      options: CarouselOptions(
+                        autoPlay: true,
+                        autoPlayInterval: const Duration(seconds: 3),
+                        autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                        enlargeCenterPage: false,
+                        viewportFraction: isMobile ? 0.45 : isSmallTablet ? 0.30 : isTablet ? 0.25 : 0.15,
+                        enableInfiniteScroll: true,
+                        scrollDirection: Axis.horizontal,
                       ),
-
-                      _statCard(
-                        title: "Total discount",
-                        value: "0.00",
-                        subtitle: "+8% from yesterday",
-                        icon: Icons.people_outline,
-                        iconColor: Colors.blue,
-                      ),
-
-                      _statCard(
-                        title: "Re-order",
-                        value: "7",
-                        subtitle: "Requires attention",
-                        icon: Icons.warning_amber_rounded,
-                        iconColor: Colors.orange,
-                      ),
-
-                      _statCard(
-                        title: "Expiring Soon",
-                        value: "12",
-                        subtitle: "Within 30 days",
-                        icon: Icons.schedule,
-                        iconColor: Colors.redAccent,
-                      ),
-                      _statCard(
-                        title: "Finished Stock",
-                        value: "12",
-                        subtitle: "Within 30 days",
-                        icon: Icons.security_update_good_sharp,
-                        iconColor: Colors.lightBlue,
-                      ),
-                      _statCard(
-                        title: "Available",
-                        value: "12",
-                        subtitle: "Within 30 days",
-                        icon: Icons.new_label_sharp,
-                        iconColor: Colors.lightGreen,
-                      ),
-                      _statCard(
-                        title: "VAT",
-                        value: "12",
-                        subtitle: "Within 30 days",
-                        icon: Icons.schedule,
-                        iconColor: Colors.redAccent,
-                      ),
-                    ],
+                      items: [
+                        _statCard(
+                          title: "Stock value",
+                          value: "41000",
+                          subtitle: "+12% from yesterday",
+                          icon: Icons.trending_up,
+                          iconColor: Colors.green,
+                        ),
+                        _statCard(
+                          title: "Total discount",
+                          value: "0.00",
+                          subtitle: "+8% from yesterday",
+                          icon: Icons.people_outline,
+                          iconColor: Colors.blue,
+                        ),
+                        _statCard(
+                          title: "Re-order",
+                          value: "7",
+                          subtitle: "Requires attention",
+                          icon: Icons.warning_amber_rounded,
+                          iconColor: Colors.orange,
+                        ),
+                        _statCard(
+                          title: "Expiring Soon",
+                          value: "12",
+                          subtitle: "Within 30 days",
+                          icon: Icons.schedule,
+                          iconColor: Colors.redAccent,
+                        ),
+                        _statCard(
+                          title: "Finished Stock",
+                          value: "12",
+                          subtitle: "Within 30 days",
+                          icon: Icons.security_update_good_sharp,
+                          iconColor: Colors.lightBlue,
+                        ),
+                        _statCard(
+                          title: "Available",
+                          value: "12",
+                          subtitle: "Within 30 days",
+                          icon: Icons.new_label_sharp,
+                          iconColor: Colors.lightGreen,
+                        ),
+                        _statCard(
+                          title: "VAT",
+                          value: "12",
+                          subtitle: "Within 30 days",
+                          icon: Icons.schedule,
+                          iconColor: Colors.redAccent,
+                        ),
+                      ],
+                    ),
                   ),
+
                   SizedBox(height: 15),
                   Wrap(
                     spacing: 15,
@@ -1409,7 +1419,6 @@ class WorkPlaceWidget extends StatelessWidget {
               Icon(Icons.shopping_cart, color: Colors.greenAccent)
             ],
           ),
-
           const SizedBox(height: 12),
           FittedBox(
             child: Text(
@@ -1423,11 +1432,11 @@ class WorkPlaceWidget extends StatelessWidget {
           ),
 
           const Text(
-            "Cash",
-            style: TextStyle(color: Colors.white60, fontSize: 14),
+            "Total Sales",
+            style: TextStyle(color: Colors.white60, fontSize: 18),
           ),
 
-          //const SizedBox(height: 14),
+          const SizedBox(height: 4),
 
           //  Unassigned Box
           Stack(
@@ -1437,26 +1446,75 @@ class WorkPlaceWidget extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3A2C4F),
+                  color: Colors.greenAccent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.redAccent, width: 1),
+                  border: Border.all(color: Colors.greenAccent, width: 1),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  //crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
                     Text(
                       "10,023,000.00",
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4),
                     Text(
-                      "Credit",
-                      style: TextStyle(color: Colors.white60, fontSize: 13),
+                      "Cash Sales",
+                      style: TextStyle(color: Colors.white60, fontSize: 12),
                     ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: -6,
+                bottom: -6,
+                child: Container(
+                  height: 20,
+                  width: 20,
+                  decoration: const BoxDecoration(
+                    color: Colors.greenAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.bookmark_added_outlined, color: Colors.white, size: 12,),
+                  ),
+                ),
+              ),
+
+            ],
+          ),
+          Spacer(),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color:  Colors.redAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.redAccent, width: 1),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text(
+                      "Credit Sales",
+                      style: TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                    Text(
+                      "10,023,000.00",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
                   ],
                 ),
               ),
@@ -1466,8 +1524,8 @@ class WorkPlaceWidget extends StatelessWidget {
                 right: -6,
                 bottom: -6,
                 child: Container(
-                  height: 28,
-                  width: 28,
+                  height: 20,
+                  width: 20,
                   decoration: const BoxDecoration(
                     color: Colors.redAccent,
                     shape: BoxShape.circle,
