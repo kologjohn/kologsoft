@@ -78,7 +78,9 @@ class _ItemListPageState extends State<ItemListPage> {
 
           /// LIST VIEW
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            child:
+
+            StreamBuilder<QuerySnapshot>(
               stream: db.collection('itemsreg').orderBy('name').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -99,7 +101,7 @@ class _ItemListPageState extends State<ItemListPage> {
                 // Filter documents based on search query - search all fields
                 final filteredDocs = allDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  
+
                   // Search through all fields in the document
                   return data.values.any((value) {
                     if (value == null) return false;
@@ -129,7 +131,7 @@ class _ItemListPageState extends State<ItemListPage> {
               final modesMap = data['modes'] as Map<String, dynamic>? ?? {};
               final singleMode = modesMap['single'] as Map<String, dynamic>? ?? {};
               final cartonMode = modesMap['carton'] as Map<String, dynamic>? ?? {};
-              
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(18),
@@ -276,10 +278,10 @@ class _ItemListPageState extends State<ItemListPage> {
                           }
                         }
                       },
-                    ),
-                  ],
-                ),
-              );
+                     ),
+                    ],
+                   ),
+                  );
                   },
                 );
 

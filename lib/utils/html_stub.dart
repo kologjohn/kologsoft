@@ -25,17 +25,49 @@ class WindowBase {
   void print() {}
 }
 
+/// Minimal stub for CSS style used in dart:html
+class CssStyleDeclaration {
+  String? display;
+  String? position;
+  String? width;
+  String? height;
+  String? border;
+
+  // Provide bracket-like assignment for defensive compatibility
+  void operator []=(String key, String value) {
+    switch (key) {
+      case 'display':
+        display = value;
+        break;
+      case 'position':
+        position = value;
+        break;
+      case 'width':
+        width = value;
+        break;
+      case 'height':
+        height = value;
+        break;
+      case 'border':
+        border = value;
+        break;
+      default:
+        break;
+    }
+  }
+}
+
 class AnchorElement {
   String href = '';
   String download = '';
-  Map<String, String> style = {};
+  CssStyleDeclaration style = CssStyleDeclaration();
 
   void click() {}
 }
 
 class IFrameElement {
   String src = '';
-  Map<String, String> style = {};
+  CssStyleDeclaration style = CssStyleDeclaration();
   WindowBase? contentWindow;
   Stream<dynamic> get onLoad => Stream.empty();
 }

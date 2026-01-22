@@ -78,13 +78,14 @@ class _ItemRegPageState extends State<ItemRegPage> {
         double retailPrice = double.tryParse(value) ?? 0;
         double unitCost = double.tryParse(_costController.text) ?? 0;
         double boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
-        double supplierPrice =
-            double.tryParse(_supplierPriceController.text) ?? 0;
+        double supplierPrice =double.tryParse(_supplierPriceController.text) ?? 0;
         double boxQty = double.tryParse(_boxQtyController.text) ?? 1;
         double boxunitprice = boxPrice / boxQty;
 
         if (retailPrice <= 0) return 'Enter a valid retail price';
+        if (boxQty == 1) {
 
+        }
         if (unitCost > 0 && retailPrice < unitCost) {
           return 'Retail price GHS$retailPrice must be greater than\n Unit Cost which is GHS${boxPrice / boxQty}';
         }
@@ -122,13 +123,26 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
       case 'boxPrice':
         final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
-        if (boxQty == 1) return null;
+       // if (boxQty == 1) return null;
 
         double boxPrice = double.tryParse(value) ?? 0;
         double boxQtyVal = double.tryParse(_boxQtyController.text) ?? 1;
         double pricePerUnit = boxQtyVal > 0 ? boxPrice / boxQtyVal : 0;
         double retailPrice = double.tryParse(_retail_price.text) ?? 0;
         double costPrice = double.tryParse(_costController.text) ?? 0;
+
+        if (boxQty == 1) {
+          // if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
+          //   return 'Prices should be equal because Box Qty is 1,';
+          // }
+          if(costPrice > boxPrice){
+            return 'Cost price  GHS$costPrice \n is more than Box Price GHS$boxPrice';
+          }
+          if(boxPrice > retailPrice){
+            return 'Box price  GHS$boxPrice \n can more than Retail Price GHS$retailPrice';
+          }
+          return null;
+        }
 
         if (pricePerUnit > retailPrice) {
           return 'Price per unit which is GHS${boxPrice / boxQtyVal} \n Qty cannot be less than Retail Price';
@@ -147,10 +161,16 @@ class _ItemRegPageState extends State<ItemRegPage> {
         final unitCost = double.tryParse(_costController.text) ?? 0;
         final boxPrice = double.tryParse(_wholesalePriceController.text) ?? 0;
         final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-
+        double costPrice = double.tryParse(_costController.text) ?? 0;
         if (boxQty == 1) {
-          if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
-            return 'Prices should be equal because Box Qty is 1,';
+          // if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
+          //   return 'Prices should be equal because Box Qty is 1,';
+          // }
+          if(costPrice > supplierPrice){
+            return 'Cost price  GHS$costPrice \n is more than Supplier Price GHS$supplierPrice';
+          }
+          if(supplierPrice > retailPrice){
+            return 'Supplier price  GHS$supplierPrice \n is more than Retail Price GHS$retailPrice';
           }
           return null;
         }
@@ -571,8 +591,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           isNumber: true,
                           validator: (v) => _validateField('retailPrice', v),
                           onChanged: (value) {
-                            final boxQty =
-                                double.tryParse(_boxQtyController.text) ?? 0;
+                            final boxQty = double.tryParse(_boxQtyController.text) ?? 0;
                             if (boxQty == 1) {
                               //_enableBoxPricing
                               setState(() {
@@ -613,12 +632,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               _showBoxPricingSwitch = true;
                               _enableBoxPricing = true;
                               // auto calculate quantities
-                              _halfboxqty_controller.text = (qty / 2)
-                                  .ceil()
-                                  .toString();
-                              _quarterqty_controller.text = (qty / 4)
-                                  .ceil()
-                                  .toString();
+                              _halfboxqty_controller.text = (qty / 2).ceil().toString();
+                              _quarterqty_controller.text = (qty / 4).ceil().toString();
                             });
                           } else if (qty == 1) {
                             setState(() {
@@ -648,18 +663,15 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             child: _buildFieldWithEnabled(
                               onChanged: (val) {
                                 final price = double.tryParse(val) ?? 0;
-                                _halfboxprice_controller.text = (price / 2)
-                                    .toStringAsFixed(2);
-                                _quarterprice_controller.text = (price / 4)
-                                    .toStringAsFixed(2);
+                                _halfboxprice_controller.text = (price / 2).toStringAsFixed(2);
+                                _quarterprice_controller.text = (price / 4).toStringAsFixed(2);
                                 _formKey.currentState?.validate();
                               },
                               _wholesalePriceController,
                               'Box Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled:
-                                  double.tryParse(_boxQtyController.text) != 1,
+                             // enabled: double.tryParse(_boxQtyController.text) != 1,
                               validator: (v) => _validateField('boxPrice', v),
                             ),
                           ),
@@ -670,13 +682,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
-                              enabled:
-                                  double.tryParse(_boxQtyController.text) != 1,
+                             // enabled:double.tryParse(_boxQtyController.text) != 1,
                               onChanged: (v) {
                                 _formKey.currentState!.validate();
                               },
-                              validator: (v) =>
-                                  _validateField('supplierPrice', v),
+                              validator: (v) => _validateField('supplierPrice', v),
                             ),
                           ),
                         ],

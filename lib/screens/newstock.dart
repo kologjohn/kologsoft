@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -464,23 +466,6 @@ class _NewStockState extends State<NewStock> {
                                           ),
                                         ),
                                       ),
-                                      // SizedBox(
-                                      //   width: 200,
-                                      //   child: OutlinedButton.icon(
-                                      //     style: OutlinedButton.styleFrom(
-                                      //       side: const BorderSide(color: Colors.white70),
-                                      //       padding: const EdgeInsets.symmetric(vertical: 16),
-                                      //       shape: RoundedRectangleBorder(
-                                      //         borderRadius: BorderRadius.circular(14),
-                                      //       ),
-                                      //     ),
-                                      //     icon: const Icon(Icons.view_list, color: Colors.white70),
-                                      //     label: const Text("View", style: TextStyle(color: Colors.white70)),
-                                      //     onPressed: () {},
-                                      //   ),
-                                      // ),
-
-
                                     ],
                                   ),
                                 ],
@@ -632,13 +617,13 @@ class _StockItemsFormState extends State<StockItemsForm> {
     if (_formKey.currentState!.validate()) {
 
       setState(() {
-        final int quantity = int.tryParse(_quantityController.text.trim()) ?? 0;
+        final double quantity = double.tryParse(_quantityController.text.trim()) ?? 0;
         final double price = double.tryParse(_priceController.text.trim())?.toDouble() ?? 0.0;
         final double discount = double.tryParse(_discountController.text.trim())?.toDouble() ?? 0.0;
         final double taxValue = double.tryParse(_taxValueController.text.trim())?.toDouble() ?? 0.0;
 
         // Determine mode quantity (pieces per selected mode) - default to 1 when missing
-        int modeQty = 1;
+        double modeQty = 1;
         if (_itemModes != null && _selectedStockMode != null) {
           Map<String, dynamic>? selectedModeData;
           for (var entry in _itemModes!.entries) {
@@ -651,12 +636,14 @@ class _StockItemsFormState extends State<StockItemsForm> {
           if (selectedModeData != null) {
             // try several common keys for quantity-per-mode
             final dynamic qVal = selectedModeData['qty'] ?? 1;
-            modeQty = int.tryParse(qVal.toString()) ?? (qVal is int ? qVal : 1);
+            modeQty = (double.tryParse(qVal.toString()) ??
+                (qVal is double ? qVal.toDouble() : 1.0));
+
           }
         }
 
         // pieces = modeQty * entered quantity
-        final int pieces = modeQty * quantity;
+        final double pieces = modeQty * quantity;
 
         // compute line amounts
         final double baseAmount = price * quantity;
@@ -707,7 +694,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
     for (final it in _items) {
       final double price = (it['price'] as num?)?.toDouble() ?? 0.0;
-      final int qty = (it['quantity'] as int?) ?? 0;
+      final double qty = (it['quantity'] as double?) ?? 0;
       final double discount = (it['discount'] as num?)?.toDouble() ?? 0.0;
       final double taxAmt = (it['taxAmount'] as num?)?.toDouble() ?? 0.0;
 
@@ -725,6 +712,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
     net: payable,
     );
   }
+
 
   bool _saved = false;
   Future<void> _saveRecords() async {
@@ -773,6 +761,14 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
   Future<void> _printRecords() async {
     final pdf = pw.Document();
+    final totals = _calculateTotals();
+
+    String fmtNum(dynamic v) {
+      if (v == null || v.toString().isEmpty) return '-';
+      if (v is int) return v.toString();
+      if (v is double || v is num) return (v as num).toStringAsFixed(2);
+      return v.toString();
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -780,14 +776,11 @@ class _StockItemsFormState extends State<StockItemsForm> {
         margin: const pw.EdgeInsets.all(32),
         build: (context) {
           return <pw.Widget>[
-            // Company name at the very top
+            // Company name
             pw.Center(
               child: pw.Text(
                 widget.headerData['company'] ?? 'COMPANY NAME',
-                style: pw.TextStyle(
-                  fontSize: 26,
-                  fontWeight: pw.FontWeight.bold,
-                ),
+                style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold),
               ),
             ),
             pw.SizedBox(height: 10),
@@ -796,125 +789,132 @@ class _StockItemsFormState extends State<StockItemsForm> {
             pw.Center(
               child: pw.Text(
                 'STOCK TRANSACTION',
-                style: pw.TextStyle(
-                  fontSize: 20,
-                  fontWeight: pw.FontWeight.bold,
-                ),
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
               ),
             ),
-            pw.SizedBox(height: 20),
 
-            // Header section split into left and right
+            // new thin divider between title and headerdata
+            pw.SizedBox(height: 8),
+            pw.Container(height: 1, color: PdfColors.grey300),
+            pw.SizedBox(height: 12),
+
+            // Header section (no border)
             pw.Container(
               padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey),
-                borderRadius: pw.BorderRadius.circular(6),
-              ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Left column
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Invoice Number: ${widget.headerData['invoice'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
-                      pw.Text('Waybill Number: ${widget.headerData['waybill'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
-                      pw.Text('Staff: ${widget.headerData['createdby'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Invoice Number: ${widget.headerData['invoice'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Waybill Number: ${widget.headerData['waybill'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Staff: ${widget.headerData['createdby'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
                     ],
                   ),
-                  // Right column
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Supplier: ${widget.headerData['suppliername'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
-                      pw.Text('Branch: ${widget.headerData['branchname'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
-                      pw.Text('Date: ${widget.headerData['invoicedate'] ?? ''}',
-                          style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Supplier: ${widget.headerData['suppliername'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Branch: ${widget.headerData['branchname'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Date: ${widget.headerData['invoicedate'] ?? ''}', style: pw.TextStyle(fontSize: 14)),
                     ],
                   ),
                 ],
               ),
             ),
 
-            pw.SizedBox(height: 20),
+            // thin divider between header and table
+            pw.SizedBox(height: 12),
+            pw.Container(height: 1, color: PdfColors.grey300),
+            pw.SizedBox(height: 12),
 
-            // Items table spanning full width
-            pw.Table.fromTextArray(
-              border: pw.TableBorder.all(color: PdfColors.grey),
-              headerStyle: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                fontSize: 12,
-              ),
-              cellStyle: const pw.TextStyle(fontSize: 11),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: [
-                '#',
-                'Item',
-                'Mode',
-                'Mode Qty',
-                'Pieces',
-                'Qty',
-                'Unit Price',
-                'Discount',
-                //'Tax',
-                'Total'
+            // Manual table - borders enabled only here
+            pw.Table(
+              border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey300),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(24),   // #
+                1: const pw.FlexColumnWidth(3.0),   // Item
+                2: const pw.FlexColumnWidth(1.2),   // Mode
+                3: const pw.FlexColumnWidth(0.9),   // Mode Qty (num)
+                4: const pw.FlexColumnWidth(0.9),   // Pieces (num)
+                5: const pw.FlexColumnWidth(0.9),   // Qty (num)
+                6: const pw.FlexColumnWidth(1.2),   // Unit Price (num)
+                7: const pw.FlexColumnWidth(1.2),   // Discount (num)
+                8: const pw.FlexColumnWidth(1.4),   // Total (num)
+              },
+              children: [
+                // header row
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('#', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Item', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Mode', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Mode Qty', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Pieces', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Qty', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Unit Price', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Discount', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Total', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                  ],
+                ),
+
+                // data rows
+                ..._items.asMap().entries.map((entry) {
+                  final idx = entry.key + 1;
+                  final it = entry.value;
+                  final bool even = entry.key % 2 == 0;
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(color: even ? PdfColors.white : PdfColors.grey100),
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(idx.toString(), style: pw.TextStyle(fontSize: 10))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(it['item']?.toString() ?? '-', style: pw.TextStyle(fontSize: 10))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(it['stockingmode']?.toString() ?? it['salesMode']?.toString() ?? '-', style: pw.TextStyle(fontSize: 10))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['modeqty'] ?? it['modeQty'] ?? ''), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['pieces'] ?? ''), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['quantity'] ?? ''), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['price'] ?? ''), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['discount'] ?? ''), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(fmtNum(it['total'] ?? ''), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                    ],
+                  );
+                }).toList(),
               ],
-              data: _items.asMap().entries.map((entry) {
-                final idx = entry.key + 1;
-                final it = entry.value;
-                return [
-                  idx.toString(),
-                  it['item'] ?? '',
-                  it['stockingmode'] ?? it['salesMode'] ?? '',
-                  (it['modeqty'] ?? it['modeQty'] ?? '').toString(),
-                  (it['pieces'] ?? '').toString(),
-                  (it['quantity'] ?? '').toString(),
-                  (it['price'] != null)
-                      ? (it['price'] as num).toStringAsFixed(2)
-                      : '',
-                  (it['discount'] != null)
-                      ? (it['discount'] as num).toStringAsFixed(2)
-                      : '',
-                  //(it['taxamount'] ?? it['taxAmount'] ?? 0).toString(),
-                  (it['total'] != null)
-                      ? (it['total'] as num).toStringAsFixed(2)
-                      : '',
-                ];
-              }).toList(),
             ),
 
             pw.SizedBox(height: 20),
 
-            // Totals section aligned to right
+            // Totals - right aligned, no border
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey),
-                    borderRadius: pw.BorderRadius.circular(6),
-                  ),
+                  width: 260,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                   child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                     children: [
-                      pw.Text('Gross: ${_calculateTotals().gross?.toStringAsFixed(2) ?? '0.00'}'),
-                      pw.Text('Discount: ${_calculateTotals().discount?.toStringAsFixed(2) ?? '0.00'}'),
-                      pw.Text('Tax: ${_calculateTotals().tax?.toStringAsFixed(2) ?? '0.00'}'),
-                      pw.Text(
-                        'Net: ${_calculateTotals().net?.toStringAsFixed(2) ?? '0.00'}',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
+                      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                        pw.Text('Gross:', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        pw.Text(fmtNum(totals.gross), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                      ]),
+                      pw.SizedBox(height: 6),
+                      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                        pw.Text('Discount:', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        pw.Text(fmtNum(totals.discount), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                      ]),
+                      pw.SizedBox(height: 6),
+                      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                        pw.Text('Tax:', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        pw.Text(fmtNum(totals.tax), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                      ]),
+                      pw.Divider(),
+                      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                        pw.Text('Net:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(fmtNum(totals.net), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ]),
                     ],
                   ),
                 ),
@@ -927,7 +927,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
-
 
 
   @override
