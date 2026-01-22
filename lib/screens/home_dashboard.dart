@@ -568,7 +568,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   SizedBox(height: 15),
                   SizedBox(
                     width: double.infinity,
-                    height: 100, // adjust to your card height
+                    height: 85,
                     child: CarouselSlider(
                       options: CarouselOptions(
                         autoPlay: true,
@@ -1323,7 +1323,7 @@ class RespWidget extends StatelessWidget {
                     text: "90,000,00.00",
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 26,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1425,7 +1425,7 @@ class WorkPlaceWidget extends StatelessWidget {
               "30,000,088.00",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 26,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1433,10 +1433,10 @@ class WorkPlaceWidget extends StatelessWidget {
 
           const Text(
             "Total Sales",
-            style: TextStyle(color: Colors.white60, fontSize: 18),
+            style: TextStyle(color: Colors.white60, fontSize: 14),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
 
           //  Unassigned Box
           Stack(
@@ -1675,7 +1675,7 @@ class _MomoKpiWidgetState extends State<MomoKpiWidget>
                 child: Text(
                   "GHS ${_amountAnim.value.toStringAsFixed(2)}",
                   style: const TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -1769,7 +1769,7 @@ Widget _statCard({
             Text(
               title,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Colors.white70
               ),
@@ -1784,7 +1784,7 @@ Widget _statCard({
         Text(
           value,
           style: const TextStyle(
-            fontSize: 23,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             color: Colors.white
           ),
@@ -1796,7 +1796,7 @@ Widget _statCard({
         Text(
           subtitle,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             color: Colors.white54,
           ),
         ),
