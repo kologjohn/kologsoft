@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
@@ -8,8 +9,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html' as html;
+import 'package:path_provider/path_provider.dart' if (dart.library.html) 'package:kologsoft/utils/web_path_provider.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -670,17 +671,46 @@ class _SalesPageState extends State<SalesPage> {
         ),
       );
 
-      // Save PDF to temporary directory and share
-      final output = await getTemporaryDirectory();
-      final file = File('${output.path}/receipt_$receiptNumber.pdf');
-      await file.writeAsBytes(await pdf.save());
+      // Handle printing based on platform
+      if (kIsWeb) {
+        // Web printing: Open PDF in new window and trigger print dialog
+        final bytes = await pdf.save();
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.document.createElement('a') as html.AnchorElement
+          ..href = url
+          ..style.display = 'none'
+          ..download = 'receipt_$receiptNumber.pdf';
+        html.document.body?.children.add(anchor);
+        
+        // Open in new window for printing
+        final newWindow = html.window.open(url, '_blank');
+        if (newWindow != null) {
+          // Trigger print dialog after a small delay to ensure PDF is loaded
+          Future.delayed(const Duration(milliseconds: 500), () {
+            newWindow.print();
+          });
+        }
+        
+        // Also trigger download
+        anchor.click();
+        
+        // Clean up
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+      } else {
+        // Mobile/Desktop: Save PDF to temporary directory and share
+        final output = await getTemporaryDirectory();
+        final file = File('${output.path}/receipt_$receiptNumber.pdf');
+        await file.writeAsBytes(await pdf.save());
 
-      // Share the receipt PDF
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text:
-            'Receipt #$receiptNumber - Total: GHS ${total.toStringAsFixed(2)}',
-      );
+        // Share the receipt PDF
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text:
+              'Receipt #$receiptNumber - Total: GHS ${total.toStringAsFixed(2)}',
+        );
+      }
 
       // Remove current cart after successful save and print
       setState(() {
