@@ -117,7 +117,7 @@ class _TotalDebtWidgetState extends State<TotalDebtWidget>
                 child: Text(
                   "GHS ${_animation.value.toStringAsFixed(2)}",
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: debtColor,
                   ),
