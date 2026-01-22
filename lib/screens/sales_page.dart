@@ -4,6 +4,12 @@ import 'package:kologsoft/providers/Datafeed.dart';
 import 'package:provider/provider.dart';
 import 'package:kologsoft/models/momo_payment_model.dart';
 import 'package:kologsoft/models/customerreg_model.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -65,6 +71,31 @@ class _SalesPageState extends State<SalesPage> {
     _barcodeController.removeListener(_onBarcodeChanged);
     _quantityController.removeListener(_onQuantityChanged);
     super.dispose();
+  }
+
+  Future<void> _scanBarcode() async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+      );
+
+      if (result != null && result is String) {
+        setState(() {
+          _barcodeController.text = result;
+        });
+        _formKey.currentState?.validate();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening scanner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _onBarcodeChanged() {
@@ -290,6 +321,500 @@ class _SalesPageState extends State<SalesPage> {
         ),
       );
     }
+  }
+
+  Future<void> _printReceipt() async {
+    if (_salesItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No items to print'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show dialog to get amount paid
+    final amountPaidController = TextEditingController(
+      text: _calculateTaxableTotal().toStringAsFixed(2),
+    );
+
+    final amountPaid = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2332),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Amount Paid', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Total: GHS ${_calculateTaxableTotal().toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: amountPaidController,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: const TextStyle(color: Colors.white, fontSize: 20),
+              decoration: InputDecoration(
+                labelText: 'Amount Paid by Customer',
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixText: 'GHS ',
+                prefixStyle: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white24),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.green, width: 2),
+                ),
+                fillColor: const Color(0xFF22304A),
+                filled: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              final amount = double.tryParse(amountPaidController.text);
+              Navigator.pop(context, amount);
+            },
+            child: const Text(
+              'Continue',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (amountPaid == null) return;
+
+    final total = _calculateTaxableTotal();
+    final change = amountPaid - total;
+
+    try {
+      final datafeed = Provider.of<Datafeed>(context, listen: false);
+      final companyId = datafeed.companyid;
+      final companyName = datafeed.company;
+      final cashierName = datafeed.staff;
+      final staffPosition = datafeed.staffPosition;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final receiptNumber = '$staffPosition$timestamp';
+      final now = DateTime.now();
+
+      // Save the sale to Firestore first
+      final docId = '${companyId}_${staffPosition}_$timestamp';
+      final Map<String, dynamic> itemsMap = {};
+      for (int i = 0; i < _salesItems.length; i++) {
+        itemsMap['item_$i'] = _salesItems[i];
+      }
+
+      final saleData = {
+        'companyId': companyId,
+        'staffPosition': staffPosition,
+        'receiptNumber': receiptNumber,
+        'transMode': 'cash',
+        'items': itemsMap,
+        'totalAmount': total,
+        'amountPaid': amountPaid,
+        'change': change,
+        'itemCount': _salesItems.length,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+        'createdBy': datafeed.staff,
+        'timestamp': timestamp,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('sales')
+          .doc(docId)
+          .set(saleData);
+
+      // Generate PDF receipt for 80mm thermal printer
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.roll80,
+          build: (context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header - Company Name
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        companyName.toUpperCase(),
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                      pw.SizedBox(height: 3),
+                      pw.Text(
+                        'SALES RECEIPT',
+                        style: pw.TextStyle(
+                          fontSize: 16,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 8),
+                      pw.Divider(thickness: 2),
+                      pw.SizedBox(height: 5),
+                    ],
+                  ),
+                ),
+
+                // Receipt details
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Receipt #:',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.Text(
+                      receiptNumber,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Date:', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text(
+                      '${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Cashier:',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                    pw.Text(
+                      cashierName,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 8),
+                pw.Divider(),
+
+                // Items
+                pw.SizedBox(height: 5),
+                ..._salesItems.map((item) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          item['item'] ?? '',
+                          style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              '  ${item['quantity']} x GHS ${item['price']}',
+                              style: const pw.TextStyle(fontSize: 9),
+                            ),
+                            pw.Text(
+                              'GHS ${item['totalAmount']}',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+
+                pw.SizedBox(height: 8),
+                pw.Divider(thickness: 2),
+
+                // Total section
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'TOTAL',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'GHS ${total.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Amount Paid',
+                      style: const pw.TextStyle(fontSize: 12),
+                    ),
+                    pw.Text(
+                      'GHS ${amountPaid.toStringAsFixed(2)}',
+                      style: const pw.TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'CHANGE',
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'GHS ${change.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+
+                pw.SizedBox(height: 12),
+                pw.Divider(thickness: 2),
+
+                // Footer
+                pw.SizedBox(height: 8),
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        'Thank you for your business!',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 5),
+                      pw.Text(
+                        'Powered by KologSoft',
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontStyle: pw.FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save PDF to temporary directory and share
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/receipt_$receiptNumber.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      // Share the receipt PDF
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text:
+            'Receipt #$receiptNumber - Total: GHS ${total.toStringAsFixed(2)}',
+      );
+
+      // Remove current cart after successful save and print
+      setState(() {
+        _customerCarts.remove(_currentCartId);
+
+        if (_customerCarts.isNotEmpty) {
+          _currentCartId = _customerCarts.keys.first;
+        } else {
+          _cartCounter++;
+          _currentCartId = 'cart_$_cartCounter';
+          _customerCarts[_currentCartId] = [];
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Receipt printed! Receipt: $receiptNumber'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error printing receipt: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPrintDialog(List<int> bytes, String receiptNumber) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2332),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Receipt Ready',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              'Receipt #$receiptNumber',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Receipt data is ready for printing',
+              style: TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22304A),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'To print this receipt:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '• Connect to network/bluetooth printer',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const Text(
+                    '• Use printer IP address or device pairing',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  Text(
+                    '• Receipt data: ${bytes.length} bytes ready',
+                    style: const TextStyle(color: Colors.green, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              // Remove current cart after successful save
+              setState(() {
+                _customerCarts.remove(_currentCartId);
+
+                if (_customerCarts.isNotEmpty) {
+                  _currentCartId = _customerCarts.keys.first;
+                } else {
+                  _cartCounter++;
+                  _currentCartId = 'cart_$_cartCounter';
+                  _customerCarts[_currentCartId] = [];
+                }
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Receipt #$receiptNumber saved successfully!'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            child: const Text('Done', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMomoDialog() {
@@ -1474,39 +1999,82 @@ class _SalesPageState extends State<SalesPage> {
                                     key: _formKey,
                                     child: Column(
                                       children: [
-                                        TextFormField(
-                                          controller: _barcodeController,
-                                          style: TextStyle(color: Colors.white),
-                                          decoration: InputDecoration(
-                                            labelText: 'Barcode',
-                                            labelStyle: const TextStyle(
-                                              color: Colors.white70,
-                                            ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              borderSide: const BorderSide(
-                                                color: Colors.white24,
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextFormField(
+                                                controller: _barcodeController,
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                                decoration: InputDecoration(
+                                                  labelText: 'Barcode',
+                                                  labelStyle: const TextStyle(
+                                                    color: Colors.white70,
+                                                  ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                        borderSide:
+                                                            const BorderSide(
+                                                              color: Colors
+                                                                  .white24,
+                                                            ),
+                                                      ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                        borderSide:
+                                                            const BorderSide(
+                                                              color:
+                                                                  Colors.blue,
+                                                            ),
+                                                      ),
+                                                  fillColor: const Color(
+                                                    0xFF22304A,
+                                                  ),
+                                                  filled: true,
+                                                ),
+                                                validator: (value) =>
+                                                    value == null ||
+                                                        value.isEmpty
+                                                    ? 'Barcode required'
+                                                    : null,
                                               ),
                                             ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              borderSide: const BorderSide(
-                                                color: Colors.blue,
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              height: 56,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF22304A),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.white24,
+                                                ),
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.qr_code_scanner,
+                                                  color: Colors.white70,
+                                                ),
+                                                onPressed: _scanBarcode,
+                                                tooltip: 'Scan Barcode/QR Code',
                                               ),
                                             ),
-                                            fillColor: const Color(0xFF22304A),
-                                            filled: true,
-                                          ),
-                                          validator: (value) =>
-                                              value == null || value.isEmpty
-                                              ? 'Barcode required'
-                                              : null,
+                                          ],
                                         ),
                                         // Auto-suggestion dropdown with StreamBuilder
                                         if (_showSuggestions)
@@ -2375,7 +2943,7 @@ class _SalesPageState extends State<SalesPage> {
                                                   BorderRadius.circular(8),
                                             ),
                                           ),
-                                          onPressed: _saveSale,
+                                          onPressed: _printReceipt,
                                           child: Text(
                                             "POS PRINT",
                                             style: TextStyle(
@@ -2531,5 +3099,104 @@ class _SalesPageState extends State<SalesPage> {
         ),
       ],
     );
+  }
+}
+
+// Barcode Scanner Screen
+class BarcodeScannerScreen extends StatefulWidget {
+  const BarcodeScannerScreen({Key? key}) : super(key: key);
+
+  @override
+  State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
+  MobileScannerController cameraController = MobileScannerController();
+  bool _isProcessing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Scan Barcode/QR Code'),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: ValueListenableBuilder(
+              valueListenable: cameraController,
+              builder: (context, value, child) {
+                final isFlashOn = value.torchState == TorchState.on;
+                return Icon(
+                  isFlashOn ? Icons.flash_on : Icons.flash_off,
+                  color: Colors.white,
+                );
+              },
+            ),
+            onPressed: () => cameraController.toggleTorch(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            onPressed: () => cameraController.switchCamera(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: cameraController,
+            onDetect: (capture) {
+              if (_isProcessing) return;
+
+              final barcodes = capture.barcodes;
+              if (barcodes.isEmpty) return;
+
+              final barcode = barcodes.first;
+              final String? code = barcode.rawValue;
+
+              if (code != null && code.isNotEmpty) {
+                setState(() => _isProcessing = true);
+                Navigator.pop(context, code);
+              }
+            },
+          ),
+          // Overlay with scanning guide
+          Center(
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green, width: 3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          // Instructions
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: const Text(
+                'Position the barcode or QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
   }
 }

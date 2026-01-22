@@ -62,7 +62,7 @@ final pages = {
   Routes.supplierlist: (context) => const RouteGuard(child: SupplierListPage()),
   Routes.companyreg: (context) => RouteGuard(
     child: CompanyRegPage(),
-    allowedAccessLevels: ['admin', 'manager'],
+    allowedAccessLevels: ['admin', 'manager','super admin'],
   ),
   Routes.companylist: (context) => RouteGuard(child: CompanyListPage()),
   Routes.warehousereg: (context) => RouteGuard(child: WarehouseRegistration()),

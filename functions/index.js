@@ -360,61 +360,61 @@ exports.recordCollectionUpdate = onDocumentWritten('{collectionId}/{docId}', asy
 });
 
 // Notify staff who have NOT read the latest update for a monitored collection
-exports.notifyUnreadStaff = onDocumentWritten('collection_updates/{collectionId}', async (event) => {
-  try {
-    const { collectionId } = event.params;
+// exports.notifyUnreadStaff = onDocumentWritten('collection_updates/{collectionId}', async (event) => {
+//   try {
+//     const { collectionId } = event.params;
 
-    if (!MONITORED_COLLECTIONS.includes(collectionId)) return null;
+//     if (!MONITORED_COLLECTIONS.includes(collectionId)) return null;
 
-    const before = event.data?.before ? event.data.before.data() : null;
-    const after = event.data?.after ? event.data.after.data() : null;
+//     const before = event.data?.before ? event.data.before.data() : null;
+//     const after = event.data?.after ? event.data.after.data() : null;
 
-    if (!after) return null;
+//     if (!after) return null;
 
-    const newUpdateId = after.lastUpdateId || after.lastDocId || null;
-    const prevUpdateId = before ? (before.lastUpdateId || before.lastDocId || null) : null;
+//     const newUpdateId = after.lastUpdateId || after.lastDocId || null;
+//     const prevUpdateId = before ? (before.lastUpdateId || before.lastDocId || null) : null;
 
-    // only proceed when there's a new update id
-    if (!newUpdateId || newUpdateId === prevUpdateId) return null;
+//     // only proceed when there's a new update id
+//     if (!newUpdateId || newUpdateId === prevUpdateId) return null;
 
-    // Fetch all staff and notify those who don't have this update id in their readUpdates map
-    const staffSnap = await admin.firestore().collection('staff').get();
-    const notifyPromises = [];
+//     // Fetch all staff and notify those who don't have this update id in their readUpdates map
+//     const staffSnap = await admin.firestore().collection('staff').get();
+//     const notifyPromises = [];
 
-    for (const doc of staffSnap.docs) {
-      const staffData = doc.data() || {};
-      const readUpdates = staffData.readUpdates || staffData.read_updates || {};
+//     for (const doc of staffSnap.docs) {
+//       const staffData = doc.data() || {};
+//       const readUpdates = staffData.readUpdates || staffData.read_updates || {};
 
-      // If readUpdates already contains the update id, skip
-      if (readUpdates && Object.prototype.hasOwnProperty.call(readUpdates, newUpdateId)) continue;
+//       // If readUpdates already contains the update id, skip
+//       if (readUpdates && Object.prototype.hasOwnProperty.call(readUpdates, newUpdateId)) continue;
 
-      // Build a notification message
-      const name = staffData.name || '';
-      const email = staffData.email || '';
-      const phone = staffData.phone || '';
-      const messageText = `Hello ${name || 'Staff'}, there is a new update in ${collectionId}. Please review the changes.`;
+//       // Build a notification message
+//       const name = staffData.name || '';
+//       const email = staffData.email || '';
+//       const phone = staffData.phone || '';
+//       const messageText = `Hello ${name || 'Staff'}, there is a new update in ${collectionId}. Please review the changes.`;
 
-      // send email if available
-      if (email) {
-        const subject = `Update: ${collectionId}`;
-        notifyPromises.push(sendEmail({ to: email, subject, text: messageText, html: `<p>${messageText}</p>` }).catch(err => logger.error('email send error', err)));
-      }
+//       // send email if available
+//       if (email) {
+//         const subject = `Update: ${collectionId}`;
+//         notifyPromises.push(sendEmail({ to: email, subject, text: messageText, html: `<p>${messageText}</p>` }).catch(err => logger.error('email send error', err)));
+//       }
 
-      // send SMS if available
-      if (phone) {
-        const formattedPhone = phone.startsWith('+') ? phone : `+233${phone.substring(1)}`;
-        notifyPromises.push(sendSMS(messageText, formattedPhone, 'KologSoft').catch(err => logger.error('sms send error', err)));
-      }
-    }
+//       // send SMS if available
+//       if (phone) {
+//         const formattedPhone = phone.startsWith('+') ? phone : `+233${phone.substring(1)}`;
+//         notifyPromises.push(sendSMS(messageText, formattedPhone, 'KologSoft').catch(err => logger.error('sms send error', err)));
+//       }
+//     }
 
-    await Promise.allSettled(notifyPromises);
-    logger.info(`notifyUnreadStaff: notifications sent for update ${newUpdateId} of ${collectionId}`);
-    return null;
-  } catch (err) {
-    logger.error('notifyUnreadStaff error:', err);
-    return null;
-  }
-});
+//     await Promise.allSettled(notifyPromises);
+//     logger.info(`notifyUnreadStaff: notifications sent for update ${newUpdateId} of ${collectionId}`);
+//     return null;
+//   } catch (err) {
+//     logger.error('notifyUnreadStaff error:', err);
+//     return null;
+//   }
+// });
 
 // Update itemsreg openingstock when stock_transactions items map changes
 exports.syncStockTransactionsToItemsreg = onDocumentWritten("stock_transactions/{transactionId}", async (event) => {
