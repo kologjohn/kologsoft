@@ -823,6 +823,8 @@ class _StockItemsFormState extends State<StockItemsForm> {
                           style: pw.TextStyle(fontSize: 14)),
                       pw.Text('Waybill Number: ${widget.headerData['waybill'] ?? ''}',
                           style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Staff: ${widget.headerData['createdby'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
                     ],
                   ),
                   // Right column
@@ -861,7 +863,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                 'Qty',
                 'Unit Price',
                 'Discount',
-                'Tax',
+                //'Tax',
                 'Total'
               ],
               data: _items.asMap().entries.map((entry) {
@@ -880,7 +882,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                   (it['discount'] != null)
                       ? (it['discount'] as num).toStringAsFixed(2)
                       : '',
-                  (it['taxamount'] ?? it['taxAmount'] ?? 0).toString(),
+                  //(it['taxamount'] ?? it['taxAmount'] ?? 0).toString(),
                   (it['total'] != null)
                       ? (it['total'] as num).toStringAsFixed(2)
                       : '',
@@ -1333,18 +1335,22 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           spacing: 10,
                                           runSpacing: 10,
                                           children: [
-                                            SizedBox(
-                                              width: 150,
-                                              child: ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.orangeAccent,
-                                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            if (!_saved)
+                                              SizedBox(
+                                                width: 150,
+                                                child: ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.orangeAccent,
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                  onPressed: _loading ? null : _addItem,
+                                                  child: const Text(
+                                                    "Add Record",
+                                                    style: TextStyle(color: Colors.white),
+                                                  ),
                                                 ),
-                                                onPressed: (_saved || _loading) ? null : _addItem,
-                                                child: const Text("Add Record", style: TextStyle(color: Colors.white)),
                                               ),
-                                            ),
                                             SizedBox(
                                               width: 150,
                                               child: ElevatedButton(
@@ -1416,7 +1422,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                       3: FlexColumnWidth(1),
                                       4: FlexColumnWidth(1),
                                       5: FlexColumnWidth(1),
-                                      6: FlexColumnWidth(1),
+                                     // 6: FlexColumnWidth(1),
                                       7: FlexColumnWidth(1),
                                       8: FlexColumnWidth(1), // extra column for delete
                                     },
@@ -1429,7 +1435,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         "Pieces",
                                         "Unit Price",
                                         "Discount",
-                                        "Tax",
+                                        //"Tax",
                                         "Total",
                                         "Action"
                                       ], isHeader: true),
@@ -1445,9 +1451,9 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         final discountText = (item['discount'] != null)
                                             ? (item['discount'] as double).toStringAsFixed(2)
                                             : '0.00';
-                                        final taxText = (item['taxamount'] != null)
-                                            ? (item['taxamount'] as double).toStringAsFixed(2)
-                                            : '0.00';
+                                        // final taxText = (item['taxamount'] != null)
+                                        //     ? (item['taxamount'] as double).toStringAsFixed(2)
+                                        //     : '0.00';
 
                                         return TableRow(
                                           children: [
@@ -1458,7 +1464,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                             _cell(item['pieces']?.toString() ?? '0', alignRight: true),
                                             _cell(priceText, alignRight: true),
                                             _cell(discountText, alignRight: true),
-                                            _cell(taxText, alignRight: true),
+                                           // _cell(taxText, alignRight: true),
                                             _cell(totalText, alignRight: true),
                                             _saved
                                                 ? const Padding(
@@ -1501,7 +1507,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         );
                                       }).toList(),
                                       (() {
-                                        return _tableRow(["", "", "", "", "", "", "", "", "", ""]);
+                                        return _tableRow(["", "", "", "", "", "", "", "", "",]);
                                       })(),
                                       (() {
                                         final totals = _calculateTotals();
@@ -1513,7 +1519,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           "",
                                           "",
                                           totals.discount!.toStringAsFixed(2),
-                                          totals.tax!.toStringAsFixed(2),
+                                          //totals.tax!.toStringAsFixed(2),
                                           totals.net!.toStringAsFixed(2),
                                           ""
                                         ]);

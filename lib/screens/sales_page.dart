@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
+import 'package:kologsoft/services/mobileview.dart';
 import 'package:provider/provider.dart';
 import 'package:kologsoft/models/momo_payment_model.dart';
 import 'package:kologsoft/models/customerreg_model.dart';
@@ -2099,6 +2100,7 @@ class _SalesPageState extends State<SalesPage> {
                     final double itemWidth = isSmallScreen
                         ? constraints.maxWidth
                         : (constraints.maxWidth / 2) - 24;
+                    final bool isMobile = constraints.maxWidth < 600;
                     return Wrap(
                       spacing: 16,
                       runSpacing: 16,
@@ -2884,324 +2886,331 @@ class _SalesPageState extends State<SalesPage> {
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: Container(
-                            color: Color(0xFF182232),
-                            //height: 300,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text(
-                                        "SALES PREVIEW",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                        Visibility(
+                          visible: !isMobile,
+                          child: SizedBox(
+                            width: itemWidth,
+                            child: Container(
+                              color: Color(0xFF182232),
+                              //height: 300,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "SALES PREVIEW",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      ),
-                                      // Cart switcher
-                                      if (_customerCarts.length > 1)
-                                        PopupMenuButton<String>(
-                                          icon: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.shopping_cart,
-                                                color: Colors.orange,
-                                                size: 20,
-                                              ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'Cart ${_currentCartId.split('_')[1]} (${_customerCarts.length})',
-                                                style: TextStyle(
+                                        // Cart switcher
+                                        if (_customerCarts.length > 1)
+                                          PopupMenuButton<String>(
+                                            icon: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.shopping_cart,
+                                                  color: Colors.orange,
+                                                  size: 20,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Cart ${_currentCartId.split('_')[1]} (${_customerCarts.length})',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.arrow_drop_down,
                                                   color: Colors.white,
-                                                  fontSize: 12,
+                                                  size: 20,
                                                 ),
-                                              ),
-                                              Icon(
-                                                Icons.arrow_drop_down,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                            ],
+                                              ],
+                                            ),
+                                            color: Color(0xFF22304A),
+                                            itemBuilder: (context) {
+                                              return _customerCarts.keys.map((
+                                                cartId,
+                                              ) {
+                                                final cartNum = cartId.split(
+                                                  '_',
+                                                )[1];
+                                                final itemCount =
+                                                    _customerCarts[cartId]
+                                                        ?.length ??
+                                                    0;
+                                                final isActive =
+                                                    cartId == _currentCartId;
+                                                return PopupMenuItem<String>(
+                                                  value: cartId,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        isActive
+                                                            ? Icons
+                                                                  .radio_button_checked
+                                                            : Icons
+                                                                  .radio_button_unchecked,
+                                                        color: isActive
+                                                            ? Colors.orange
+                                                            : Colors.white70,
+                                                        size: 18,
+                                                      ),
+                                                      SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Cart $cartNum ($itemCount items)',
+                                                          style: TextStyle(
+                                                            color: isActive
+                                                                ? Colors.orange
+                                                                : Colors.white,
+                                                            fontWeight: isActive
+                                                                ? FontWeight.bold
+                                                                : FontWeight
+                                                                      .normal,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      if (!isActive &&
+                                                          _customerCarts.length >
+                                                              1)
+                                                        IconButton(
+                                                          icon: Icon(
+                                                            Icons.delete,
+                                                            color: Colors.red,
+                                                            size: 18,
+                                                          ),
+                                                          onPressed: () {
+                                                            Navigator.pop(
+                                                              context,
+                                                            );
+                                                            _deleteCart(cartId);
+                                                          },
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          constraints:
+                                                              BoxConstraints(),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList();
+                                            },
+                                            onSelected: _switchCart,
                                           ),
-                                          color: Color(0xFF22304A),
-                                          itemBuilder: (context) {
-                                            return _customerCarts.keys.map((
-                                              cartId,
-                                            ) {
-                                              final cartNum = cartId.split(
-                                                '_',
-                                              )[1];
-                                              final itemCount =
-                                                  _customerCarts[cartId]
-                                                      ?.length ??
-                                                  0;
-                                              final isActive =
-                                                  cartId == _currentCartId;
-                                              return PopupMenuItem<String>(
-                                                value: cartId,
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      isActive
-                                                          ? Icons
-                                                                .radio_button_checked
-                                                          : Icons
-                                                                .radio_button_unchecked,
-                                                      color: isActive
-                                                          ? Colors.orange
-                                                          : Colors.white70,
-                                                      size: 18,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        'Cart $cartNum ($itemCount items)',
-                                                        style: TextStyle(
-                                                          color: isActive
-                                                              ? Colors.orange
-                                                              : Colors.white,
-                                                          fontWeight: isActive
-                                                              ? FontWeight.bold
-                                                              : FontWeight
-                                                                    .normal,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (!isActive &&
-                                                        _customerCarts.length >
-                                                            1)
-                                                      IconButton(
-                                                        icon: Icon(
-                                                          Icons.delete,
-                                                          color: Colors.red,
-                                                          size: 18,
-                                                        ),
-                                                        onPressed: () {
-                                                          Navigator.pop(
-                                                            context,
-                                                          );
-                                                          _deleteCart(cartId);
-                                                        },
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        constraints:
-                                                            BoxConstraints(),
-                                                      ),
-                                                  ],
-                                                ),
-                                              );
-                                            }).toList();
-                                          },
-                                          onSelected: _switchCart,
-                                        ),
-                                    ],
-                                  ),
-                                  const Divider(color: Colors.white24),
-                                  SizedBox(height: 15),
+                                      ],
+                                    ),
+                                    const Divider(color: Colors.white24),
+                                    SizedBox(height: 15),
 
-                                  Table(
-                                    border: TableBorder.all(color: Colors.grey),
-                                    columnWidths: const {
-                                      0: FixedColumnWidth(40),
-                                      1: FlexColumnWidth(2),
-                                      2: FlexColumnWidth(1),
-                                      3: FlexColumnWidth(1),
-                                      4: FlexColumnWidth(1),
-                                      5: FixedColumnWidth(60),
-                                    },
-                                    children: [
-                                      _tableRow([
-                                        "#",
-                                        "Item",
-                                        "Quantity",
-                                        "Price",
-                                        "Total",
-                                        "Action",
-                                      ], isHeader: true),
-                                      // Display sales items
-                                      ..._salesItems.asMap().entries.map((
-                                        entry,
-                                      ) {
-                                        final index = entry.key;
-                                        final item = entry.value;
-                                        return _tableRowWithAction(
-                                          (index + 1).toString(),
-                                          item['item'] ?? '',
-                                          item['quantity'] ?? '0',
-                                          item['price'] ?? '0',
-                                          item['totalAmount'] ?? '0',
-                                          () => _removeFromSalesPreview(index),
+                                    Table(
+                                      border: TableBorder.all(color: Colors.grey),
+                                      columnWidths: const {
+                                        0: FixedColumnWidth(40),
+                                        1: FlexColumnWidth(2),
+                                        2: FlexColumnWidth(1),
+                                        3: FlexColumnWidth(1),
+                                        4: FlexColumnWidth(1),
+                                        5: FixedColumnWidth(60),
+                                      },
+                                      children: [
+                                        _tableRow([
+                                          "#",
+                                          "Item",
+                                          "Quantity",
+                                          "Price",
+                                          "Total",
+                                          "Action",
+                                        ], isHeader: true),
+                                        // Display sales items
+                                        ..._salesItems.asMap().entries.map((
+                                          entry,
+                                        ) {
+                                          final index = entry.key;
+                                          final item = entry.value;
+                                          return _tableRowWithAction(
+                                            (index + 1).toString(),
+                                            item['item'] ?? '',
+                                            item['quantity'] ?? '0',
+                                            item['price'] ?? '0',
+                                            item['totalAmount'] ?? '0',
+                                            () => _removeFromSalesPreview(index),
+                                          );
+                                        }).toList(),
+                                        _tableRow([
+                                          "",
+                                          "Taxable Total",
+                                          "",
+                                          "",
+                                          _calculateTaxableTotal()
+                                              .toStringAsFixed(2),
+                                          "",
+                                        ]),
+                                        _tableRow([
+                                          "",
+                                          "Payable Amount",
+                                          "",
+                                          "",
+                                          _calculateTaxableTotal()
+                                              .toStringAsFixed(2),
+                                          "",
+                                        ]),
+                                      ],
+                                    ),
+
+                                    SizedBox(height: 20),
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final isWideScreen =
+                                            constraints.maxWidth > 600;
+                                        final buttonWidth = isWideScreen
+                                            ? 120.0
+                                            : 90.0;
+                                        final buttonPadding = isWideScreen
+                                            ? 16.0
+                                            : 12.0;
+                                        final fontSize = isWideScreen
+                                            ? 14.0
+                                            : 12.0;
+
+                                        return Wrap(
+                                          spacing: isWideScreen ? 10 : 6,
+                                          runSpacing: isWideScreen ? 10 : 8,
+                                          alignment: WrapAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: buttonWidth,
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.teal,
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: buttonPadding,
+                                                    horizontal: 4,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed: _printReceipt,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    "POS PRINT",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: fontSize,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            SizedBox(
+                                              width: buttonWidth,
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: buttonPadding,
+                                                    horizontal: 4,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed: _showMomoDialog,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    "MOMO",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: fontSize,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: isWideScreen ? 150 : 120,
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.lightBlue,
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: buttonPadding,
+                                                    horizontal: 4,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed: _createNewCart,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    "NEW TRANSACTION",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: fontSize,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: isWideScreen ? 130 : 100,
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.orange,
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: buttonPadding,
+                                                    horizontal: 4,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed:
+                                                    _showCustomerInfoDialog,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    "Customer Info",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: fontSize,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         );
-                                      }).toList(),
-                                      _tableRow([
-                                        "",
-                                        "Taxable Total",
-                                        "",
-                                        "",
-                                        _calculateTaxableTotal()
-                                            .toStringAsFixed(2),
-                                        "",
-                                      ]),
-                                      _tableRow([
-                                        "",
-                                        "Payable Amount",
-                                        "",
-                                        "",
-                                        _calculateTaxableTotal()
-                                            .toStringAsFixed(2),
-                                        "",
-                                      ]),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 20),
-                                  LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final isWideScreen =
-                                          constraints.maxWidth > 600;
-                                      final buttonWidth = isWideScreen
-                                          ? 120.0
-                                          : 90.0;
-                                      final buttonPadding = isWideScreen
-                                          ? 16.0
-                                          : 12.0;
-                                      final fontSize = isWideScreen
-                                          ? 14.0
-                                          : 12.0;
-
-                                      return Wrap(
-                                        spacing: isWideScreen ? 10 : 6,
-                                        runSpacing: isWideScreen ? 10 : 8,
-                                        alignment: WrapAlignment.center,
-                                        children: [
-                                          SizedBox(
-                                            width: buttonWidth,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.teal,
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: buttonPadding,
-                                                  horizontal: 4,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              onPressed: _printReceipt,
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "POS PRINT",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-
-                                          SizedBox(
-                                            width: buttonWidth,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.red,
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: buttonPadding,
-                                                  horizontal: 4,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              onPressed: _showMomoDialog,
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "MOMO",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: isWideScreen ? 150 : 120,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    Colors.lightBlue,
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: buttonPadding,
-                                                  horizontal: 4,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              onPressed: _createNewCart,
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "NEW TRANSACTION",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: isWideScreen ? 130 : 100,
-                                            child: ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.orange,
-                                                padding: EdgeInsets.symmetric(
-                                                  vertical: buttonPadding,
-                                                  horizontal: 4,
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              onPressed:
-                                                  _showCustomerInfoDialog,
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "Customer Info",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: fontSize,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
+                        Visibility(
+                            visible: isMobile,
+                            child: MobileSalesPreview()
+                        )
                       ],
                     );
                   },
