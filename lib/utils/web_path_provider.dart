@@ -1,19 +1,10 @@
-/// Web stub for path_provider and dart:io packages
+/// Web stub for path_provider package
 /// This is used as a conditional import when running on web platform
-/// where path_provider's getTemporaryDirectory and dart:io are not available
+/// where path_provider's getTemporaryDirectory is not available
 
 class Directory {
   final String path;
   Directory(this.path);
-}
-
-class File {
-  final String path;
-  File(this.path);
-  
-  Future<void> writeAsBytes(List<int> bytes) async {
-    // No-op on web - we handle file operations differently
-  }
 }
 
 /// Returns a dummy directory for web platform

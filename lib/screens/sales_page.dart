@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
@@ -9,8 +10,13 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'dart:io' if (dart.library.html) 'dart:html' as html;
-import 'package:path_provider/path_provider.dart' if (dart.library.html) 'package:kologsoft/utils/web_path_provider.dart';
+import 'dart:io'
+    if (dart.library.html) 'package:kologsoft/utils/web_file_stub.dart';
+import 'dart:html'
+    if (dart.library.io) 'package:kologsoft/utils/html_stub.dart'
+    as html;
+import 'package:path_provider/path_provider.dart'
+    if (dart.library.html) 'package:kologsoft/utils/web_path_provider.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -342,80 +348,136 @@ class _SalesPageState extends State<SalesPage> {
 
     final amountPaid = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2332),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Amount Paid', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Total: GHS ${_calculateTaxableTotal().toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final total = _calculateTaxableTotal();
+          final enteredAmount = double.tryParse(amountPaidController.text) ?? 0;
+          final change = enteredAmount - total;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A2332),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: amountPaidController,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: const TextStyle(color: Colors.white, fontSize: 20),
-              decoration: InputDecoration(
-                labelText: 'Amount Paid by Customer',
-                labelStyle: const TextStyle(color: Colors.white70),
-                prefixText: 'GHS ',
-                prefixStyle: const TextStyle(
-                  color: Colors.green,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white24),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.green, width: 2),
-                ),
-                fillColor: const Color(0xFF22304A),
-                filled: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              final amount = double.tryParse(amountPaidController.text);
-              Navigator.pop(context, amount);
-            },
-            child: const Text(
-              'Continue',
+            title: const Text(
+              'Amount Paid',
               style: TextStyle(color: Colors.white),
             ),
-          ),
-        ],
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Total: GHS ${total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: amountPaidController,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                  onChanged: (value) {
+                    setState(() {}); // Trigger rebuild to update change
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Amount Paid by Customer',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixText: 'GHS ',
+                    prefixStyle: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.green,
+                        width: 2,
+                      ),
+                    ),
+                    fillColor: const Color(0xFF22304A),
+                    filled: true,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: change >= 0
+                        ? const Color(0xFF1B4D3E)
+                        : const Color(0xFF4D1B1B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: change >= 0 ? Colors.green : Colors.red,
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Change:',
+                        style: TextStyle(
+                          color: change >= 0
+                              ? Colors.green[200]
+                              : Colors.red[200],
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'GHS ${change.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: change >= 0 ? Colors.green : Colors.red,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  final amount = double.tryParse(amountPaidController.text);
+                  Navigator.pop(context, amount);
+                },
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -673,31 +735,42 @@ class _SalesPageState extends State<SalesPage> {
 
       // Handle printing based on platform
       if (kIsWeb) {
-        // Web printing: Open PDF in new window and trigger print dialog
+        // Web printing: Create hidden iframe and print in background
         final bytes = await pdf.save();
         final blob = html.Blob([bytes], 'application/pdf');
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.document.createElement('a') as html.AnchorElement
-          ..href = url
-          ..style.display = 'none'
-          ..download = 'receipt_$receiptNumber.pdf';
-        html.document.body?.children.add(anchor);
-        
-        // Open in new window for printing
-        final newWindow = html.window.open(url, '_blank');
-        if (newWindow != null) {
-          // Trigger print dialog after a small delay to ensure PDF is loaded
-          Future.delayed(const Duration(milliseconds: 500), () {
-            newWindow.print();
+
+        // Create a hidden iframe for printing
+        final iframe =
+            html.document.createElement('iframe') as html.IFrameElement
+              ..src = url
+              ..style.display = 'none'
+              ..style.position = 'absolute'
+              ..style.width = '0'
+              ..style.height = '0'
+              ..style.border = 'none';
+
+        html.document.body?.children.add(iframe);
+
+        // Wait for iframe to load, then print
+        iframe.onLoad.listen((_) {
+          try {
+            // Access the iframe's content window and trigger print
+            final contentWindow = iframe.contentWindow;
+            if (contentWindow != null) {
+              // Call print method using dynamic call
+              (contentWindow as dynamic).print();
+            }
+          } catch (e) {
+            print('Print error: $e');
+          }
+
+          // Clean up after a delay
+          Future.delayed(const Duration(seconds: 2), () {
+            html.document.body?.children.remove(iframe);
+            html.Url.revokeObjectUrl(url);
           });
-        }
-        
-        // Also trigger download
-        anchor.click();
-        
-        // Clean up
-        html.document.body?.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
+        });
       } else {
         // Mobile/Desktop: Save PDF to temporary directory and share
         final output = await getTemporaryDirectory();
@@ -859,373 +932,385 @@ class _SalesPageState extends State<SalesPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 24,
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width > 600
-                  ? 600
-                  : double.infinity,
+        builder: (context, setState) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isLargeScreen = screenWidth > 600;
+          final dialogPadding = isLargeScreen ? 24.0 : 12.0;
+          final titleFontSize = isLargeScreen ? 18.0 : 16.0;
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isLargeScreen ? 40 : 16,
+              vertical: isLargeScreen ? 40 : 24,
             ),
-            child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: isLargeScreen ? 600 : double.infinity,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              contentPadding: EdgeInsets.all(
-                MediaQuery.of(context).size.width > 600 ? 24 : 16,
-              ),
-              title: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              child: AlertDialog(
+                backgroundColor: const Color(0xFF1A2332),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                contentPadding: EdgeInsets.all(dialogPadding),
+                title: Container(
+                  padding: EdgeInsets.all(isLargeScreen ? 16 : 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isLargeScreen ? 8 : 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.phone_android,
+                          color: Colors.white,
+                          size: isLargeScreen ? 28 : 22,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.phone_android,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Mobile Money Payment',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Payment Details',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Network Selection
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF22304A),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedNetwork,
-                          isExpanded: true,
-                          hint: const Text(
-                            'Select Network',
-                            style: TextStyle(color: Colors.white70),
+                      SizedBox(width: isLargeScreen ? 12 : 8),
+                      Flexible(
+                        child: Text(
+                          'Mobile Money Payment',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: titleFontSize,
                           ),
-                          icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.white70,
-                          ),
-                          dropdownColor: const Color(0xFF22304A),
-                          style: const TextStyle(color: Colors.white),
-                          items: ['MTN', 'Vodafone', 'AirtelTigo']
-                              .map(
-                                (network) => DropdownMenuItem<String>(
-                                  value: network,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.sim_card,
-                                        color: network == 'MTN'
-                                            ? Colors.yellow
-                                            : network == 'Vodafone'
-                                            ? Colors.red
-                                            : Colors.blue,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(network),
-                                    ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Payment Details',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Network Selection
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22304A),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedNetwork,
+                            isExpanded: true,
+                            hint: const Text(
+                              'Select Network',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.white70,
+                            ),
+                            dropdownColor: const Color(0xFF22304A),
+                            style: const TextStyle(color: Colors.white),
+                            items: ['MTN', 'Vodafone', 'AirtelTigo']
+                                .map(
+                                  (network) => DropdownMenuItem<String>(
+                                    value: network,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.sim_card,
+                                          color: network == 'MTN'
+                                              ? Colors.yellow
+                                              : network == 'Vodafone'
+                                              ? Colors.red
+                                              : Colors.blue,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(network),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedNetwork = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: phoneController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: '024XXXXXXX',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(
-                          Icons.phone,
-                          color: Color(0xFF2196F3),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF2196F3),
-                            width: 2,
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedNetwork = value;
+                              });
+                            },
                           ),
                         ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: amountController,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        labelText: 'Amount',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(
-                          Icons.attach_money,
-                          color: Color(0xFF4CAF50),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: phoneController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        prefixText: 'GHS ',
-                        prefixStyle: const TextStyle(
-                          color: Color(0xFF4CAF50),
-                          fontSize: 18,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          hintText: '024XXXXXXX',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          prefixIcon: const Icon(
+                            Icons.phone,
+                            color: Color(0xFF2196F3),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2196F3),
+                              width: 2,
+                            ),
+                          ),
+                          fillColor: const Color(0xFF22304A),
+                          filled: true,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: amountController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Amount',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.attach_money,
                             color: Color(0xFF4CAF50),
                           ),
+                          prefixText: 'GHS ',
+                          prefixStyle: const TextStyle(
+                            color: Color(0xFF4CAF50),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4CAF50),
+                            ),
+                          ),
+                          fillColor: const Color(0xFF22304A),
+                          filled: true,
                         ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.blue[300],
-                            size: 20,
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.3),
                           ),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              'A payment request will be sent to this number',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 5,
-                  ),
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (phoneController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter phone number'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          if (selectedNetwork == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please select network'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setState(() {
-                            isSaving = true;
-                          });
-
-                          try {
-                            final provider = Provider.of<Datafeed>(
-                              context,
-                              listen: false,
-                            );
-                            final docId = FirebaseFirestore.instance
-                                .collection('momo_payments')
-                                .doc()
-                                .id;
-
-                            final momoPayment = MomoPaymentModel(
-                              id: docId,
-                              phoneNumber: phoneController.text,
-                              amount: double.parse(amountController.text),
-                              branchId: provider.selectedBranch?.id ?? '',
-                              branchName:
-                                  provider.selectedBranch?.branchname ?? '',
-                              companyId: provider.companyid,
-                              staff: provider.staff,
-                              status: 'pending',
-                              createdAt: DateTime.now(),
-                            );
-
-                            await FirebaseFirestore.instance
-                                .collection('momo_payments')
-                                .doc(docId)
-                                .set(momoPayment.toMap());
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'MOMO request sent to ${phoneController.text}',
-                                      ),
-                                    ],
-                                  ),
-                                  backgroundColor: const Color(0xFF4CAF50),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setState(() {
-                              isSaving = false;
-                            });
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Row(
-                          mainAxisSize: MainAxisSize.min,
+                        ),
+                        child: Row(
                           children: [
-                            Icon(Icons.send, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Send Request',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.blue[300],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'A payment request will be sent to this number',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ],
                         ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+                actions: [
+                  TextButton(
+                    onPressed: isSaving ? null : () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 5,
+                    ),
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            if (phoneController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter phone number'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            if (selectedNetwork == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please select network'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setState(() {
+                              isSaving = true;
+                            });
+
+                            try {
+                              final provider = Provider.of<Datafeed>(
+                                context,
+                                listen: false,
+                              );
+                              final docId = FirebaseFirestore.instance
+                                  .collection('momo_payments')
+                                  .doc()
+                                  .id;
+
+                              final momoPayment = MomoPaymentModel(
+                                id: docId,
+                                phoneNumber: phoneController.text,
+                                amount: double.parse(amountController.text),
+                                branchId: provider.selectedBranch?.id ?? '',
+                                branchName:
+                                    provider.selectedBranch?.branchname ?? '',
+                                companyId: provider.companyid,
+                                staff: provider.staff,
+                                status: 'pending',
+                                createdAt: DateTime.now(),
+                              );
+
+                              await FirebaseFirestore.instance
+                                  .collection('momo_payments')
+                                  .doc(docId)
+                                  .set(momoPayment.toMap());
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'MOMO request sent to ${phoneController.text}',
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF4CAF50),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setState(() {
+                                isSaving = false;
+                              });
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.send, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Send Request',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -1250,406 +1335,419 @@ class _SalesPageState extends State<SalesPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 24,
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width > 600
-                  ? 600
-                  : double.infinity,
+        builder: (context, setState) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isLargeScreen = screenWidth > 600;
+          final dialogPadding = isLargeScreen ? 24.0 : 12.0;
+          final titleFontSize = isLargeScreen ? 18.0 : 16.0;
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isLargeScreen ? 40 : 16,
+              vertical: isLargeScreen ? 40 : 24,
             ),
-            child: AlertDialog(
-              backgroundColor: const Color(0xFF1A2332),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: isLargeScreen ? 600 : double.infinity,
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              contentPadding: EdgeInsets.all(
-                MediaQuery.of(context).size.width > 600 ? 24 : 16,
-              ),
-              title: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF6F00), Color(0xFFFF9800)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              child: AlertDialog(
+                backgroundColor: const Color(0xFF1A2332),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                contentPadding: EdgeInsets.all(dialogPadding),
+                title: Container(
+                  padding: EdgeInsets.all(isLargeScreen ? 16 : 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF6F00), Color(0xFFFF9800)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isLargeScreen ? 8 : 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.person_add,
+                          color: Colors.white,
+                          size: isLargeScreen ? 28 : 22,
+                        ),
+                      ),
+                      SizedBox(width: isLargeScreen ? 12 : 8),
+                      Flexible(
+                        child: Text(
+                          'Customer Information',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: titleFontSize,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.person_add,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Customer Information',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Personal Details',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: nameController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      decoration: InputDecoration(
-                        labelText: 'Customer Name *',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: 'Enter full name',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(
-                          Icons.person,
-                          color: Color(0xFFFF9800),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Personal Details',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: nameController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
+                        decoration: InputDecoration(
+                          labelText: 'Customer Name *',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          hintText: 'Enter full name',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          prefixIcon: const Icon(
+                            Icons.person,
                             color: Color(0xFFFF9800),
-                            width: 2,
                           ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFF9800),
+                              width: 2,
+                            ),
+                          ),
+                          fillColor: const Color(0xFF22304A),
+                          filled: true,
                         ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: phoneController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number *',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: '024XXXXXXX',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(
-                          Icons.phone,
-                          color: Color(0xFF4CAF50),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: phoneController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number *',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          hintText: '024XXXXXXX',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          prefixIcon: const Icon(
+                            Icons.phone,
                             color: Color(0xFF4CAF50),
-                            width: 2,
                           ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4CAF50),
+                              width: 2,
+                            ),
+                          ),
+                          fillColor: const Color(0xFF22304A),
+                          filled: true,
                         ),
-                        fillColor: const Color(0xFF22304A),
-                        filled: true,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Payment Method',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 20),
+                      const Divider(color: Colors.white24),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Payment Method',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF22304A),
-                        border: Border.all(color: Colors.white24),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                'Credit',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              value: 'credit',
-                              groupValue: paymentMethod,
-                              onChanged: (value) {
-                                setState(() {
-                                  paymentMethod = value!;
-                                });
-                              },
-                              activeColor: const Color(0xFFFF9800),
-                            ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                'Cash',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              value: 'cash',
-                              groupValue: paymentMethod,
-                              onChanged: (value) {
-                                setState(() {
-                                  paymentMethod = value!;
-                                });
-                              },
-                              activeColor: const Color(0xFF4CAF50),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 5,
-                  ),
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (nameController.text.isEmpty ||
-                              phoneController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please enter name and phone number',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setState(() {
-                            isSaving = true;
-                          });
-
-                          try {
-                            final provider = Provider.of<Datafeed>(
-                              context,
-                              listen: false,
-                            );
-                            final docId = FirebaseFirestore.instance
-                                .collection('customers')
-                                .doc()
-                                .id;
-
-                            final customer = CustomerRegModel(
-                              id: docId,
-                              branchname:
-                                  provider.selectedBranch?.branchname ?? '',
-                              branchid: provider.selectedBranch?.id ?? '',
-                              name: nameController.text,
-                              contact: phoneController.text,
-                              customertype: 'Retail',
-                              creditlimit: null,
-                              paymentduration: null,
-                              companyid: provider.companyid,
-                              staff: provider.staff,
-                              date: DateTime.now(),
-                              updatedby: null,
-                              updatedat: null,
-                              deletedat: null,
-                            );
-
-                            await FirebaseFirestore.instance
-                                .collection('customers')
-                                .doc(docId)
-                                .set(customer.toMap());
-
-                            // Now save the sale with customer info
-                            final companyId = provider.companyid;
-                            final staffPosition = provider.staffPosition;
-                            final timestamp =
-                                DateTime.now().millisecondsSinceEpoch;
-
-                            // Create document ID: companyid + staffposition + timestamp
-                            final saleDocId =
-                                '${companyId}_${staffPosition}_$timestamp';
-
-                            // Create receipt number: staffposition + timestamp (no underscore)
-                            final receiptNumber = '$staffPosition$timestamp';
-
-                            // Prepare items map
-                            final Map<String, dynamic> itemsMap = {};
-                            for (int i = 0; i < _salesItems.length; i++) {
-                              itemsMap['item_$i'] = _salesItems[i];
-                            }
-
-                            // Prepare sale document with customer info
-                            final saleData = {
-                              'companyId': companyId,
-                              'staffPosition': staffPosition,
-                              'receiptNumber': receiptNumber,
-                              'transMode': paymentMethod,
-                              'items': itemsMap,
-                              'totalAmount': _calculateTaxableTotal(),
-                              'itemCount': _salesItems.length,
-                              'createdAt': Timestamp.fromDate(DateTime.now()),
-                              'createdBy': provider.staff,
-                              'timestamp': timestamp,
-                              'customerId': docId,
-                              'customerName': nameController.text,
-                              'customerPhone': phoneController.text,
-                            };
-
-                            // Save to Firestore
-                            await FirebaseFirestore.instance
-                                .collection('sales')
-                                .doc(saleDocId)
-                                .set(saleData);
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '${paymentMethod.toUpperCase()} sale saved! Receipt: $receiptNumber',
-                                      ),
-                                    ],
-                                  ),
-                                  backgroundColor: const Color(0xFF4CAF50),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-
-                              // Remove current cart after successful save
-                              this.setState(() {
-                                _customerCarts.remove(_currentCartId);
-
-                                // If there are remaining carts, switch to the first one
-                                if (_customerCarts.isNotEmpty) {
-                                  _currentCartId = _customerCarts.keys.first;
-                                } else {
-                                  // Create a new cart if all were removed
-                                  _cartCounter++;
-                                  _currentCartId = 'cart_$_cartCounter';
-                                  _customerCarts[_currentCartId] = [];
-                                }
-                              });
-                            }
-                          } catch (e) {
-                            setState(() {
-                              isSaving = false;
-                            });
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error saving customer: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Row(
-                          mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22304A),
+                          border: Border.all(color: Colors.white24),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           children: [
-                            Icon(Icons.save, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Save Customer',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
+                            Expanded(
+                              child: RadioListTile<String>(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Credit',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                value: 'credit',
+                                groupValue: paymentMethod,
+                                onChanged: (value) {
+                                  setState(() {
+                                    paymentMethod = value!;
+                                  });
+                                },
+                                activeColor: const Color(0xFFFF9800),
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'Cash',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                value: 'cash',
+                                groupValue: paymentMethod,
+                                onChanged: (value) {
+                                  setState(() {
+                                    paymentMethod = value!;
+                                  });
+                                },
+                                activeColor: const Color(0xFF4CAF50),
                               ),
                             ),
                           ],
                         ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+                actions: [
+                  TextButton(
+                    onPressed: isSaving ? null : () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF9800),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 5,
+                    ),
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            if (nameController.text.isEmpty ||
+                                phoneController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter name and phone number',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setState(() {
+                              isSaving = true;
+                            });
+
+                            try {
+                              final provider = Provider.of<Datafeed>(
+                                context,
+                                listen: false,
+                              );
+                              final docId = FirebaseFirestore.instance
+                                  .collection('customers')
+                                  .doc()
+                                  .id;
+
+                              final customer = CustomerRegModel(
+                                id: docId,
+                                branchname:
+                                    provider.selectedBranch?.branchname ?? '',
+                                branchid: provider.selectedBranch?.id ?? '',
+                                name: nameController.text,
+                                contact: phoneController.text,
+                                customertype: 'Retail',
+                                creditlimit: null,
+                                paymentduration: null,
+                                companyid: provider.companyid,
+                                staff: provider.staff,
+                                date: DateTime.now(),
+                                updatedby: null,
+                                updatedat: null,
+                                deletedat: null,
+                              );
+
+                              await FirebaseFirestore.instance
+                                  .collection('customers')
+                                  .doc(docId)
+                                  .set(customer.toMap());
+
+                              // Now save the sale with customer info
+                              final companyId = provider.companyid;
+                              final staffPosition = provider.staffPosition;
+                              final timestamp =
+                                  DateTime.now().millisecondsSinceEpoch;
+
+                              // Create document ID: companyid + staffposition + timestamp
+                              final saleDocId =
+                                  '${companyId}_${staffPosition}_$timestamp';
+
+                              // Create receipt number: staffposition + timestamp (no underscore)
+                              final receiptNumber = '$staffPosition$timestamp';
+
+                              // Prepare items map
+                              final Map<String, dynamic> itemsMap = {};
+                              for (int i = 0; i < _salesItems.length; i++) {
+                                itemsMap['item_$i'] = _salesItems[i];
+                              }
+
+                              // Prepare sale document with customer info
+                              final saleData = {
+                                'companyId': companyId,
+                                'staffPosition': staffPosition,
+                                'receiptNumber': receiptNumber,
+                                'transMode': paymentMethod,
+                                'items': itemsMap,
+                                'totalAmount': _calculateTaxableTotal(),
+                                'itemCount': _salesItems.length,
+                                'createdAt': Timestamp.fromDate(DateTime.now()),
+                                'createdBy': provider.staff,
+                                'timestamp': timestamp,
+                                'customerId': docId,
+                                'customerName': nameController.text,
+                                'customerPhone': phoneController.text,
+                              };
+
+                              // Save to Firestore
+                              await FirebaseFirestore.instance
+                                  .collection('sales')
+                                  .doc(saleDocId)
+                                  .set(saleData);
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${paymentMethod.toUpperCase()} sale saved! Receipt: $receiptNumber',
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF4CAF50),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+
+                                // Remove current cart after successful save
+                                this.setState(() {
+                                  _customerCarts.remove(_currentCartId);
+
+                                  // If there are remaining carts, switch to the first one
+                                  if (_customerCarts.isNotEmpty) {
+                                    _currentCartId = _customerCarts.keys.first;
+                                  } else {
+                                    // Create a new cart if all were removed
+                                    _cartCounter++;
+                                    _currentCartId = 'cart_$_cartCounter';
+                                    _customerCarts[_currentCartId] = [];
+                                  }
+                                });
+                              }
+                            } catch (e) {
+                              setState(() {
+                                isSaving = false;
+                              });
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error saving customer: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.save, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Save Customer',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -2463,6 +2561,15 @@ class _SalesPageState extends State<SalesPage> {
                                         TextFormField(
                                           controller: _quantityController,
                                           style: TextStyle(color: Colors.white),
+                                          keyboardType:
+                                              TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'^\d*\.?\d*'),
+                                            ),
+                                          ],
                                           decoration: InputDecoration(
                                             labelText: 'Quantity',
                                             labelStyle: const TextStyle(
@@ -2956,100 +3063,139 @@ class _SalesPageState extends State<SalesPage> {
                                   ),
 
                                   SizedBox(height: 20),
-                                  Wrap(
-                                    spacing: 10,
-                                    runSpacing: 10,
-                                    children: [
-                                      SizedBox(
-                                        width: 100,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.teal,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          onPressed: _printReceipt,
-                                          child: Text(
-                                            "POS PRINT",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final isWideScreen =
+                                          constraints.maxWidth > 600;
+                                      final buttonWidth = isWideScreen
+                                          ? 120.0
+                                          : 90.0;
+                                      final buttonPadding = isWideScreen
+                                          ? 16.0
+                                          : 12.0;
+                                      final fontSize = isWideScreen
+                                          ? 14.0
+                                          : 12.0;
 
-                                      SizedBox(
-                                        width: 100,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          onPressed: _showMomoDialog,
-                                          child: Text(
-                                            "MOMO",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 150,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.lightBlue,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
+                                      return Wrap(
+                                        spacing: isWideScreen ? 10 : 6,
+                                        runSpacing: isWideScreen ? 10 : 8,
+                                        alignment: WrapAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: buttonWidth,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.teal,
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: buttonPadding,
+                                                  horizontal: 4,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: _printReceipt,
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  "POS PRINT",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          onPressed: _createNewCart,
-                                          child: Text(
-                                            "NEW TRANSACTION",
-                                            style: TextStyle(
-                                              color: Colors.white,
+
+                                          SizedBox(
+                                            width: buttonWidth,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: buttonPadding,
+                                                  horizontal: 4,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: _showMomoDialog,
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  "MOMO",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 100,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
+                                          SizedBox(
+                                            width: isWideScreen ? 150 : 120,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.lightBlue,
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: buttonPadding,
+                                                  horizontal: 4,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed: _createNewCart,
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  "NEW TRANSACTION",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          onPressed: _showCustomerInfoDialog,
-                                          child: Text(
-                                            "Customer Info",
-                                            style: TextStyle(
-                                              color: Colors.white,
+                                          SizedBox(
+                                            width: isWideScreen ? 130 : 100,
+                                            child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.orange,
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: buttonPadding,
+                                                  horizontal: 4,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              onPressed:
+                                                  _showCustomerInfoDialog,
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  "Customer Info",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    ],
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
