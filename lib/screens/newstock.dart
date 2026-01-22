@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
+import 'package:pdf/pdf.dart';
 import 'package:provider/provider.dart';
-
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class NewStock extends StatefulWidget {
   final String? docId;
@@ -19,10 +21,12 @@ class _NewStockState extends State<NewStock> {
   final TextEditingController _invoicenumberController = TextEditingController();
   final TextEditingController _waybillController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
 
   String? _selectedPurchaseType;
   String? _selectedpaymentaccount;
   bool _loading=false;
+  DateTime? _selectedDate;
 
   late List<String> _purchasTypes = ['Cash', 'Credit','Opening Stock'];
   late List<String> paymentaccount = ['Cash Account', 'Bank Account', 'Mobile Money'];
@@ -227,10 +231,6 @@ class _NewStockState extends State<NewStock> {
                                   ),
                                   SizedBox(height: 14),
                                   if (isCashPurchase) ...[
-                                    /// CREDIT LIMIT
-
-
-                                    /// PAYMENT DURATION
                                     DropdownButtonFormField<String>(
                                       value: _selectedpaymentaccount,
                                       dropdownColor: const Color(0xFF22304A),
@@ -303,10 +303,69 @@ class _NewStockState extends State<NewStock> {
                                     validator: (val) =>
                                     val == null ? 'Please select branch' : null,
                                   ),
+                                  const SizedBox(height: 14),
+                                  TextFormField(
+                                    controller: _dateController,
+                                    readOnly: true,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'Date',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      hintText: 'yyyy-mm-dd',
+                                      hintStyle: const TextStyle(color: Colors.white54),
+                                      suffixIcon: const Icon(
+                                        Icons.calendar_today,
+                                        color: Colors.white70,
+                                        size: 18,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    onTap: () async {
+                                      DateTime? picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: _selectedDate ?? DateTime.now(),
+                                        firstDate: DateTime(2020),
+                                        lastDate: DateTime(2100),
+                                        builder: (context, child) {
 
+                                          return Theme(
+                                            data: Theme.of(context).copyWith(
+                                              colorScheme: const ColorScheme.dark(
+                                                primary: Colors.blue,
+                                                onPrimary: Colors.white,
+                                                surface: Color(0xFF22304A),
+                                                onSurface: Colors.white,
+                                              ),
+                                            ),
+                                            child: child!,
+                                          );
+                                        },
+                                      );
 
-
-                                  const SizedBox(height: 30),
+                                      if (picked != null) {
+                                        setState(() {
+                                          _selectedDate = picked;
+                                          _dateController.text =
+                                          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                                        });
+                                      }
+                                    },
+                                    validator: (value) =>
+                                    value == null || value.isEmpty ? 'Select date' : null,
+                                  ),
+                                  const SizedBox(height: 14),
                                   Wrap(
                                     spacing: 10,
                                     runSpacing: 10,
@@ -334,15 +393,14 @@ class _NewStockState extends State<NewStock> {
                                             String invoicenumber= _invoicenumberController.text.trim();
                                             String waybillnumber= _waybillController.text.trim();
                                             String purchasetype= _selectedPurchaseType!;
-                                            String paymentduration = isCashPurchase ? _selectedpaymentaccount ?? '' : '';
+                                            DateTime? invoicedate = _selectedDate;
                                             final branchId = value.selectedBranch?.id ?? '';
                                             final branchName = value.selectedBranch?.branchname ?? '';
-                                            final docid = value.normalizeAndSanitize(
-                                                "${value.companyid}${DateTime.now().millisecondsSinceEpoch}${branchId}"
-                                            );
+                                            final docid = value.normalizeAndSanitize("${value.companyid}${DateTime.now().millisecondsSinceEpoch}${branchId}");
 
                                             final headerData = {
                                               'invoice': invoicenumber,
+                                              'invoicedate': invoicedate,
                                               'waybill': waybillnumber,
                                               'supplierid': value.selectedSupplier?.id ?? '',
                                               'suppliername': value.selectedSupplier?.supplier ?? '',
@@ -406,21 +464,21 @@ class _NewStockState extends State<NewStock> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
-                                        width: 200,
-                                        child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(color: Colors.white70),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(14),
-                                            ),
-                                          ),
-                                          icon: const Icon(Icons.view_list, color: Colors.white70),
-                                          label: const Text("View", style: TextStyle(color: Colors.white70)),
-                                          onPressed: () {},
-                                        ),
-                                      ),
+                                      // SizedBox(
+                                      //   width: 200,
+                                      //   child: OutlinedButton.icon(
+                                      //     style: OutlinedButton.styleFrom(
+                                      //       side: const BorderSide(color: Colors.white70),
+                                      //       padding: const EdgeInsets.symmetric(vertical: 16),
+                                      //       shape: RoundedRectangleBorder(
+                                      //         borderRadius: BorderRadius.circular(14),
+                                      //       ),
+                                      //     ),
+                                      //     icon: const Icon(Icons.view_list, color: Colors.white70),
+                                      //     label: const Text("View", style: TextStyle(color: Colors.white70)),
+                                      //     onPressed: () {},
+                                      //   ),
+                                      // ),
 
 
                                     ],
@@ -442,7 +500,7 @@ class _NewStockState extends State<NewStock> {
 }
 
 
-// dart
+
 class StockItemsForm extends StatefulWidget {
   final String transactionId;
   final Map<String, dynamic> headerData;
@@ -467,7 +525,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
   String? _selectedPriceMode;
   String? _selectedTaxType;
   final List<String> _taxType = ['No vat','Flat', 'standard'];
-  Map<String, dynamic>? _itemModes; // Store the modes from selected item
+  Map<String, dynamic>? _itemModes;
   bool _loading=false;
   List<Map<String, dynamic>> _suggestions = [];
   bool _showSuggestions = false;
@@ -572,7 +630,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
   void _addItem() {
     if (_formKey.currentState!.validate()) {
-      final provider = Provider.of<Datafeed>(context, listen: false);
 
       setState(() {
         final int quantity = int.tryParse(_quantityController.text.trim()) ?? 0;
@@ -642,29 +699,34 @@ class _StockItemsFormState extends State<StockItemsForm> {
     }
   }
 
-  // Compute totals for preview
-  Map<String, double> _calculateTotals() {
+
+  ({double gross, double discount, double tax, double net}) _calculateTotals() {
     double baseTotal = 0.0;
     double discountTotal = 0.0;
     double taxTotal = 0.0;
+
     for (final it in _items) {
       final double price = (it['price'] as num?)?.toDouble() ?? 0.0;
       final int qty = (it['quantity'] as int?) ?? 0;
       final double discount = (it['discount'] as num?)?.toDouble() ?? 0.0;
       final double taxAmt = (it['taxAmount'] as num?)?.toDouble() ?? 0.0;
+
       baseTotal += price * qty;
       discountTotal += discount;
       taxTotal += taxAmt;
     }
+
     final double payable = baseTotal - discountTotal + taxTotal;
-    return {
-      'gross': baseTotal,
-      'discount': discountTotal,
-      'tax': taxTotal,
-      'netval': payable,
-    };
+
+    return (
+    gross: baseTotal,
+    discount: discountTotal,
+    tax: taxTotal,
+    net: payable,
+    );
   }
 
+  bool _saved = false;
   Future<void> _saveRecords() async {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -679,7 +741,10 @@ class _StockItemsFormState extends State<StockItemsForm> {
       ...widget.headerData,
       'transactionId': widget.transactionId,
       'items': _items,
-      'totals': totals,
+      'gross': totals.gross,
+      'discount': totals.discount,
+      'tax': totals.tax,
+      'netval': totals.net,
     };
 
     try {
@@ -689,17 +754,178 @@ class _StockItemsFormState extends State<StockItemsForm> {
           .set(docData);
 
       if (!mounted) return;
+  setState(() {
+  _saved = true; // disable add & save, show print
+  });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Records saved')),
       );
-      Navigator.of(context).pop();
+
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Save failed: $e')),
       );
     }
+    //Navigator.of(context).pop();
   }
+
+  Future<void> _printRecords() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (context) {
+          return <pw.Widget>[
+            // Company name at the very top
+            pw.Center(
+              child: pw.Text(
+                widget.headerData['company'] ?? 'COMPANY NAME',
+                style: pw.TextStyle(
+                  fontSize: 26,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 10),
+
+            // Title
+            pw.Center(
+              child: pw.Text(
+                'STOCK TRANSACTION',
+                style: pw.TextStyle(
+                  fontSize: 20,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+
+            // Header section split into left and right
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey),
+                borderRadius: pw.BorderRadius.circular(6),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Left column
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Invoice Number: ${widget.headerData['invoice'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Waybill Number: ${widget.headerData['waybill'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                  // Right column
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Supplier: ${widget.headerData['suppliername'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Branch: ${widget.headerData['branchname'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
+                      pw.Text('Date: ${widget.headerData['invoicedate'] ?? ''}',
+                          style: pw.TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Items table spanning full width
+            pw.Table.fromTextArray(
+              border: pw.TableBorder.all(color: PdfColors.grey),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 12,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 11),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '#',
+                'Item',
+                'Mode',
+                'Mode Qty',
+                'Pieces',
+                'Qty',
+                'Unit Price',
+                'Discount',
+                'Tax',
+                'Total'
+              ],
+              data: _items.asMap().entries.map((entry) {
+                final idx = entry.key + 1;
+                final it = entry.value;
+                return [
+                  idx.toString(),
+                  it['item'] ?? '',
+                  it['stockingmode'] ?? it['salesMode'] ?? '',
+                  (it['modeqty'] ?? it['modeQty'] ?? '').toString(),
+                  (it['pieces'] ?? '').toString(),
+                  (it['quantity'] ?? '').toString(),
+                  (it['price'] != null)
+                      ? (it['price'] as num).toStringAsFixed(2)
+                      : '',
+                  (it['discount'] != null)
+                      ? (it['discount'] as num).toStringAsFixed(2)
+                      : '',
+                  (it['taxamount'] ?? it['taxAmount'] ?? 0).toString(),
+                  (it['total'] != null)
+                      ? (it['total'] as num).toStringAsFixed(2)
+                      : '',
+                ];
+              }).toList(),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Totals section aligned to right
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey),
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('Gross: ${_calculateTotals().gross?.toStringAsFixed(2) ?? '0.00'}'),
+                      pw.Text('Discount: ${_calculateTotals().discount?.toStringAsFixed(2) ?? '0.00'}'),
+                      pw.Text('Tax: ${_calculateTotals().tax?.toStringAsFixed(2) ?? '0.00'}'),
+                      pw.Text(
+                        'Net: ${_calculateTotals().net?.toStringAsFixed(2) ?? '0.00'}',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ];
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+
 
 
   @override
@@ -1039,7 +1265,19 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                             fillColor: const Color(0xFF22304A),
                                             filled: true,
                                           ),
-                                          validator: (value) => value == null || value.isEmpty ? 'Enter quantity' : null,
+                                          validator: (value) {
+                                            if (value == null || value.isEmpty) {
+                                              return 'Enter quantity';
+                                            }
+                                            final qty = double.tryParse(value);
+                                            if (qty == null) {
+                                              return 'Quantity must be a number';
+                                            }
+                                            if (qty <= 0) {
+                                              return 'Quantity must be greater than 0';
+                                            }
+                                            return null;
+                                          },
                                         ),
                                         const SizedBox(height: 10),
                                         DropdownButtonFormField<String>(
@@ -1103,7 +1341,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 ),
-                                                onPressed: _addItem,
+                                                onPressed: (_saved || _loading) ? null : _addItem,
                                                 child: const Text("Add Record", style: TextStyle(color: Colors.white)),
                                               ),
                                             ),
@@ -1137,7 +1375,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 ),
                                                 onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text("Home", style: TextStyle(color: Colors.white)),
+                                                child: const Text("New Transaction", style: TextStyle(color: Colors.white)),
                                               ),
                                             ),
                                           ],
@@ -1222,7 +1460,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                             _cell(discountText, alignRight: true),
                                             _cell(taxText, alignRight: true),
                                             _cell(totalText, alignRight: true),
-                                            Padding(
+                                            _saved
+                                                ? const Padding(
+                                              padding: EdgeInsets.all(4.0),
+                                              child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                            )
+                                                : Padding(
                                               padding: const EdgeInsets.all(4.0),
                                               child: IconButton(
                                                 icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
@@ -1252,12 +1495,12 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                   }
                                                 },
                                               ),
-                                            ),
+                                            )
+
                                           ],
                                         );
                                       }).toList(),
                                       (() {
-                                        final totals = _calculateTotals();
                                         return _tableRow(["", "", "", "", "", "", "", "", "", ""]);
                                       })(),
                                       (() {
@@ -1269,27 +1512,32 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                           "",
                                           "",
                                           "",
-                                          totals['discount']!.toStringAsFixed(2),
-                                          totals['tax']!.toStringAsFixed(2),
-                                          totals['netval']!.toStringAsFixed(2),
+                                          totals.discount!.toStringAsFixed(2),
+                                          totals.tax!.toStringAsFixed(2),
+                                          totals.net!.toStringAsFixed(2),
                                           ""
                                         ]);
                                       })(),
                                     ],
                                   ),
                                   const SizedBox(height: 20),
-                                  Center(
-
-                   child: SizedBox(
+                    Center(
+                    child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!_saved)
+                    SizedBox(
                     width: 150,
                     child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.lightBlue,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    ),
                     ),
                     onPressed: _loading
-                    ? null // disable while loading
+                    ? null
                         : () async {
                     setState(() => _loading = true);
                     await _saveRecords();
@@ -1309,11 +1557,32 @@ class _StockItemsFormState extends State<StockItemsForm> {
                     style: TextStyle(color: Colors.white),
                     ),
                     ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    if (_saved)
+                    SizedBox(
+                    width: 150,
+                    child: OutlinedButton.icon(
+                    onPressed: _printRecords,
+                    icon: const Icon(Icons.print),
+                    label: const Text('PRINT'),
+                    style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.lightBlue),
+                    foregroundColor: Colors.lightBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ],
+                    ),
                     )
 
-
-                                  ),
-                                ],
+                    ],
                               ),
                             ),
                           ),
