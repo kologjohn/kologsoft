@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pdf/pdf.dart';
 import 'package:provider/provider.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -863,6 +864,30 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
+  Future<void> _scanBarcode() async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+      );
+
+      if (result != null && result is String) {
+        setState(() {
+          _barcodeController.text = result;
+        });
+        _formkey.currentState?.validate();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening scanner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
 
   @override
@@ -913,37 +938,116 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         key: _formkey,
                                         child: Column(
                                           children: [
-                                            TextFormField(
-                                              controller: _barcodeController,
-                                              style: const TextStyle(color: Colors.white),
-                                              decoration: InputDecoration(
-                                                labelText: 'Barcode',
-                                                labelStyle: const TextStyle(
-                                                  color: Colors.white70,
-                                                ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Colors.white24,
+                                            // TextFormField(
+                                            //   controller: _barcodeController,
+                                            //   style: const TextStyle(color: Colors.white),
+                                            //   decoration: InputDecoration(
+                                            //     labelText: 'Barcode',
+                                            //     labelStyle: const TextStyle(
+                                            //       color: Colors.white70,
+                                            //     ),
+                                            //     border: OutlineInputBorder(
+                                            //       borderRadius: BorderRadius.circular(12),
+                                            //     ),
+                                            //     enabledBorder: OutlineInputBorder(
+                                            //       borderRadius: BorderRadius.circular(12),
+                                            //       borderSide: const BorderSide(
+                                            //         color: Colors.white24,
+                                            //       ),
+                                            //     ),
+                                            //     focusedBorder: OutlineInputBorder(
+                                            //       borderRadius: BorderRadius.circular(12),
+                                            //       borderSide: const BorderSide(
+                                            //         color: Colors.blue,
+                                            //       ),
+                                            //     ),
+                                            //     fillColor: const Color(0xFF22304A),
+                                            //     filled: true,
+                                            //   ),
+                                            //   validator: (value) =>
+                                            //   value == null || value.isEmpty
+                                            //       ? 'Barcode required'
+                                            //       : null,
+                                            // ),
+
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: TextFormField(
+                                                    controller: _barcodeController,
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                    decoration: InputDecoration(
+                                                      labelText: 'Barcode',
+                                                      labelStyle: const TextStyle(
+                                                        color: Colors.white70,
+                                                      ),
+                                                      border: OutlineInputBorder(
+                                                        borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                      ),
+                                                      enabledBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                        borderSide:
+                                                        const BorderSide(
+                                                          color: Colors
+                                                              .white24,
+                                                        ),
+                                                      ),
+                                                      focusedBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                        borderSide:
+                                                        const BorderSide(
+                                                          color:
+                                                          Colors.blue,
+                                                        ),
+                                                      ),
+                                                      fillColor: const Color(
+                                                        0xFF22304A,
+                                                      ),
+                                                      filled: true,
+                                                    ),
+                                                    validator: (value) =>
+                                                    value == null ||
+                                                        value.isEmpty
+                                                        ? 'Barcode required'
+                                                        : null,
                                                   ),
                                                 ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Colors.blue,
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  height: 56,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF22304A),
+                                                    borderRadius:
+                                                    BorderRadius.circular(12),
+                                                    border: Border.all(
+                                                      color: Colors.white24,
+                                                    ),
+                                                  ),
+                                                  child: IconButton(
+                                                    icon: const Icon(
+                                                      Icons.qr_code_scanner,
+                                                      color: Colors.white70,
+                                                    ),
+                                                    onPressed: _scanBarcode,
+                                                    tooltip: 'Scan Barcode/QR Code',
                                                   ),
                                                 ),
-                                                fillColor: const Color(0xFF22304A),
-                                                filled: true,
-                                              ),
-                                              validator: (value) =>
-                                              value == null || value.isEmpty
-                                                  ? 'Barcode required'
-                                                  : null,
+                                              ],
                                             ),
+
                                             if (_showSuggestions)
                                               StreamBuilder<QuerySnapshot>(
                                                 stream: FirebaseFirestore.instance
@@ -1576,4 +1680,103 @@ class _StockItemsFormState extends State<StockItemsForm> {
     );
   }
 
+}
+
+// Barcode Scanner Screen
+class BarcodeScannerScreen extends StatefulWidget {
+  const BarcodeScannerScreen({Key? key}) : super(key: key);
+
+  @override
+  State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
+  MobileScannerController cameraController = MobileScannerController();
+  bool _isProcessing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Scan Barcode/QR Code'),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: ValueListenableBuilder(
+              valueListenable: cameraController,
+              builder: (context, value, child) {
+                final isFlashOn = value.torchState == TorchState.on;
+                return Icon(
+                  isFlashOn ? Icons.flash_on : Icons.flash_off,
+                  color: Colors.white,
+                );
+              },
+            ),
+            onPressed: () => cameraController.toggleTorch(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            onPressed: () => cameraController.switchCamera(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: cameraController,
+            onDetect: (capture) {
+              if (_isProcessing) return;
+
+              final barcodes = capture.barcodes;
+              if (barcodes.isEmpty) return;
+
+              final barcode = barcodes.first;
+              final String? code = barcode.rawValue;
+
+              if (code != null && code.isNotEmpty) {
+                setState(() => _isProcessing = true);
+                Navigator.pop(context, code);
+              }
+            },
+          ),
+          // Overlay with scanning guide
+          Center(
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green, width: 3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          // Instructions
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: const Text(
+                'Position the barcode or QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
+  }
 }
