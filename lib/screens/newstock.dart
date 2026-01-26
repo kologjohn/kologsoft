@@ -66,12 +66,17 @@ class _NewStockState extends State<NewStock> {
         _selectedpaymentaccount = paymentDuration;
       }
     }
+    if (widget.docId != null && widget.docId!.isNotEmpty) {
+      _showStockItems = true;
+      _pendingHeader = widget.data;
+    }
   }
 
   void _resetToNewStock() {
     setState(() {
       _showStockItems = false;
-      _pendingHeader = null;
+      _pendingHeader ={};
+      widget.docId == null;
 
       // Clear all controllers
       _invoicenumberController.clear();
@@ -408,7 +413,7 @@ class _NewStockState extends State<NewStock> {
                                       label: _loading
                                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
                                           : Text(
-                                        widget.docId == null ? "Proceed" : "Update",
+                                         "Proceed",
                                         style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
                                       ),
                                     ),
@@ -484,6 +489,10 @@ class _StockItemsFormState extends State<StockItemsForm> {
     _selectedTaxType = _taxType.first;
     _taxValueController.text = '0';
     _discountController.text = '0';
+    if (widget.headerData.containsKey('items')) {
+      final rawItems = widget.headerData['items'];
+      if (rawItems is List) { _items.addAll(rawItems.map((e) => Map<String, dynamic>.from(e))); }
+    }
   }
 
   @override
@@ -1610,10 +1619,11 @@ class _StockItemsFormState extends State<StockItemsForm> {
                         strokeWidth: 2,
                         ),
                         )
-                            : const Text(
-                        "SAVE RECORDS",
-                        style: TextStyle(color: Colors.white),
-                        ),
+                            :
+                        Text(
+                        widget.headerData.containsKey('items') ? "EDIT RECORDS" : "SAVE RECORDS",
+                        style: const TextStyle(color: Colors.white),
+                        )
                         ),
                         ),
 

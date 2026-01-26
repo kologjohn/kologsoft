@@ -18,9 +18,6 @@ class _StockListPageState extends State<StockListPage> {
 
   @override
   Widget build(BuildContext context) {
-    //bool isWideScreen = constraints.maxWidth > 500;
-    final screenwidth =MediaQuery.sizeOf(context).width;
-    final provider=Provider.of<Datafeed>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFF101624),
