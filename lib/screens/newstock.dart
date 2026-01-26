@@ -10,8 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../providers/routes.dart';
-
 class NewStock extends StatefulWidget {
   final String? docId;
   final Map<String, dynamic>? data;
@@ -68,6 +66,24 @@ class _NewStockState extends State<NewStock> {
         _selectedpaymentaccount = paymentDuration;
       }
     }
+  }
+
+  void _resetToNewStock() {
+    setState(() {
+      _showStockItems = false;
+      _pendingHeader = null;
+
+      // Clear all controllers
+      _invoicenumberController.clear();
+      _waybillController.clear();
+      _contactController.clear();
+      _dateController.clear();
+
+      // Reset dropdowns
+      _selectedPurchaseType = null;
+      _selectedpaymentaccount = null;
+      _selectedDate = null;
+    });
   }
 
   @override
@@ -134,7 +150,7 @@ class _NewStockState extends State<NewStock> {
             key: _formKey,
             child: SingleChildScrollView(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 100),
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 transitionBuilder: (child, animation) {
@@ -152,7 +168,12 @@ class _NewStockState extends State<NewStock> {
                     ? Padding(
                   key: const ValueKey('stock_form'),
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: StockItemsForm(transactionId: _pendingHeader!['docid'] as String, headerData: _pendingHeader!, onNewTransaction: () {showform:_showStockItems; },),
+                  child:StockItemsForm(
+                    transactionId: _pendingHeader!['docid'] as String,
+                    headerData: _pendingHeader!,
+                    onNewTransaction: _resetToNewStock,
+                  ),
+
 
                 )
                     : Padding(
@@ -192,13 +213,13 @@ class _NewStockState extends State<NewStock> {
                                 controller: _invoicenumberController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(label: 'Invoice Number', prefix: Icons.receipt),
-                                validator: (v) => v == null || v.trim().isEmpty ? 'Enter invoice number' : null,
+                                //validator: (v) => v == null || v.trim().isEmpty ? 'Enter invoice number' : null,
                               ),
                               TextFormField(
                                 controller: _waybillController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(label: 'Waybill Number', prefix: Icons.local_shipping),
-                                validator: (v) => v == null || v.trim().isEmpty ? 'Enter waybill number' : null,
+                               // validator: (v) => v == null || v.trim().isEmpty ? 'Enter waybill number' : null,
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -1386,7 +1407,15 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                     ),
                                                     onPressed: () {
-                                                      Navigator.pushNamed(context, Routes.newstock);
+                                                      setState(() {
+                                                        _itemController.clear();
+                                                        _priceController.clear();
+                                                        _quantityController.clear();
+                                                        _discountController.text = '0';
+                                                        _taxValueController.text = '0';
+                                                        _barcodeController.clear();
+
+                                                      });
                                                     },
 
                                                     child: const Text("Reset", style: TextStyle(color: Colors.white)),
@@ -1401,16 +1430,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                     ),
                                                     onPressed: () {
-                                                      setState(() {
-                                                        _itemController.clear();
-                                                        _priceController.clear();
-                                                        _quantityController.clear();
-                                                        _discountController.text = '0';
-                                                        _taxValueController.text = '0';
-                                                        _barcodeController.clear();
-
-                                                      });
-
+                                                      widget.onNewTransaction();
 
                                                     },
                                                     child: const Text("New Transaction", style: TextStyle(color: Colors.white)),
@@ -1682,7 +1702,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
 }
 
-// Barcode Scanner Screen
 class BarcodeScannerScreen extends StatefulWidget {
   const BarcodeScannerScreen({Key? key}) : super(key: key);
 

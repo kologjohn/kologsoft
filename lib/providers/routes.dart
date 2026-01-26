@@ -20,6 +20,7 @@ import '../screens/itemlist.dart';
 import '../screens/itemreg.dart';
 import '../screens/staff.dart';
 import '../screens/stocking_mode.dart';
+import '../screens/stocklist.dart';
 import '../screens/supplierlist.dart';
 import '../screens/supplierscreen.dart';
 import '../screens/warehousereg.dart';
@@ -50,6 +51,7 @@ class Routes {
   static const String sales = '/sales';
   static const String transfers = '/transfers';
   static const String transferpage = '/transferpage';
+  static const String stocklist = '/stocklist';
 }
 
 final pages = {
@@ -82,4 +84,5 @@ final pages = {
   Routes.sales: (context) => const RouteGuard(child: SalesPage()),
   Routes.transfers: (context) => const RouteGuard(child: Transfers()),
   Routes.transferpage: (context) => const RouteGuard(child: TransferPage()),
+  Routes.stocklist: (context) => const RouteGuard(child: StockListPage()),
 };

@@ -214,6 +214,16 @@ class Sidebar extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.white),
                     title: const Text(
+                      'View Stock Entries ',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                     Navigator.pushNamed(context, Routes.stocklist);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.add_business, color: Colors.white),
+                    title: const Text(
                       'Transfers',
                       style: TextStyle(color: Colors.white),
                     ),
