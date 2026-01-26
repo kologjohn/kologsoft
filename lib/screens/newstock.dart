@@ -894,6 +894,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
+
   Future<void> _scanBarcode() async {
     try {
       final result = await Navigator.push(
@@ -918,7 +919,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -968,38 +968,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                         key: _formkey,
                                         child: Column(
                                           children: [
-                                            // TextFormField(
-                                            //   controller: _barcodeController,
-                                            //   style: const TextStyle(color: Colors.white),
-                                            //   decoration: InputDecoration(
-                                            //     labelText: 'Barcode',
-                                            //     labelStyle: const TextStyle(
-                                            //       color: Colors.white70,
-                                            //     ),
-                                            //     border: OutlineInputBorder(
-                                            //       borderRadius: BorderRadius.circular(12),
-                                            //     ),
-                                            //     enabledBorder: OutlineInputBorder(
-                                            //       borderRadius: BorderRadius.circular(12),
-                                            //       borderSide: const BorderSide(
-                                            //         color: Colors.white24,
-                                            //       ),
-                                            //     ),
-                                            //     focusedBorder: OutlineInputBorder(
-                                            //       borderRadius: BorderRadius.circular(12),
-                                            //       borderSide: const BorderSide(
-                                            //         color: Colors.blue,
-                                            //       ),
-                                            //     ),
-                                            //     fillColor: const Color(0xFF22304A),
-                                            //     filled: true,
-                                            //   ),
-                                            //   validator: (value) =>
-                                            //   value == null || value.isEmpty
-                                            //       ? 'Barcode required'
-                                            //       : null,
-                                            // ),
-
                                             Row(
                                               children: [
                                                 Expanded(
@@ -1455,206 +1423,10 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                 ),
                               ),
                             ),
-                            SizedBox(
-                              width: itemWidth,
-                              child: Container(
-                                color: const Color(0xFF182232),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "STOCK PREVIEW",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const Divider(color: Colors.white24),
-                                      const SizedBox(height: 15),
-                                      Table(
-                                        border: TableBorder.all(color: Colors.grey),
-                                        columnWidths: const {
-                                          0: FixedColumnWidth(40),
-                                          1: FlexColumnWidth(2),
-                                          2: FlexColumnWidth(1),
-                                          3: FlexColumnWidth(1),
-                                          4: FlexColumnWidth(1),
-                                          5: FlexColumnWidth(1),
-                                         // 6: FlexColumnWidth(1),
-                                          7: FlexColumnWidth(1),
-                                          8: FlexColumnWidth(1), // extra column for delete
-                                        },
-                                        children: [
-                                          _tableRow([
-                                            "#",
-                                            "Item",
-                                            "Mode",
-                                            "Qty",
-                                            "Pieces",
-                                            "Unit Price",
-                                            "Discount",
-                                            //"Tax",
-                                            "Total",
-                                            "Action"
-                                          ], isHeader: true),
-                                          ..._items.asMap().entries.map((entry) {
-                                            final idx = entry.key;
-                                            final item = entry.value;
-                                            final priceText = (item['price'] != null)
-                                                ? (item['price'] as double).toStringAsFixed(2)
-                                                : '0.00';
-                                            final totalText = (item['total'] != null)
-                                                ? (item['total'] as double).toStringAsFixed(2)
-                                                : '0.00';
-                                            final discountText = (item['discount'] != null)
-                                                ? (item['discount'] as double).toStringAsFixed(2)
-                                                : '0.00';
-                                            // final taxText = (item['taxamount'] != null)
-                                            //     ? (item['taxamount'] as double).toStringAsFixed(2)
-                                            //     : '0.00';
+                                 isSmallScreen
+                                    ? MobileSalesPreview(items:_items,)
+                                    : _buildStockTable( itemWidth),
 
-                                            return TableRow(
-                                              children: [
-                                                _cell((idx + 1).toString()),
-                                                _cell(item['item']?.toString() ?? ''),
-                                                _cell(item['stockingmode']?.toString() ?? ''),
-                                                _cell(item['quantity']?.toString() ?? '0', alignRight: true),
-                                                _cell(item['pieces']?.toString() ?? '0', alignRight: true),
-                                                _cell(priceText, alignRight: true),
-                                                _cell(discountText, alignRight: true),
-                                               // _cell(taxText, alignRight: true),
-                                                _cell(totalText, alignRight: true),
-                                                _saved
-                                                    ? const Padding(
-                                                  padding: EdgeInsets.all(4.0),
-                                                  child: Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                                )
-                                                    : Padding(
-                                                  padding: const EdgeInsets.all(4.0),
-                                                  child: IconButton(
-                                                    icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                                                    onPressed: () async {
-                                                      final confirm = await showDialog<bool>(
-                                                        context: context,
-                                                        builder: (ctx) => AlertDialog(
-                                                          title: const Text("Confirm Delete"),
-                                                          content: const Text("Are you sure you want to delete this item?"),
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed: () => Navigator.of(ctx).pop(false),
-                                                              child: const Text("Cancel"),
-                                                            ),
-                                                            ElevatedButton(
-                                                              onPressed: () => Navigator.of(ctx).pop(true),
-                                                              child: const Text("Delete"),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      );
-
-                                                      if (confirm == true) {
-                                                        setState(() {
-                                                          _items.removeAt(idx);
-                                                        });
-                                                      }
-                                                    },
-                                                  ),
-                                                )
-
-                                              ],
-                                            );
-                                          }).toList(),
-                                          (() {
-                                            return _tableRow(["", "", "", "", "", "", "", "", "",]);
-                                          })(),
-                                          (() {
-                                            final totals = _calculateTotals();
-                                            return _tableRow([
-                                              "",
-                                              "Grand Total",
-                                              "",
-                                              "",
-                                              "",
-                                              "",
-                                              totals.discount!.toStringAsFixed(2),
-                                              //totals.tax!.toStringAsFixed(2),
-                                              totals.net!.toStringAsFixed(2),
-                                              ""
-                                            ]);
-                                          })(),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-                        Center(
-                        child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (!_saved)
-                        SizedBox(
-                        width: 150,
-                        child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        ),
-                        ),
-                        onPressed: _loading
-                        ? null
-                            : () async {
-                        setState(() => _loading = true);
-                        await _saveRecords();
-                        if (mounted) setState(() => _loading = false);
-                        },
-                        child: _loading
-                        ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                        ),
-                        )
-                            :
-                        Text(
-                        widget.headerData.containsKey('items') ? "EDIT RECORDS" : "SAVE RECORDS",
-                        style: const TextStyle(color: Colors.white),
-                        )
-                        ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        if (_saved)
-                        SizedBox(
-                        width: 150,
-                        child: OutlinedButton.icon(
-                        onPressed: _printRecords,
-                        icon: const Icon(Icons.print),
-                        label: const Text('PRINT'),
-                        style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.lightBlue),
-                        foregroundColor: Colors.lightBlue,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        ),
-                        ),
-                        ),
-                        ),
-                        ],
-                        ),
-                        )
-
-                        ],
-                                  ),
-                                ),
-                              ),
-                            ),
 
                           ],
                         );
@@ -1667,8 +1439,213 @@ class _StockItemsFormState extends State<StockItemsForm> {
           ),
 
       ],
+
+    );
+
+  }
+
+  Widget _buildStockTable(double itemWidth) {
+    return SizedBox(
+      width: itemWidth,
+      child: Container(
+        color: const Color(0xFF182232),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "STOCK PREVIEW",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Divider(color: Colors.white24),
+              const SizedBox(height: 15),
+              Table(
+                border: TableBorder.all(color: Colors.grey),
+                columnWidths: const {
+                  0: FixedColumnWidth(40),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(1),
+                  3: FlexColumnWidth(1),
+                  4: FlexColumnWidth(1),
+                  5: FlexColumnWidth(1),
+                  // 6: FlexColumnWidth(1),
+                  7: FlexColumnWidth(1),
+                  8: FlexColumnWidth(1), // extra column for delete
+                },
+                children: [
+                  _tableRow([
+                    "#",
+                    "Item",
+                    "Mode",
+                    "Qty",
+                    "Pieces",
+                    "Unit Price",
+                    "Discount",
+                    //"Tax",
+                    "Total",
+                    "Action"
+                  ], isHeader: true),
+                  ..._items.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final item = entry.value;
+                    final priceText = (item['price'] != null)
+                        ? (item['price'] as double).toStringAsFixed(2)
+                        : '0.00';
+                    final totalText = (item['total'] != null)
+                        ? (item['total'] as double).toStringAsFixed(2)
+                        : '0.00';
+                    final discountText = (item['discount'] != null)
+                        ? (item['discount'] as double).toStringAsFixed(2)
+                        : '0.00';
+                    // final taxText = (item['taxamount'] != null)
+                    //     ? (item['taxamount'] as double).toStringAsFixed(2)
+                    //     : '0.00';
+
+                    return TableRow(
+                      children: [
+                        _cell((idx + 1).toString()),
+                        _cell(item['item']?.toString() ?? ''),
+                        _cell(item['stockingmode']?.toString() ?? ''),
+                        _cell(item['quantity']?.toString() ?? '0', alignRight: true),
+                        _cell(item['pieces']?.toString() ?? '0', alignRight: true),
+                        _cell(priceText, alignRight: true),
+                        _cell(discountText, alignRight: true),
+                        // _cell(taxText, alignRight: true),
+                        _cell(totalText, alignRight: true),
+                        _saved
+                            ? const Padding(
+                          padding: EdgeInsets.all(4.0),
+                          child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        )
+                            : Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text("Confirm Delete"),
+                                  content: const Text("Are you sure you want to delete this item?"),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(false),
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.of(ctx).pop(true),
+                                      child: const Text("Delete"),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirm == true) {
+                                setState(() {
+                                  _items.removeAt(idx);
+                                });
+                              }
+                            },
+                          ),
+                        )
+
+                      ],
+                    );
+                  }).toList(),
+                  (() {
+                    return _tableRow(["", "", "", "", "", "", "", "", "",]);
+                  })(),
+                  (() {
+                    final totals = _calculateTotals();
+                    return _tableRow([
+                      "",
+                      "Grand Total",
+                      "",
+                      "",
+                      "",
+                      "",
+                      totals.discount!.toStringAsFixed(2),
+                      //totals.tax!.toStringAsFixed(2),
+                      totals.net!.toStringAsFixed(2),
+                      ""
+                    ]);
+                  })(),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!_saved)
+                      SizedBox(
+                        width: 150,
+                        child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.lightBlue,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: _loading
+                                ? null
+                                : () async {
+                              setState(() => _loading = true);
+                              await _saveRecords();
+                              if (mounted) setState(() => _loading = false);
+                            },
+                            child: _loading
+                                ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                                :
+                            Text(
+                              widget.headerData.containsKey('items') ? "EDIT RECORDS" : "SAVE RECORDS",
+                              style: const TextStyle(color: Colors.white),
+                            )
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    if (_saved)
+                      SizedBox(
+                        width: 150,
+                        child: OutlinedButton.icon(
+                          onPressed: _printRecords,
+                          icon: const Icon(Icons.print),
+                          label: const Text('PRINT'),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.lightBlue),
+                            foregroundColor: Colors.lightBlue,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
+
 
   TableRow _tableRow(List<String> cells, {bool isHeader = false}) {
     return TableRow(
@@ -1710,6 +1687,158 @@ class _StockItemsFormState extends State<StockItemsForm> {
     );
   }
 
+}
+class MobileSalesPreview extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final VoidCallback? onPrint;
+  final VoidCallback? onNewTransaction;
+
+  const MobileSalesPreview({
+    super.key,
+    required this.items,
+    this.onPrint,
+    this.onNewTransaction,
+  });
+
+  double get totalAmount {
+    return items.fold(0.0, (sum, item) {
+      return sum + (item['total'] ?? 0.0);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      color: const Color(0xFF182232),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Sales Preview",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const Divider(color: Colors.white24, height: 20),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+            itemBuilder: (context, index) {
+              final item = items[index];
+
+              return _cartItem(
+                name: item['item'] ?? '',
+                price: (item['price'] ?? 0.0).toDouble(),
+                qty: int.tryParse(item['quantity'].toString()) ?? 0,
+                total: (item['total'] ?? 0.0).toDouble(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(color: Colors.white24),
+
+          _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}",
+              bold: true),
+
+          const SizedBox(height: 18),
+
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _actionBtn("POS PRINT", Colors.teal, onPrint),
+              _actionBtn("NEW TRANSACTION", Colors.lightBlue, onNewTransaction),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cartItem({
+    required String name,
+    required double price,
+    required int qty,
+    required double total,
+  }) {
+    return Row(
+      children: [
+        const CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.white24,
+          child: Icon(Icons.inventory, size: 18, color: Colors.white),
+        ),
+        const SizedBox(width: 10),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _line(name, "GHC ${price.toStringAsFixed(2)}"),
+              _line("Qty", "$qty"),
+              _line("Total", "GHC ${total.toStringAsFixed(2)}"),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _line(String left, String right) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(left, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        Text(right, style: const TextStyle(color: Colors.white)),
+      ],
+    );
+  }
+
+  Widget _row(String label, String value, {bool bold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _actionBtn(String text, Color color, VoidCallback? onTap) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      onPressed: onTap,
+      child: Text(text, style: const TextStyle(fontSize: 12)),
+    );
+  }
 }
 
 class BarcodeScannerScreen extends StatefulWidget {
