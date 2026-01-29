@@ -81,14 +81,14 @@ class _StockListPageState extends State<StockListPage> {
           /// LIST VIEW
           Expanded(
             child:
-            StreamBuilder<QuerySnapshot>(
-              stream: db.collection('stock_transactions').orderBy('createdat').snapshots(),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Provider.of<Datafeed>(context, listen: false).itemsStream(collectionName: 'stock_transactions'),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(
                     child: Text(
                       "No stock items yet",
@@ -97,13 +97,9 @@ class _StockListPageState extends State<StockListPage> {
                   );
                 }
 
-                final allDocs = snapshot.data!.docs;
-
-                // Filter documents based on search query - search all fields
+                final allDocs = snapshot.data!;
                 final filteredDocs = allDocs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-
-                  // Search through all fields in the document
+                  final data = doc as Map<String, dynamic>;
                   return data.values.any((value) {
                     if (value == null) return false;
                     return value.toString().toLowerCase().contains(searchQuery);
@@ -126,16 +122,14 @@ class _StockListPageState extends State<StockListPage> {
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final doc = filteredDocs[index];
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = doc as Map<String, dynamic>;
                     final rawItems = data['items'];
 
                     List<Map<String, dynamic>> items = [];
 
                     if (rawItems is List) {
-                      // items stored as an array
                       items = rawItems.map((e) => Map<String, dynamic>.from(e)).toList();
                     } else if (rawItems is Map) {
-                      // items stored as a map
                       items = rawItems.entries.map((entry) {
                         return {
                           'key': entry.key,
@@ -143,7 +137,6 @@ class _StockListPageState extends State<StockListPage> {
                         };
                       }).toList();
                     }
-
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(18),
@@ -158,146 +151,141 @@ class _StockListPageState extends State<StockListPage> {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          /// ITEM NUMBER
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: const Color(0xFF415A77),
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Invoice#: ${data['invoice']}",
+                                style: const TextStyle(color: Colors.amberAccent,
+                                    fontSize: 20,
+                                  fontWeight: FontWeight.bold),
+
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-
-                          /// ITEM DETAILS
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Invoice#: ${data['invoice']}",
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Loop through items
-                                ...items.map((item) {
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "${item['item']}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-
-                                        ),
-                                      ),
-                                      Text(
-                                        "Qty: ${item['quantity']}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-
-                                        ),
-                                      ),
-
-                                      Text(
-                                        "Mode: ${item['stockingmode']}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        "Purchase price: ${item['price']}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-
-                                        ),
-                                      ),
-                                      Text(
-                                        "Total: ${item['total']}",
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-
-                                      const SizedBox(height: 6),
-                                    ],
-                                  );
-                                }).toList(),
-                                Text(
-                                  "Date: ${data['createdat'].toDate().toString().substring(0, 10)}",
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF415A77),
+                                child: Text(
+                                  '${index + 1}',
                                   style: const TextStyle(
                                     color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ],
-                            ),
-
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 8),
 
-                          /// EDIT BUTTON
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.amber),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => NewStock(
-                                    docId: doc.id,
-                                    data: data,
-
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-
-                          /// DELETE BUTTON
-                          IconButton(
-                            icon: const Icon(Icons.delete,
-                                color: Colors.redAccent),
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text("Delete Item"),
-                                  content: const Text(
-                                    "Are you sure you want to delete this item?",
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text("Cancel"),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: const Text("Delete"),
+                          ...items.map((item) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.label, color: Colors.amber, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${item['item']}",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              );
 
-                              if (confirm == true) {
-                                await db.collection('stock_transactions').doc(doc.id).delete();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Item deleted successfully"),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
+                                Text("Qty: ${item['quantity']}", style: const TextStyle(color: Colors.white)),
+                                Text("Mode: ${item['stockingmode']}", style: const TextStyle(color: Colors.white)),
+                                Text("Purchase price: ${item['price']}", style: const TextStyle(color: Colors.white)),
+                                Text("Total: ${item['total']}", style: const TextStyle(color: Colors.white)),
+                                const SizedBox(height: 6),
+                                const Divider(color: Colors.white24, height: 20),
+
+                              ],
+                            );
+                          }).toList(),
+
+                          Text(
+                            "Date: ${data['createdat'].toDate().toString().substring(0, 10)}",
+                            style: const TextStyle(color: Colors.white),
                           ),
+                          Text(
+                            "Staff: ${data['createdby'].toString()}",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+
+                          const Divider(color: Colors.white24, height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+
+                              Text(
+                                "Total Amount: GHC ${data['netval'].toStringAsFixed(2) ?? 0}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.amber),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => NewStock(
+                                            docId: doc['docid'],
+                                            data: data,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (_) => AlertDialog(
+                                          title: Text("Delete Stock Invoice #${data['invoice']}"),
+                                          content: const Text("Are you sure you want to delete this stock invoice?"),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text("Cancel"),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text("Delete"),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await db.collection('stock_transactions').doc(doc['docid']).delete();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Stock invoice deleted successfully"),backgroundColor: Colors.green,),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+
                         ],
                       ),
                     );
+
                   },
                 );
 

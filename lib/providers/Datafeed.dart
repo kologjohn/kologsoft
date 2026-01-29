@@ -6,7 +6,6 @@ import 'package:kologsoft/models/paymentdurationmodel.dart';
 import 'package:kologsoft/models/productcategorymodel.dart';
 import 'package:kologsoft/models/staffmodel.dart';
 import 'package:kologsoft/providers/routes.dart';
-import 'package:kologsoft/screens/stocking_mode.dart';
 import 'package:kologsoft/services/item_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/branch.dart';
@@ -85,6 +84,13 @@ class Datafeed extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error fetching branches: $e");
     }
+  }
+
+  Stream<List<Map<String, dynamic>>> itemsStream({required String? collectionName}) {
+    Query<Map<String, dynamic>> query = db.collection(collectionName!).where("companyid", isEqualTo: companyid);
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    });
   }
 
   fetchSuppliers() async {

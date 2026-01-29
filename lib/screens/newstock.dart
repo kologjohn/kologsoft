@@ -4,11 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pdf/pdf.dart';
 import 'package:provider/provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'itemreg.dart';
 
 class NewStock extends StatefulWidget {
   final String? docId;
@@ -66,6 +66,7 @@ class _NewStockState extends State<NewStock> {
         _selectedpaymentaccount = paymentDuration;
       }
     }
+
     if (widget.docId != null && widget.docId!.isNotEmpty) {
       _showStockItems = true;
       _pendingHeader = widget.data;
@@ -77,17 +78,14 @@ class _NewStockState extends State<NewStock> {
       _showStockItems = false;
       _pendingHeader ={};
       widget.docId == null;
-
-      // Clear all controllers
       _invoicenumberController.clear();
       _waybillController.clear();
       _contactController.clear();
       _dateController.clear();
-
-      // Reset dropdowns
       _selectedPurchaseType = null;
       _selectedpaymentaccount = null;
       _selectedDate = null;
+
     });
   }
 
@@ -105,8 +103,7 @@ class _NewStockState extends State<NewStock> {
     IconData? prefix,
     String? hint,
     Widget? suffix,
-  }) {
-    return InputDecoration(
+  }) {return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white70),
       hintText: hint,
@@ -124,8 +121,7 @@ class _NewStockState extends State<NewStock> {
       ),
       fillColor: const Color(0xFF22304A),
       filled: true,
-    );
-  }
+    );}
 
   Widget _twoCol(Widget a, Widget b) {
     return Wrap(
@@ -212,19 +208,16 @@ class _NewStockState extends State<NewStock> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Invoice & Waybill in two columns
                             _twoCol(
                               TextFormField(
                                 controller: _invoicenumberController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(label: 'Invoice Number', prefix: Icons.receipt),
-                                //validator: (v) => v == null || v.trim().isEmpty ? 'Enter invoice number' : null,
                               ),
                               TextFormField(
                                 controller: _waybillController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: _inputDecoration(label: 'Waybill Number', prefix: Icons.local_shipping),
-                               // validator: (v) => v == null || v.trim().isEmpty ? 'Enter waybill number' : null,
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -248,7 +241,6 @@ class _NewStockState extends State<NewStock> {
                             ),
                             const SizedBox(height: 14),
 
-                            // Purchase mode & Payment account (conditional)
                             _twoCol(
                               DropdownButtonFormField<String>(
                                 value: _selectedPurchaseType,
@@ -283,7 +275,6 @@ class _NewStockState extends State<NewStock> {
                             ),
                             const SizedBox(height: 14),
 
-                            // Branch & Date
                             _twoCol(
                               DropdownButtonFormField<String>(
                                 value: value.selectedBranch?.id,
@@ -381,18 +372,12 @@ class _NewStockState extends State<NewStock> {
                                           'docid': docid,
                                           'createdat': DateTime.now(),
                                           'createdby': value.staff,
-                                          'editedby': "",
-                                          'editedat': "",
-                                          'deletedby': "",
-                                          'deletedat': "",
                                           'companyid': value.companyid,
                                           'company': value.company,
                                         };
 
                                         try {
-                                          if (widget.docId != null) {
-                                            final id = widget.docId!;
-                                          } else {
+                                          if (widget.docId == null) {
                                             setState(() {
                                               _pendingHeader = headerData;
                                               _showStockItems = true;
@@ -653,7 +638,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
     }
   }
 
-
   ({double gross, double discount, double tax, double net}) _calculateTotals() {
     double baseTotal = 0.0;
     double discountTotal = 0.0;
@@ -680,7 +664,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
     );
   }
 
-
   bool _saved = false;
   Future<void> _saveRecords() async {
     if (_items.isEmpty) {
@@ -700,17 +683,23 @@ class _StockItemsFormState extends State<StockItemsForm> {
       'discount': totals.discount,
       'tax': totals.tax,
       'netval': totals.net,
-    };
 
+    };
+    if (widget.headerData.containsKey('items'))
+    {
+      docData['editedat'] = FieldValue.serverTimestamp();
+      docData['editedby'] = widget.headerData['createdby'] ?? 'unknown';
+    }
     try {
+
       await FirebaseFirestore.instance
           .collection('stock_transactions')
           .doc(widget.transactionId)
-          .set(docData);
+          .set(docData,SetOptions(merge: true));
 
       if (!mounted) return;
   setState(() {
-  _saved = true; // disable add & save, show print
+  _saved = true;
   });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -723,7 +712,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
         SnackBar(content: Text('Save failed: $e')),
       );
     }
-    //Navigator.of(context).pop();
+
   }
 
   Future<void> _printRecords() async {
@@ -1047,10 +1036,8 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                             ),
 
                                             if (_showSuggestions)
-                                              StreamBuilder<QuerySnapshot>(
-                                                stream: FirebaseFirestore.instance
-                                                    .collection('itemsreg')
-                                                    .snapshots(),
+                                              StreamBuilder<List<Map<String, dynamic>>>(
+                                                stream:Provider.of<Datafeed>(context, listen: false).itemsStream(collectionName: 'itemsreg'),
                                                 builder: (context, snapshot) {
                                                   if (!snapshot.hasData) {
                                                     return Container(
@@ -1065,9 +1052,9 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                     );
                                                   }
 
-                                                  final allDocs = snapshot.data!.docs;
+                                                  final allDocs = snapshot.data!;
                                                   final filteredDocs = allDocs.where((doc) {
-                                                    final data = doc.data() as Map<String, dynamic>;
+                                                    final data = doc as Map<String, dynamic>;
                                                     final name = (data['name'] ?? '').toString().toLowerCase();
                                                     final barcode = (data['barcode'] ?? '').toString().toLowerCase();
                                                     final query = _searchQuery.toLowerCase();
@@ -1092,8 +1079,8 @@ class _StockItemsFormState extends State<StockItemsForm> {
                                                       itemCount: filteredDocs.length,
                                                       itemBuilder: (context, index) {
                                                         final doc = filteredDocs[index];
-                                                        final item = doc.data() as Map<String, dynamic>;
-                                                        item['id'] = doc.id;
+                                                        final item = doc as Map<String, dynamic>;
+                                                        item['id'] = doc['id'];
 
                                                         return ListTile(
                                                           dense: true,
@@ -1611,7 +1598,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
                             )
                                 :
                             Text(
-                              widget.headerData.containsKey('items') ? "EDIT RECORDS" : "SAVE RECORDS",
+                              widget.headerData.containsKey('items') ? "UPDATE RECORDS" : "SAVE RECORDS",
                               style: const TextStyle(color: Colors.white),
                             )
                         ),
@@ -1645,7 +1632,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
       ),
     );
   }
-
 
   TableRow _tableRow(List<String> cells, {bool isHeader = false}) {
     return TableRow(
@@ -1688,6 +1674,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
   }
 
 }
+
 class MobileSalesPreview extends StatelessWidget {
   final List<Map<String, dynamic>> items;
   final VoidCallback? onPrint;
@@ -1712,65 +1699,62 @@ class MobileSalesPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       color: const Color(0xFF182232),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Sales Preview",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Sales Preview",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
+            const Divider(color: Colors.white24, height: 20),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+              itemBuilder: (context, index) {
+                final item = items[index];
+        
+                return _cartItem(
+                  name: item['item'] ?? '',
+                  price: (item['price'] ?? 0.0).toDouble(),
+                  qty: double.tryParse(item['quantity'].toString()) ?? 0,
+                  mode: item['stockingmode'] ?? "",
+                  total: (item['total'] ?? 0.0).toDouble(),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            const Divider(color: Colors.white24),
+            _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}",
+                bold: true),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _actionBtn("SAVE RECORDS", Colors.teal, onPrint),
+                _actionBtn("NEW TRANSACTION", Colors.lightBlue, onNewTransaction),
+              ],
+            ),
+          ],
+        ),
 
-          const Divider(color: Colors.white24, height: 20),
-
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const Divider(color: Colors.white10),
-            itemBuilder: (context, index) {
-              final item = items[index];
-
-              return _cartItem(
-                name: item['item'] ?? '',
-                price: (item['price'] ?? 0.0).toDouble(),
-                qty: int.tryParse(item['quantity'].toString()) ?? 0,
-                total: (item['total'] ?? 0.0).toDouble(),
-              );
-            },
-          ),
-
-          const SizedBox(height: 24),
-          const Divider(color: Colors.white24),
-
-          _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}",
-              bold: true),
-
-          const SizedBox(height: 18),
-
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _actionBtn("POS PRINT", Colors.teal, onPrint),
-              _actionBtn("NEW TRANSACTION", Colors.lightBlue, onNewTransaction),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
   Widget _cartItem({
     required String name,
     required double price,
-    required int qty,
+    required double qty,
+    required String mode,
     required double total,
   }) {
     return Row(
@@ -1787,6 +1771,7 @@ class MobileSalesPreview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _line(name, "GHC ${price.toStringAsFixed(2)}"),
+              _line("Mode",  mode),
               _line("Qty", "$qty"),
               _line("Total", "GHC ${total.toStringAsFixed(2)}"),
             ],
@@ -1838,103 +1823,5 @@ class MobileSalesPreview extends StatelessWidget {
       onPressed: onTap,
       child: Text(text, style: const TextStyle(fontSize: 12)),
     );
-  }
-}
-
-class BarcodeScannerScreen extends StatefulWidget {
-  const BarcodeScannerScreen({Key? key}) : super(key: key);
-
-  @override
-  State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
-}
-
-class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  MobileScannerController cameraController = MobileScannerController();
-  bool _isProcessing = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Scan Barcode/QR Code'),
-        backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: cameraController,
-              builder: (context, value, child) {
-                final isFlashOn = value.torchState == TorchState.on;
-                return Icon(
-                  isFlashOn ? Icons.flash_on : Icons.flash_off,
-                  color: Colors.white,
-                );
-              },
-            ),
-            onPressed: () => cameraController.toggleTorch(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cameraswitch, color: Colors.white),
-            onPressed: () => cameraController.switchCamera(),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          MobileScanner(
-            controller: cameraController,
-            onDetect: (capture) {
-              if (_isProcessing) return;
-
-              final barcodes = capture.barcodes;
-              if (barcodes.isEmpty) return;
-
-              final barcode = barcodes.first;
-              final String? code = barcode.rawValue;
-
-              if (code != null && code.isNotEmpty) {
-                setState(() => _isProcessing = true);
-                Navigator.pop(context, code);
-              }
-            },
-          ),
-          // Overlay with scanning guide
-          Center(
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green, width: 3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          // Instructions
-          Positioned(
-            bottom: 100,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: const Text(
-                'Position the barcode or QR code within the frame',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  backgroundColor: Colors.black54,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    cameraController.dispose();
-    super.dispose();
   }
 }
