@@ -1,28 +1,22 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:async';
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' hide Uint8List;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mobile_scanner/src/objects/barcode.dart';
 import 'package:provider/provider.dart';
-import 'package:barcode_widget/barcode_widget.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:mobile_scanner/mobile_scanner.dart' hide Barcode;
-
-import '../providers/Datafeed.dart';
 import '../models/itemregmodel.dart';
+import '../providers/Datafeed.dart';
+
 
 class ItemRegPage extends StatefulWidget {
   final String? docId;
-  final Map<String, dynamic>? data;
+  final ItemModel? item;
 
-  const ItemRegPage({Key? key, this.docId, this.data}) : super(key: key);
+  const ItemRegPage({Key? key, this.docId, this.item}) : super(key: key);
 
   @override
   State<ItemRegPage> createState() => _ItemRegPageState();
@@ -163,9 +157,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
         final retailPrice = double.tryParse(_retail_price.text) ?? 0;
         double costPrice = double.tryParse(_costController.text) ?? 0;
         if (boxQty == 1) {
-          // if (supplierPrice != boxPrice || supplierPrice != retailPrice) {
-          //   return 'Prices should be equal because Box Qty is 1,';
-          // }
           if(costPrice > supplierPrice){
             return 'Cost price  GHS$costPrice \n is more than Supplier Price GHS$supplierPrice';
           }
@@ -326,26 +317,27 @@ class _ItemRegPageState extends State<ItemRegPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
       context.read<Datafeed>().fetchproductcategory();
     });
 
-    if (widget.data != null) {
-      final d = widget.data!;
+    if (widget.item  != null) {
+      final d = widget.item !;
       // Basic fields
-      _existingLogoUrl = d['imageurl'];
-      _nameController.text = d['name'] ?? '';
-      _barcodeController.text = d['barcode'] ?? '';
-      _costController.text = d['costprice'] ?? '';
-      _productCategory = d['pcategory'];
-      _productType = d['producttype'];
-      _costController.text = d['cp'];
-      _supplierMinQtyController.text = d['sminqty'];
+      _existingLogoUrl = d.imageurl;
+      _nameController.text = d.name ?? '';
+      _barcodeController.text = d.barcode ?? '';
+      _costController.text = d.costprice ?? '';
+      _productCategory = d.productcategory;
+      _productType = d.producttype;
+      _costController.text = d.costprice;
+      _supplierMinQtyController.text = d.sminqty;
 
       // Enable box pricing switch
-      _enableBoxPricing = d['modemore'] == true;
+      _enableBoxPricing = d.modemore == true;
 
       // ----- LOAD MODES -----
-      final modes = d['modes'] as Map<String, dynamic>? ?? {};
+      final modes = d.modes as Map<String, dynamic>? ?? {};
 
       // Single
       final single = modes['single'] ?? {};
@@ -799,11 +791,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   if (widget.docId != null) {
                                     try {
                                       await _db
-                                          .collection('itemsreg')
-                                          .doc(widget.docId)
-                                          .update({
-                                            'modes.half': FieldValue.delete(),
-                                          });
+                                          .collection('itemsreg') .doc(widget.docId)
+                                          .update({ 'modes.half': FieldValue.delete(),           });
                                       if (mounted) {
                                         ScaffoldMessenger.of(
                                           context,
@@ -1284,29 +1273,20 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             foregroundColor: Colors.white70,
                             backgroundColor: Colors.blue,
                           ),
-                          onPressed: _loading
-                              ? null
-                              : () async {
+                          onPressed: _loading ? null
+                           : () async {
                                   if (!_formKey.currentState!.validate())
-                                    return;
+                                  return;
                                   setState(() => _loading = true);
                                   try {
                                     final datafeed = context.read<Datafeed>();
                                     final companyId = datafeed.companyid;
-                                    final itemName = _nameController.text
-                                        .trim();
-                                    final barcode = _barcodeController.text
-                                        .trim();
+                                    final itemName = _nameController.text.trim();
+                                    final barcode = _barcodeController.text.trim();
 
                                     if (widget.docId == null) {
-                                      final nameQuery = await _db
-                                          .collection('itemsreg')
-                                          .where(
-                                            'companyid',
-                                            isEqualTo: companyId,
-                                          )
-                                          .where('name', isEqualTo: itemName)
-                                          .limit(1)
+                                      final nameQuery = await _db.collection('itemsreg')
+                                          .where('companyid',isEqualTo: companyId, ).where('name', isEqualTo: itemName).limit(1)
                                           .get();
 
                                       if (nameQuery.docs.isNotEmpty) {
@@ -1380,7 +1360,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         .doc(docId);
                                     final imageUrl = await uploadLogo(docId);
 
-                                    // final supplierText = _supplierMinQtyController.text.trim();
+
 
                                     Map<String, dynamic> modesMap = {
                                       "single": {
@@ -1391,10 +1371,8 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         'qty': '1',
                                       },
                                     };
-                                    double boxqty =
-                                        _boxQtyController.text.isNotEmpty
-                                        ? double.parse(_boxQtyController.text)
-                                        : 0;
+                                    double boxqty = _boxQtyController.text.isNotEmpty
+                                        ? double.parse(_boxQtyController.text): 0;
                                     if (boxqty >= 2) {
                                       modesMap["carton"] = {
                                         'name': 'carton',
@@ -1478,34 +1456,60 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
                                     }
 
-                                    final data = {
-                                      'id': docId,
-                                      'companyid': datafeed.companyid,
-                                      'company': datafeed.company,
-                                      'name': itemName,
-                                      'barcode': _barcodeController.text.trim(),
-                                      'cp': _costController.text.trim(),
-                                      'pcategory': _productCategory,
-                                      'producttype': _productType,
-                                      'imageurl': imageUrl,
-                                      'updatedat': null,
-                                      'updatedby': null,
-                                      'deletedby': null,
-                                      'deletedat': null,
-                                      'modemore': _enableBoxPricing,
-                                      'modes': modesMap,
-                                      'wminqty':
-                                          _wholesaleMinQtyController.text,
-                                      'sminqty': _supplierMinQtyController.text,
-                                      'staff': datafeed.staff,
-                                    };
+                                    // final data = {
+                                    //   'id': docId,
+                                    //   'companyid': datafeed.companyid,
+                                    //   'company': datafeed.company,
+                                    //   'name': itemName,
+                                    //   'barcode': _barcodeController.text.trim(),
+                                    //   'cp': _costController.text.trim(),
+                                    //   'pcategory': _productCategory,
+                                    //   'producttype': _productType,
+                                    //   'imageurl': imageUrl,
+                                    //   'updatedat': null,
+                                    //   'updatedby': null,
+                                    //   'deletedby': null,
+                                    //   'deletedat': null,
+                                    //   'modemore': _enableBoxPricing,
+                                    //   'modes': modesMap,
+                                    //   'wminqty': _wholesaleMinQtyController.text,
+                                    //   'sminqty': _supplierMinQtyController.text,
+                                    //   'staff': datafeed.staff,
+                                    // };
+                                    final item = ItemModel(
+                                        id: docId,
+                                        no: docId,
+                                        name: itemName,
+                                        barcode: _barcodeController.text.trim(),
+                                        costprice: _costController.text.trim(),
+                                        retailmarkup: '',
+                                        wholesalemarkup: '',
+                                        retailprice: '',
+                                        wholesaleprice: '',
+                                        producttype: _productType!,
+                                        pricingmode: '',
+                                        productcategory: _productCategory!,
+                                        warehouse: '',
+                                        openingstock: '',
+                                        company: datafeed.company,
+                                        companyid: datafeed.companyid,
+                                        imageurl: imageUrl!,
+                                        modes: modesMap,
+                                      createdat: DateTime.now(),
+                                      updatedby: '',
+                                      updatedat: null,
+                                      wminqty: _wholesaleMinQtyController.text,
+                                      sminqty: _supplierMinQtyController.text,
+                                      staff: datafeed.staff,
+                                      modemore: _enableBoxPricing,
+                                      deletedat: null,
+                                      deletedby: '',
+                                    );
+                                    final data = item.toMap();
                                     if (widget.docId == null) {
-                                      data['createdat'] =
-                                          FieldValue.serverTimestamp();
+                                      data['createdat'] =  FieldValue.serverTimestamp();
                                     }
-                                    await docRef.set(
-                                      data,
-                                      SetOptions(merge: true),
+                                    await docRef.set(data, SetOptions(merge: true),
                                     );
                                     _clearAllFields();
 

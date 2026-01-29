@@ -37,13 +37,28 @@ class ItemModel extends HiveObject {
   @HiveField(15)
   final String companyid;
   @HiveField(16)
-  final DateTime createdAt;
+  final DateTime createdat;
   @HiveField(17)
-  final DateTime updatedAt;
+  final DateTime? updatedat;
   @HiveField(18)
-  final String updatedBy;
+  final String? updatedby;
   @HiveField(19)
   final String imageurl;
+  @HiveField(20)
+  final Map<String, dynamic> modes;
+  @HiveField(21)
+  final String wminqty;
+  @HiveField(22)
+  final String sminqty;
+  @HiveField(23)
+  final String staff;
+  @HiveField(24)
+  final bool modemore;
+  @HiveField(25)
+  final DateTime? deletedat;
+  @HiveField(26)
+  final String? deletedby;
+
 
   ItemModel({
     required this.id,
@@ -62,10 +77,18 @@ class ItemModel extends HiveObject {
     required this.openingstock,
     required this.company,
     required this.companyid,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.updatedBy,
+    required this.createdat,
+    required this.updatedby,
     required this.imageurl,
+    required this.modes,
+    required this.updatedat,
+    required this.wminqty,
+    required this.sminqty,
+    required this.staff,
+    required this.modemore,
+    required this.deletedat,
+    required this.deletedby,
+
   });
 
   Map<String, dynamic> toMap() {
@@ -81,23 +104,25 @@ class ItemModel extends HiveObject {
       'wholesaleprice': wholesaleprice,
       'producttype': producttype,
       'pricingmode': pricingmode,
-      'productcategory': productcategory,
+      'pcategory': productcategory,
       'warehouse': warehouse,
       'openingstock': openingstock,
       'company': company,
       'companyid': companyid,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-      'updatedBy': updatedBy,
+      'createdat': createdat,
+      'updatedat': updatedat,
+      'updatedby': updatedby,
       'image': imageurl,
+      'modes': modes,
     };
   }
 
   factory ItemModel.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
+
     return ItemModel(
-      id: d['id'] ?? '',
-      no: d['no'] ?? '',
+      id: doc.id,
+      no: doc.id,
       name: d['name'] ?? '',
       barcode: d['barcode'] ?? '',
       costprice: d['costprice'] ?? '0',
@@ -107,15 +132,28 @@ class ItemModel extends HiveObject {
       wholesaleprice: d['wholesaleprice'] ?? '0',
       producttype: d['producttype'] ?? 'product',
       pricingmode: d['pricingmode'] ?? '',
-      productcategory: d['productcategory'] ?? '',
+      productcategory: d['pcategory'] ?? '',
       warehouse: d['warehouse'] ?? '',
       openingstock: d['openingstock'] ?? '0',
       company: d['company'] ?? '',
       companyid: d['companyid'] ?? '',
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
-      updatedAt: (d['updatedAt'] as Timestamp).toDate(),
-      updatedBy: d['updatedBy'] ?? '',
+      createdat: d['createdat'] != null
+          ? (d['createdat'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedat: d['updatedat'] != null
+          ? (d['updatedat'] as Timestamp).toDate()
+          : null,
+      updatedby: d['updatedby'] ?? '',
       imageurl: d['image'] ?? '',
+      modes: d['modes'] is Map ? Map<String, dynamic>.from(d['modes']) : {},
+      wminqty: d['wminqty'] ?? '',
+      sminqty: d['sminqty'] ?? '',
+      staff: d['staff'] ?? '',
+      modemore: d['modemore'] == true,
+      deletedat: d['deletedat'] != null
+          ? (d['deletedat'] as Timestamp).toDate()
+          : null,
+      deletedby: d['deletedby'] ?? '',
     );
   }
 
@@ -132,23 +170,34 @@ class ItemModel extends HiveObject {
       wholesaleprice: d['wholesaleprice'] ?? '0',
       producttype: d['producttype'] ?? 'product',
       pricingmode: d['pricingmode'] ?? '',
-      productcategory: d['productcategory'] ?? '',
+      productcategory: d['pcategory'] ?? '',
       warehouse: d['warehouse'] ?? '',
       openingstock: d['openingstock'] ?? '0',
       company: d['company'] ?? '',
       companyid: d['companyid'] ?? '',
-      createdAt: d['createdAt'] is Timestamp
-          ? (d['createdAt'] as Timestamp).toDate()
-          : d['createdAt'] is DateTime
-          ? d['createdAt']
+      createdat: d['createdat'] is Timestamp
+          ? (d['createdat'] as Timestamp).toDate()
+          : d['createdat'] is DateTime
+          ? d['createdat']
           : DateTime.now(),
-      updatedAt: d['updatedAt'] is Timestamp
-          ? (d['updatedAt'] as Timestamp).toDate()
-          : d['updatedAt'] is DateTime
-          ? d['updatedAt']
-          : DateTime.now(),
-      updatedBy: d['updatedBy'] ?? '',
+      updatedat: d['updatedat'] is Timestamp
+          ? (d['updatedat'] as Timestamp).toDate()
+          : d['updatedat'] is DateTime
+          ? d['updatedat']
+          : null,
+      updatedby: d['updatedby'] ?? '',
       imageurl: d['image'] ?? '',
+      modes: d['modes'] is Map ? Map<String, dynamic>.from(d['modes']) : {},
+      wminqty: d['wminqty'] ?? '',
+      sminqty: d['sminqty'] ?? '',
+      staff: d['staff'] ?? '',
+      modemore: d['modemore'] == true,
+      deletedat: d['deletedat'] is Timestamp
+          ? (d['deletedat'] as Timestamp).toDate()
+          : d['deletedat'] is DateTime
+          ? d['deletedat']
+          : null,
+      deletedby: d['deletedby'] ?? '',
     );
   }
 }
