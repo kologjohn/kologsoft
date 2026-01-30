@@ -240,6 +240,44 @@ class _ItemListPageState extends State<ItemListPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (item.imageurl.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Center(
+                              child: ClipOval(
+                                child: SizedBox(
+                                  height: 140,
+                                  width: 140,
+                                  child: Image.network(
+                                    item.imageurl,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return SizedBox(
+                                        height: 140,
+                                        width: 140,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: progress.expectedTotalBytes != null
+                                                ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      height: 140,
+                                      width: 140,
+                                      color: const Color(0xFF22304A),
+                                      child: const Center(
+                                        child: Icon(Icons.broken_image, color: Colors.white54, size: 40),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         _section("Basic Information"),
                         _line("Item No", item.no,'1'),
                         _line("Barcode", item.barcode,'2'),
@@ -250,7 +288,7 @@ class _ItemListPageState extends State<ItemListPage> {
 
                         const SizedBox(height: 12),
                         _section("Pricing"),
-                        _line("Cost Price", item.costprice,'1'),
+                        _line("Cost Price", item.cp,'1'),
                         _line("Retail Markup", item.retailmarkup,'2'),
                         _line("Wholesale Markup", item.wholesalemarkup,'3'),
                         _line("Retail Price", item.retailprice,'4'),
@@ -290,7 +328,7 @@ class _ItemListPageState extends State<ItemListPage> {
                   ),
                 ),
 
-                // ================= FOOTER =================
+
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: const BoxDecoration(

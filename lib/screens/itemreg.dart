@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:async';
@@ -5,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' hide Uint8List;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as hiveBox;
 import 'package:image_picker/image_picker.dart';
 import 'package:kologsoft/providers/routes.dart';
 import 'package:provider/provider.dart';
@@ -328,10 +330,10 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _existingLogoUrl = d.imageurl;
       _nameController.text = d.name ?? '';
       _barcodeController.text = d.barcode ?? '';
-      _costController.text = d.costprice ?? '';
+      _costController.text = d.cp ?? '';
       _productCategory = d.productcategory;
       _productType = d.producttype;
-      _costController.text = d.costprice;
+      _costController.text = d.cp;
       _supplierMinQtyController.text = d.sminqty;
 
       // Enable box pricing switch
@@ -1351,7 +1353,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
 
 
-                                  Map<String, dynamic> modesMap = Map<String, dynamic>.from(widget.item?.modes ?? {});
+                                 Map<String, dynamic> modesMap = Map<String, dynamic>.from(widget.item?.modes ?? {});
                                     modesMap["single"] = {
                                       'name': 'Single',
                                       'sp': _retail_price.text.trim(),
@@ -1431,29 +1433,29 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         no: docId,
                                         name: itemName,
                                         barcode: _barcodeController.text.trim(),
-                                        costprice: _costController.text.trim(),
+                                        cp: _costController.text.trim(),
                                         retailmarkup: '',
                                         wholesalemarkup: '',
                                         retailprice: '',
                                         wholesaleprice: '',
-                                        producttype: _productType!,
+                                        producttype: _productType ?? '',
                                         pricingmode: '',
-                                        productcategory: _productCategory!,
+                                        productcategory: _productCategory?? '',
                                         warehouse: '',
                                         openingstock: '',
                                         company: datafeed.company,
                                         companyid: datafeed.companyid,
-                                        imageurl: imageUrl!,
+                                        imageurl: imageUrl?? '',
                                         modes: modesMap,
                                       createdat: DateTime.now(),
-                                      updatedby: '',
+                                      updatedby: null,
                                       updatedat: null,
                                       wminqty: _wholesaleMinQtyController.text,
                                       sminqty: _supplierMinQtyController.text,
                                       staff: datafeed.staff,
                                       modemore: _enableBoxPricing,
                                       deletedat: null,
-                                      deletedby: '',
+                                      deletedby: null,
                                     );
                                     final data = item.toMap();
                                     if (widget.docId == null) {
@@ -1461,7 +1463,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     }
                                     await docRef.set(data, SetOptions(merge: true),
                                     );
-                                    print(modesMap.toString());
+                                   // print(modesMap.toString());
                                     _clearAllFields();
 
                                     if (mounted) {
@@ -1481,6 +1483,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         Navigator.pushNamed(context, Routes.itemlist);
                                       }
                                     }
+
                                   } catch (e) {
                                     if (mounted) {
                                       ScaffoldMessenger.of(
