@@ -105,8 +105,12 @@ class _ItemRegPageState extends State<ItemRegPage> {
       case 'costPrice':
         final costPrice = double.tryParse(value) ?? 0;
         final retailPrice = double.tryParse(_retail_price.text) ?? 0;
+        final isNumber = double.tryParse(value) != null;
 
-        if (retailPrice > 0 && costPrice > retailPrice) {
+        if (isNumber) {
+          return 'Cost Price must not be a number';
+        }
+          if (retailPrice > 0 && costPrice > retailPrice) {
           return 'Unit Cost Price GHS$costPrice must be less than Retail Price GHS$retailPrice';
         }
         return null;
@@ -1712,9 +1716,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
     return TextFormField(
       enabled: enabled,
       controller: controller,
-      keyboardType: isNumber
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
+      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
       style: const TextStyle(color: Colors.white70),
       validator: validator ?? (v) => v == null || v.isEmpty ? 'Required' : null,
       decoration: _inputDecoration(label, icon),
