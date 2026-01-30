@@ -121,26 +121,25 @@ class ItemModel extends HiveObject {
     final d = doc.data() as Map<String, dynamic>;
 
     return ItemModel(
-      id: doc.id,
-      no: doc.id,
-      name: d['name'],
-      barcode: d['barcode'],
-      cp: d['cp'],
-      retailmarkup: d['retailmarkup'],
-      wholesalemarkup: d['wholesalemarkup'],
-      retailprice: d['retailprice'],
-      wholesaleprice: d['wholesaleprice'],
-      producttype: d['producttype'],
-      pricingmode: d['pricingmode'],
-      productcategory: d['pcategory'],
-      warehouse: d['warehouse'],
-      openingstock: d['openingstock'],
-      company: d['company'],
-      companyid: d['companyid'],
+      id: doc.id  ?? '',
+      no: doc.id  ?? '',
+      name: d['name'] ?? '',
+      barcode: d['barcode'] ?? '',
+      cp: d['cp'] ?? '0',
+      retailmarkup: d['retailmarkup'] ?? '0',
+      wholesalemarkup: d['wholesalemarkup'] ?? '0',
+      retailprice: d['retailprice'] ?? '0',
+      wholesaleprice: d['wholesaleprice'] ?? '0',
+      producttype: d['producttype'] ?? 'product',
+      pricingmode: d['pricingmode'] ?? '',
+      productcategory: d['productcategory'] ?? '',
+      warehouse: d['warehouse'] ?? '',
+      openingstock: d['openingstock'] ?? '0',
+      company: d['company'] ?? '',
+      companyid: d['companyid'] ?? '',
+      imageurl: d['image'] ?? '',
       createdat: d['createdat'] != null ? (d['createdat'] as Timestamp).toDate(): DateTime.now(),
-      updatedat: d['updatedat'] != null ? (d['updatedat'] as Timestamp).toDate(): null,
       updatedby: d['updatedby'] ,
-      imageurl: d['image'],
       modes: d['modes'] is Map ? Map<String, dynamic>.from(d['modes']) : {},
       wminqty: d['wminqty'],
       sminqty: d['sminqty'],
@@ -153,45 +152,39 @@ class ItemModel extends HiveObject {
 
   factory ItemModel.fromMap(Map<String, dynamic> d) {
     return ItemModel(
-      id: d['id'],
-      no: d['no'],
-      name: d['name'],
-      barcode: d['barcode'],
-      cp: d['cp'],
-      retailmarkup: d['retailmarkup'],
-      wholesalemarkup: d['wholesalemarkup'],
-      retailprice: d['retailprice'],
-      wholesaleprice: d['wholesaleprice'],
-      producttype: d['producttype'],
-      pricingmode: d['pricingmode'],
-      productcategory: d['pcategory'],
-      warehouse: d['warehouse'],
-      openingstock: d['openingstock'],
-      company: d['company'],
-      companyid: d['companyid'],
-      createdat: d['createdat'] is Timestamp
-          ? (d['createdat'] as Timestamp).toDate()
-          : d['createdat'] is DateTime
-          ? d['createdat']
-          : DateTime.now(),
-      updatedat: d['updatedat'] is Timestamp
-          ? (d['updatedat'] as Timestamp).toDate()
-          : d['updatedat'] is DateTime
-          ? d['updatedat']
-          : null,
-      updatedby: d['updatedby'],
-      imageurl: d['image'],
+      id: d['id'] ?? '',
+      no: d['no'] ?? '',
+      name: d['name'] ?? '',
+      barcode: d['barcode'] ?? '',
+      cp: d['cp'] ?? '0',
+      retailmarkup: d['retailmarkup'] ?? '0',
+      wholesalemarkup: d['wholesalemarkup'] ?? '0',
+      retailprice: d['retailprice'] ?? '0',
+      wholesaleprice: d['wholesaleprice'] ?? '0',
+      producttype: d['producttype'] ?? 'product',
+      pricingmode: d['pricingmode'] ?? '',
+      productcategory: d['productcategory'] ?? '',
+      warehouse: d['warehouse'] ?? '',
+      openingstock: d['openingstock'] ?? '0',
+      company: d['company'] ?? '',
+      companyid: d['companyid'] ?? '',
+      imageurl: d['image'] ?? '',
       modes: d['modes'] is Map ? Map<String, dynamic>.from(d['modes']) : {},
-      wminqty: d['wminqty'],
-      sminqty: d['sminqty'],
-      staff: d['staff'],
+      wminqty: d['wminqty'] ?? '',
+      sminqty: d['sminqty'] ?? '',
+      staff: d['staff'] ?? '',
       modemore: d['modemore'] == true,
       deletedat: d['deletedat'] is Timestamp
           ? (d['deletedat'] as Timestamp).toDate()
           : d['deletedat'] is DateTime
           ? d['deletedat']
           : null,
-      deletedby: d['deletedby'],
+      deletedby: d['deletedby'] ?? '',
+      createdat: d['createdAt'] is Timestamp
+          ? (d['createdAt'] as Timestamp).toDate()
+          : d['createdAt'] is DateTime
+          ? d['createdAt']
+          : DateTime.now(),
     );
   }
 }

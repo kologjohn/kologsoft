@@ -81,10 +81,14 @@ class _ItemListPageState extends State<ItemListPage> {
                 final items = snapshot.data!.docs
                     .map((e) => ItemModel.fromDoc(e))
                     .where((item) {
-                    return item.name.toLowerCase().contains(searchQuery) ||
-                      item.barcode.toLowerCase().contains(searchQuery) ||
-                      item.company.toLowerCase().contains(searchQuery) ||
-                      item.productcategory.toLowerCase().contains(searchQuery);
+                  final name = item.name ?? "";
+                  final barcode = item.barcode ?? "";
+                  final company = item.company ?? "";
+                  final category = item.productcategory ?? "";
+                    return name.toLowerCase().contains(searchQuery) ||
+                      barcode.toLowerCase().contains(searchQuery) ||
+                      company.toLowerCase().contains(searchQuery) ||
+                      category.toLowerCase().contains(searchQuery);
                       }).toList();
 
                 if (items.isEmpty) {
@@ -321,7 +325,7 @@ class _ItemListPageState extends State<ItemListPage> {
                         _section("Audit"),
                         _line("Created At", item.createdat.toString(),'1'),
                         _line("Updated At", item.updatedat?.toString() ?? "",'2'),
-                        _line("Updated By", item.updatedby.toString(),'3'),
+                        _line("Updated By", item.updatedby.toString() ?? "",'3'),
                         _line("Staff", item.staff,'4'),
                       ],
                     ),

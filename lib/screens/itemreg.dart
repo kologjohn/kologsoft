@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' hide Uint8List;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as hiveBox;
 import 'package:image_picker/image_picker.dart';
 import 'package:kologsoft/providers/routes.dart';
@@ -105,11 +106,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
       case 'costPrice':
         final costPrice = double.tryParse(value) ?? 0;
         final retailPrice = double.tryParse(_retail_price.text) ?? 0;
-        final isNumber = double.tryParse(value) != null;
 
-        if (isNumber) {
-          return 'Cost Price must not be a number';
-        }
           if (retailPrice > 0 && costPrice > retailPrice) {
           return 'Unit Cost Price GHS$costPrice must be less than Retail Price GHS$retailPrice';
         }
@@ -585,6 +582,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       SizedBox(
                         child: _buildField(
                           _retail_price,
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                           'Retail Price',
                           Icons.attach_money,
                           isNumber: true,
@@ -607,6 +605,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       SizedBox(
                         child: _buildField(
                           _costController,
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                           'Unit Cost Price',
                           Icons.attach_money,
                           isNumber: true,
@@ -618,41 +617,44 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       ),
 
                       SizedBox(height: 10),
-                      _buildField(
-                        _boxQtyController,
-                        'Box quantity',
-                        Icons.attach_money,
-                        isNumber: true,
-                        onChanged: (value) {
-                          final qty = double.tryParse(value) ?? 0;
-                          if (qty > 1) {
-                            setState(() {
-                              _showBoxPricingSwitch = true;
-                              _enableBoxPricing = true;
-                              // auto calculate quantities
-                              _halfboxqty_controller.text = (qty / 2).ceil().toString();
-                              _quarterqty_controller.text = (qty / 4).ceil().toString();
-                            });
-                          } else if (qty == 1) {
-                            setState(() {
-                              _showBoxPricingSwitch = true;
-                              _enableBoxPricing = true;
+                      SizedBox(
+                        child: _buildField(
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
+                          _boxQtyController,
+                          'Box quantity',
+                          Icons.attach_money,
+                          isNumber: true,
+                          onChanged: (value) {
+                            final qty = double.tryParse(value) ?? 0;
+                            if (qty > 1) {
+                              setState(() {
+                                _showBoxPricingSwitch = true;
+                                _enableBoxPricing = true;
+                                // auto calculate quantities
+                                _halfboxqty_controller.text = (qty / 2).ceil().toString();
+                                _quarterqty_controller.text = (qty / 4).ceil().toString();
+                              });
+                            } else if (qty == 1) {
+                              setState(() {
+                                _showBoxPricingSwitch = true;
+                                _enableBoxPricing = true;
 
-                              // Sync prices: retail = wholesale = supplier
-                              final retailPrice = _retail_price.text;
-                              _wholesalePriceController.text = retailPrice;
-                              _supplierPriceController.text = retailPrice;
-                            });
-                          } else {
-                            setState(() {
-                              _showBoxPricingSwitch = false;
-                              _enableBoxPricing = false;
-                              pricingStep = 0;
-                            });
-                          }
-                          _formKey.currentState!.validate();
-                        },
-                        validator: (v) => _validateField('boxQty', v),
+                                // Sync prices: retail = wholesale = supplier
+                                final retailPrice = _retail_price.text;
+                                _wholesalePriceController.text = retailPrice;
+                                _supplierPriceController.text = retailPrice;
+                              });
+                            } else {
+                              setState(() {
+                                _showBoxPricingSwitch = false;
+                                _enableBoxPricing = false;
+                                pricingStep = 0;
+                              });
+                            }
+                            _formKey.currentState!.validate();
+                          },
+                          validator: (v) => _validateField('boxQty', v),
+                        ),
                       ),
                       SizedBox(height: 10),
                       Row(
@@ -676,6 +678,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildFieldWithEnabled(
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                               _supplierPriceController,
                               'Supplier Price',
                               Icons.attach_money,
@@ -692,6 +695,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       const SizedBox(height: 10),
                       SizedBox(
                         child: _buildField(
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                           _supplierMinQtyController,
                           'Supplier Min Qty',
                           Icons.numbers,
@@ -712,6 +716,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             children: [
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   enabled: false,
                                   _halfboxqty_controller,
                                   'Half Box Qty',
@@ -728,6 +733,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   _halfboxprice_controller,
                                   'Half Box Price',
                                   Icons.attach_money,
@@ -831,6 +837,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             children: [
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   enabled: false,
                                   _quarterqty_controller,
                                   'Quarter Qty',
@@ -846,6 +853,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   _quarterprice_controller,
                                   'Quarter Price',
                                   Icons.attach_money,
@@ -972,6 +980,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                             children: [
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   _packQtyController,
                                   'Pack Qty',
                                   Icons.inventory,
@@ -1047,6 +1056,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: _buildField(
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))],
                                   _packprice_controller,
                                   'Pack Price',
                                   Icons.attach_money,
@@ -1712,6 +1722,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
     bool isNumber = false,
     Function(String)? onChanged,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       enabled: enabled,
@@ -1721,6 +1732,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
       validator: validator ?? (v) => v == null || v.isEmpty ? 'Required' : null,
       decoration: _inputDecoration(label, icon),
       onChanged: onChanged,
+      inputFormatters: inputFormatters,
     );
   }
 
@@ -1732,6 +1744,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
     bool enabled = true,
     Function(String)? onChanged,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
@@ -1742,6 +1755,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
       style: const TextStyle(color: Colors.white70),
       validator: validator ?? (v) => v == null || v.isEmpty ? 'Required' : null,
       decoration: _inputDecoration(label, icon),
+      inputFormatters: inputFormatters,
       onChanged: onChanged,
     );
   }
