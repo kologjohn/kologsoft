@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' hide Uint8List;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kologsoft/providers/routes.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart' hide Barcode;
 import '../models/itemregmodel.dart';
@@ -346,17 +347,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
       // Pack
       final pack = modes['pack'] ?? {};
       _packQtyController.text = pack['qty'] ?? '';
-      _packprice_controller.text = pack['rp'] ?? '';
+      _packprice_controller.text = pack['wp'] ?? '';
 
       // Quarter
       final quarter = modes['quarter'] ?? {};
       _quarterqty_controller.text = quarter['qty'] ?? '';
-      _quarterprice_controller.text = quarter['rp'] ?? '';
+      _quarterprice_controller.text = quarter['wp'] ?? '';
 
       // Half
       final half = modes['half'] ?? {};
       _halfboxqty_controller.text = half['qty'] ?? '';
-      _halfboxprice_controller.text = half['rp'] ?? '';
+      _halfboxprice_controller.text = half['wp'] ?? '';
 
       // Carton (Full Box)
       final carton = modes['carton'] ?? {};
@@ -611,7 +612,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       ),
 
                       SizedBox(height: 10),
-                      const SizedBox(height: 10),
                       _buildField(
                         _boxQtyController,
                         'Box quantity',
@@ -674,7 +674,6 @@ class _ItemRegPageState extends State<ItemRegPage> {
                               'Supplier Price',
                               Icons.attach_money,
                               isNumber: true,
-                             // enabled:double.tryParse(_boxQtyController.text) != 1,
                               onChanged: (v) {
                                 _formKey.currentState!.validate();
                               },
@@ -685,26 +684,19 @@ class _ItemRegPageState extends State<ItemRegPage> {
                       ),
 
                       const SizedBox(height: 10),
-
-                      Row(
-                        children: [
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildField(
-                              _supplierMinQtyController,
-                              'Supplier Min Qty',
-                              Icons.numbers,
-                              isNumber: true,
-                              onChanged: (value) {
-                                _formKey.currentState?.validate();
-                              },
-                              validator: (v) =>
-                                  _validateField('supplierMinQty', v),
-                            ),
-                          ),
-                        ],
+                      SizedBox(
+                        child: _buildField(
+                          _supplierMinQtyController,
+                          'Supplier Min Qty',
+                          Icons.numbers,
+                          isNumber: true,
+                          onChanged: (value) {
+                            _formKey.currentState?.validate();
+                          },
+                          validator: (v) =>
+                              _validateField('supplierMinQty', v),
+                        ),
                       ),
-
                       if (_enableBoxPricing) ...[
                         const SizedBox(height: 15),
 
@@ -741,87 +733,86 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   },
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.remove_circle,
-                                  color: Colors.red,
+                              SizedBox(width: 10,),
+                              Container(
+                                height: 30,
+                                width: 30,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22304A),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.white24),
                                 ),
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Confirm removal'),
-                                      content: const Text(
-                                        'Are you sure you want to remove Half Box Price pricing modes?\n'
-                                        'This action cannot be undone.',
-                                        style: TextStyle(color: Colors.white70),
+                                child: IconButton(
+                                  tooltip: 'Remove half pricing',
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(
+                                    Icons.remove_circle,
+                                    size: 20,
+                                    color: Colors.white70,
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) => AlertDialog(
+                                        backgroundColor: const Color(0xFF182232),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        title: const Text('Confirm removal', style: TextStyle(color: Colors.white)),
+                                        content: const Text(
+                                          'Remove half-box pricing for this item? This cannot be undone.',
+                                          style: TextStyle(color: Colors.white70),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
                                       ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('Yes, Remove'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                                    );
 
-                                  if (confirm != true) return;
-                                  setState(() {
-                                    pricingStep = 0;
+                                    if (confirm != true) return;
 
-                                    _halfboxqty_controller.clear();
-                                    _halfboxprice_controller.clear();
+                                    setState(() {
+                                      pricingStep = 0;
 
-                                    _quarterqty_controller.clear();
-                                    _quarterprice_controller.clear();
+                                      _halfboxqty_controller.clear();
+                                      _halfboxprice_controller.clear();
 
-                                    _packQtyController.clear();
-                                    _packprice_controller.clear();
-                                  });
-                                  if (widget.docId != null) {
-                                    try {
-                                      await _db
-                                          .collection('itemsreg') .doc(widget.docId)
-                                          .update({ 'modes.half': FieldValue.delete(),           });
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Box pricing removed successfully',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to remove pricing modes: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                      _quarterqty_controller.clear();
+                                      _quarterprice_controller.clear();
+
+                                      _packQtyController.clear();
+                                      _packprice_controller.clear();
+                                    });
+
+                                    if (widget.docId != null) {
+                                      try {
+                                        await _db.collection('itemsreg').doc(widget.docId).update({'modes.half': FieldValue.delete(),});
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Half pricing removed'), backgroundColor: Colors.green, duration: Duration(seconds: 2)),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to remove half pricing: $e'), backgroundColor: Colors.red),
+                                          );
+                                        }
                                       }
                                     }
-                                  }
-                                },
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -863,11 +854,9 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                           _wholesalePriceController.text,
                                         ) ??
                                         0;
-                                    final halfBoxPrice =
-                                        double.tryParse(
+                                    final halfBoxPrice = double.tryParse(
                                           _halfboxprice_controller.text,
-                                        ) ??
-                                        0;
+                                        ) ?? 0;
 
                                     if (boxPrice == 0) return null;
 
@@ -889,87 +878,82 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   },
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.remove_circle,
-                                  color: Colors.red,
+                              SizedBox(width: 10,),
+                              Container(
+                                height: 30,
+                                width: 30,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22304A),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.white24),
                                 ),
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Confirm removal'),
-                                      content: const Text(
-                                        'Are you sure you want to remove Quarter Qty pricing modes?\n'
-                                        'This action cannot be undone.',
-                                        style: TextStyle(color: Colors.white70),
+                                child: IconButton(
+                                  tooltip: 'Remove quarter pricing',
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(
+                                    Icons.remove_circle,
+                                    size: 20,
+                                    color: Colors.white70,
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) => AlertDialog(
+                                        backgroundColor: const Color(0xFF182232),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        title: const Text('Confirm removal', style: TextStyle(color: Colors.white)),
+                                        content: const Text(
+                                          'Remove quarter pricing for this item? This cannot be undone.',
+                                          style: TextStyle(color: Colors.white70),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+                                          ),
+                                        ],
                                       ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('Yes, Remove'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                                    );
 
-                                  if (confirm != true) return;
-                                  setState(() {
-                                    pricingStep = 1;
-                                    _quarterqty_controller.clear();
-                                    _quarterprice_controller.clear();
-                                    _packQtyController.clear();
-                                    _packprice_controller.clear();
-                                  });
-                                  if (widget.docId != null) {
-                                    try {
-                                      await _db
-                                          .collection('itemsreg')
-                                          .doc(widget.docId)
-                                          .update({
-                                            'modes.quarter':
-                                                FieldValue.delete(),
-                                          });
+                                    if (confirm != true) return;
 
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Box pricing removed successfully',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to remove pricing modes: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
+                                    setState(() {
+                                      pricingStep = 1;
+                                      _quarterqty_controller.clear();
+                                      _quarterprice_controller.clear();
+                                      _packQtyController.clear();
+                                      _packprice_controller.clear();
+                                    });
+
+                                    if (widget.docId != null) {
+                                      try {
+                                        await _db.collection('itemsreg').doc(widget.docId).update({'modes.quarter': FieldValue.delete(),});
+
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Quarter pricing removed'), backgroundColor: Colors.green, duration: Duration(seconds: 2)),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to remove quarter pricing: $e'), backgroundColor: Colors.red),
+                                          );
+                                        }
                                       }
                                     }
-                                  }
-                                },
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -1116,63 +1100,71 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                   },
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.remove_circle,
-                                  color: Colors.red,
+                              SizedBox(width: 10,),
+                              Container(
+                                height: 30,
+                                width: 30,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22304A),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.white24),
                                 ),
-                                onPressed: () async {
+                                child: IconButton(
+                                  tooltip: 'Remove pack pricing',
+                                  padding: EdgeInsets.zero,
+                                  splashRadius: 20,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(
+                                    Icons.remove_circle,
+                                    size: 20,
+                                    color: Colors.white70,
+                                  ),
+                                  onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('Confirm removal'),
+                                      backgroundColor: const Color(0xFF182232),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      title: const Text('Confirm removal', style: TextStyle(color: Colors.white)),
                                       content: const Text(
-                                        'Are you sure you want to remove quarter modes?\n'
-                                        'This action cannot be undone.',
+                                        'Remove pack pricing for this item? This cannot be undone.',
                                         style: TextStyle(color: Colors.white70),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
+                                          onPressed: () => Navigator.pop(context, false),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('Yes, Remove'),
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text('Remove', style: TextStyle(color: Colors.white)),
                                         ),
                                       ],
                                     ),
                                   );
 
                                   if (confirm != true) return;
+
                                   setState(() {
                                     pricingStep = 2;
                                     _packQtyController.clear();
                                     _packprice_controller.clear();
                                   });
+
                                   if (widget.docId != null) {
                                     try {
-                                      await _db
-                                          .collection('itemsreg')
-                                          .doc(widget.docId)
-                                          .update({
-                                            'modes.quarter':
-                                                FieldValue.delete(),
-                                          });
+                                      await _db.collection('itemsreg').doc(widget.docId).update({
+                                        'modes.pack': FieldValue.delete(),
+                                      });
+
                                       if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
-                                            content: Text(
-                                              'Box pricing removed successfully',
-                                            ),
+                                            content: Text('Pack pricing removed'),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
                                           ),
@@ -1180,20 +1172,17 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                              'Failed to remove pricing modes: $e',
-                                            ),
+                                            content: Text('Failed to remove pack pricing: $e'),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
                                       }
                                     }
                                   }
-                                },
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -1362,120 +1351,81 @@ class _ItemRegPageState extends State<ItemRegPage> {
 
 
 
-                                    Map<String, dynamic> modesMap = {
-                                      "single": {
-                                        'name': 'Single',
-                                        'sp': _retail_price.text.trim(),
-                                        'wp': _retail_price.text.trim(),
-                                        'rp': _retail_price.text.trim(),
-                                        'qty': '1',
-                                      },
+                                  Map<String, dynamic> modesMap = Map<String, dynamic>.from(widget.item?.modes ?? {});
+                                    modesMap["single"] = {
+                                      'name': 'Single',
+                                      'sp': _retail_price.text.trim(),
+                                      'wp': _retail_price.text.trim(),
+                                      'rp': _retail_price.text.trim(),
+                                      'qty': '1',
                                     };
+
                                     double boxqty = _boxQtyController.text.isNotEmpty
-                                        ? double.parse(_boxQtyController.text): 0;
+                                        ? double.parse(_boxQtyController.text)
+                                        : 0;
                                     if (boxqty >= 2) {
                                       modesMap["carton"] = {
                                         'name': 'carton',
-                                        'sp': _supplierPriceController.text
-                                            .trim(),
-                                        'wp': _wholesalePriceController.text
-                                            .trim(),
-                                        'rp': _wholesalePriceController.text
-                                            .trim(),
+                                        'sp': _supplierPriceController.text.trim(),
+                                        'wp': _wholesalePriceController.text.trim(),
+                                        'rp': _wholesalePriceController.text.trim(),
                                         'qty': _boxQtyController.text.trim(),
                                       };
+                                    } else {
+                                      modesMap.remove("carton");
                                     }
 
                                     if (_enableBoxPricing) {
-                                      // Half box
+                                      // HALF
                                       if (pricingStep >= 1 &&
-                                          _halfboxqty_controller
-                                              .text
-                                              .isNotEmpty &&
-                                          _halfboxprice_controller
-                                              .text
-                                              .isNotEmpty) {
-                                        modesMap["carton"] = {
-                                          'name': 'carton',
-                                          'sp': _supplierPriceController.text
-                                              .trim(),
-                                          'wp': _wholesalePriceController.text
-                                              .trim(),
-                                          'rp': _wholesalePriceController.text
-                                              .trim(),
-                                          'qty': _boxQtyController.text.trim(),
-                                        };
+                                          _halfboxqty_controller.text.isNotEmpty &&
+                                          _halfboxprice_controller.text.isNotEmpty) {
                                         modesMap["half"] = {
                                           'name': 'Half carton',
-                                          'sp': _halfboxprice_controller.text
-                                              .trim(),
-                                          'wp': _halfboxprice_controller.text
-                                              .trim(),
-                                          'rp': _halfboxprice_controller.text
-                                              .trim(),
-                                          'qty': _halfboxqty_controller.text
-                                              .trim(),
+                                          'sp': _halfboxprice_controller.text.trim(),
+                                          'wp': _halfboxprice_controller.text.trim(),
+                                          'rp': _halfboxprice_controller.text.trim(),
+                                          'qty': _halfboxqty_controller.text.trim(),
                                         };
+                                      } else {
+                                        modesMap.remove("half");
                                       }
 
-                                      // Quarter box
+                                      // QUARTER
                                       if (pricingStep >= 2 &&
-                                          _quarterqty_controller
-                                              .text
-                                              .isNotEmpty &&
-                                          _quarterprice_controller
-                                              .text
-                                              .isNotEmpty) {
+                                          _quarterqty_controller.text.isNotEmpty &&
+                                          _quarterprice_controller.text.isNotEmpty) {
                                         modesMap["quarter"] = {
                                           'name': 'Quarter carton',
-                                          'sp': _quarterprice_controller.text
-                                              .trim(),
-                                          'wp': _quarterprice_controller.text
-                                              .trim(),
+                                          'sp': _quarterprice_controller.text.trim(),
+                                          'wp': _quarterprice_controller.text.trim(),
                                           'rp': _retail_price.text.trim(),
-                                          'qty': _quarterqty_controller.text
-                                              .trim(),
+                                          'qty': _quarterqty_controller.text.trim(),
                                         };
+                                      } else {
+                                        modesMap.remove("quarter");
                                       }
 
-                                      // Pack
+                                      // PACK
                                       if (pricingStep >= 3 &&
                                           _packQtyController.text.isNotEmpty &&
-                                          _packprice_controller
-                                              .text
-                                              .isNotEmpty) {
+                                          _packprice_controller.text.isNotEmpty) {
                                         modesMap["pack"] = {
                                           'name': 'Pack',
-                                          'sp': _packprice_controller.text
-                                              .trim(),
-                                          'wp': _packprice_controller.text
-                                              .trim(),
+                                          'sp': _packprice_controller.text.trim(),
+                                          'wp': _packprice_controller.text.trim(),
                                           'rp': _retail_price.text.trim(),
                                           'qty': _packQtyController.text.trim(),
                                         };
+                                      } else {
+                                        modesMap.remove("pack");
                                       }
+                                    } else {
+                                      modesMap.remove("half");
+                                      modesMap.remove("quarter");
+                                      modesMap.remove("pack");
                                     }
 
-                                    // final data = {
-                                    //   'id': docId,
-                                    //   'companyid': datafeed.companyid,
-                                    //   'company': datafeed.company,
-                                    //   'name': itemName,
-                                    //   'barcode': _barcodeController.text.trim(),
-                                    //   'cp': _costController.text.trim(),
-                                    //   'pcategory': _productCategory,
-                                    //   'producttype': _productType,
-                                    //   'imageurl': imageUrl,
-                                    //   'updatedat': null,
-                                    //   'updatedby': null,
-                                    //   'deletedby': null,
-                                    //   'deletedat': null,
-                                    //   'modemore': _enableBoxPricing,
-                                    //   'modes': modesMap,
-                                    //   'wminqty': _wholesaleMinQtyController.text,
-                                    //   'sminqty': _supplierMinQtyController.text,
-                                    //   'staff': datafeed.staff,
-                                    // };
                                     final item = ItemModel(
                                         id: docId,
                                         no: docId,
@@ -1511,11 +1461,11 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                     }
                                     await docRef.set(data, SetOptions(merge: true),
                                     );
+                                    print(modesMap.toString());
                                     _clearAllFields();
 
                                     if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
+                                      ScaffoldMessenger.of( context,
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
@@ -1527,6 +1477,9 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                           duration: const Duration(seconds: 2),
                                         ),
                                       );
+                                      if(widget.docId!=null){
+                                        Navigator.pushNamed(context, Routes.itemlist);
+                                      }
                                     }
                                   } catch (e) {
                                     if (mounted) {
