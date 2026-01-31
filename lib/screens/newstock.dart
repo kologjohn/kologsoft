@@ -104,24 +104,24 @@ class _NewStockState extends State<NewStock> {
     String? hint,
     Widget? suffix,
   }) {return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.white54),
-      prefixIcon: prefix != null ? Icon(prefix, color: Colors.white70) : null,
-      suffixIcon: suffix,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white24),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.blue),
-      ),
-      fillColor: const Color(0xFF22304A),
-      filled: true,
-    );}
+    labelText: label,
+    labelStyle: const TextStyle(color: Colors.white70),
+    hintText: hint,
+    hintStyle: const TextStyle(color: Colors.white54),
+    prefixIcon: prefix != null ? Icon(prefix, color: Colors.white70) : null,
+    suffixIcon: suffix,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.white24),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.blue),
+    ),
+    fillColor: const Color(0xFF22304A),
+    filled: true,
+  );}
 
   Widget _twoCol(Widget a, Widget b) {
     return Wrap(
@@ -182,247 +182,247 @@ class _NewStockState extends State<NewStock> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Center(
                     child: ConstrainedBox( constraints: const BoxConstraints(maxWidth: 700),
-                    child: Card(
-                      color: const Color(0xFF182232),
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Section title
-                            Text(
-                              "Header Details",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
+                      child: Card(
+                        color: const Color(0xFF182232),
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Section title
+                              Text(
+                                "Header Details",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Provide the invoice, supplier and branch information for this stock entry.",
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
-                            ),
-                            const SizedBox(height: 16),
-
-                            _twoCol(
-                              TextFormField(
-                                controller: _invoicenumberController,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Invoice Number', prefix: Icons.receipt),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Provide the invoice, supplier and branch information for this stock entry.",
+                                style: TextStyle(color: Colors.white70, fontSize: 12),
                               ),
-                              TextFormField(
-                                controller: _waybillController,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Waybill Number', prefix: Icons.local_shipping),
+                              const SizedBox(height: 16),
+
+                              _twoCol(
+                                TextFormField(
+                                  controller: _invoicenumberController,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(label: 'Invoice Number', prefix: Icons.receipt),
+                                ),
+                                TextFormField(
+                                  controller: _waybillController,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(label: 'Waybill Number', prefix: Icons.local_shipping),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 14),
+                              const SizedBox(height: 14),
 
-                            // Supplier full width
-                            DropdownButtonFormField<String>(
-                              value: value.selectedSupplier?.id,
-                              dropdownColor: const Color(0xFF22304A),
-                              style: const TextStyle(color: Colors.white),
-                              decoration: _inputDecoration(label: 'Supplier', prefix: Icons.business),
-                              items: value.suppliers.map((suplier) {
-                                return DropdownMenuItem<String>(
-                                  value: suplier.id,
-                                  child: Text(suplier.supplier),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) value.selectSupplier(val);
-                              },
-                              validator: (val) => val == null ? 'Please select Supplier' : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            _twoCol(
+                              // Supplier full width
                               DropdownButtonFormField<String>(
-                                value: _selectedPurchaseType,
+                                value: value.selectedSupplier?.id,
                                 dropdownColor: const Color(0xFF22304A),
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Purchase Mode', prefix: Icons.payment),
-                                items: _purchasTypes.map((type) {
-                                  return DropdownMenuItem<String>(value: type, child: Text(type));
-                                }).toList(),
-                                onChanged: (v) {
-                                  setState(() {
-                                    _selectedPurchaseType = v;
-                                    if (v != 'Credit') _selectedpaymentaccount = null;
-                                  });
-                                },
-                                validator: (value) => value == null ? 'Please select purchase mode' : null,
-                              ),
-                              DropdownButtonFormField<String>(
-                                value: _selectedpaymentaccount,
-                                dropdownColor: const Color(0xFF22304A),
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Payment Account', prefix: Icons.account_balance_wallet),
-                                items: paymentaccount.map((type) {
-                                  return DropdownMenuItem<String>(value: type, child: Text(type));
-                                }).toList(),
-                                onChanged: (v) => setState(() => _selectedpaymentaccount = v),
-                                validator: (value) {
-                                  if (!isCashPurchase) return null;
-                                  return value == null ? 'Please select payment account' : null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _twoCol(
-                              DropdownButtonFormField<String>(
-                                value: value.selectedBranch?.id,
-                                dropdownColor: const Color(0xFF22304A),
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Branch', prefix: Icons.location_city),
-                                items: value.branches.map((branch) {
-                                  return DropdownMenuItem<String>(value: branch.id, child: Text(branch.branchname));
+                                decoration: _inputDecoration(label: 'Supplier', prefix: Icons.business),
+                                items: value.suppliers.map((suplier) {
+                                  return DropdownMenuItem<String>(
+                                    value: suplier.id,
+                                    child: Text(suplier.supplier),
+                                  );
                                 }).toList(),
                                 onChanged: (val) {
-                                  if (val != null) value.selectBranch(val);
+                                  if (val != null) value.selectSupplier(val);
                                 },
-                                validator: (val) => val == null ? 'Please select branch' : null,
+                                validator: (val) => val == null ? 'Please select Supplier' : null,
                               ),
-                              TextFormField(
-                                controller: _dateController,
-                                readOnly: true,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(
-                                  label: 'Date',
-                                  prefix: Icons.calendar_today,
-                                  hint: 'yyyy-mm-dd',
-                                ),
-                                onTap: () async {
-                                  DateTime? picked = await showDatePicker(
-                                    context: context,
-                                    initialDate: _selectedDate ?? DateTime.now(),
-                                    firstDate: DateTime(2020),
-                                    lastDate: DateTime(2100),
-                                    builder: (context, child) {
-                                      return Theme(
-                                        data: Theme.of(context).copyWith(
-                                          colorScheme: const ColorScheme.dark(
-                                            primary: Colors.blue,
-                                            onPrimary: Colors.white,
-                                            surface: Color(0xFF22304A),
-                                            onSurface: Colors.white,
-                                          ),
-                                        ),
-                                        child: child!,
-                                      );
-                                    },
-                                  );
+                              const SizedBox(height: 14),
 
-                                  if (picked != null) {
+                              _twoCol(
+                                DropdownButtonFormField<String>(
+                                  value: _selectedPurchaseType,
+                                  dropdownColor: const Color(0xFF22304A),
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(label: 'Purchase Mode', prefix: Icons.payment),
+                                  items: _purchasTypes.map((type) {
+                                    return DropdownMenuItem<String>(value: type, child: Text(type));
+                                  }).toList(),
+                                  onChanged: (v) {
                                     setState(() {
-                                      _selectedDate = picked;
-                                      _dateController.text =
-                                      "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                                      _selectedPurchaseType = v;
+                                      if (v != 'Credit') _selectedpaymentaccount = null;
                                     });
-                                  }
-                                },
-                                validator: (value) => value == null || value.isEmpty ? 'Select date' : null,
+                                  },
+                                  validator: (value) => value == null ? 'Please select purchase mode' : null,
+                                ),
+                                DropdownButtonFormField<String>(
+                                  value: _selectedpaymentaccount,
+                                  dropdownColor: const Color(0xFF22304A),
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(label: 'Payment Account', prefix: Icons.account_balance_wallet),
+                                  items: paymentaccount.map((type) {
+                                    return DropdownMenuItem<String>(value: type, child: Text(type));
+                                  }).toList(),
+                                  onChanged: (v) => setState(() => _selectedpaymentaccount = v),
+                                  validator: (value) {
+                                    if (!isCashPurchase) return null;
+                                    return value == null ? 'Please select payment account' : null;
+                                  },
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 14),
 
-                            const SizedBox(height: 18),
+                              _twoCol(
+                                DropdownButtonFormField<String>(
+                                  value: value.selectedBranch?.id,
+                                  dropdownColor: const Color(0xFF22304A),
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(label: 'Branch', prefix: Icons.location_city),
+                                  items: value.branches.map((branch) {
+                                    return DropdownMenuItem<String>(value: branch.id, child: Text(branch.branchname));
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) value.selectBranch(val);
+                                  },
+                                  validator: (val) => val == null ? 'Please select branch' : null,
+                                ),
+                                TextFormField(
+                                  controller: _dateController,
+                                  readOnly: true,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(
+                                    label: 'Date',
+                                    prefix: Icons.calendar_today,
+                                    hint: 'yyyy-mm-dd',
+                                  ),
+                                  onTap: () async {
+                                    DateTime? picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: _selectedDate ?? DateTime.now(),
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2100),
+                                      builder: (context, child) {
+                                        return Theme(
+                                          data: Theme.of(context).copyWith(
+                                            colorScheme: const ColorScheme.dark(
+                                              primary: Colors.blue,
+                                              onPrimary: Colors.white,
+                                              surface: Color(0xFF22304A),
+                                              onSurface: Colors.white,
+                                            ),
+                                          ),
+                                          child: child!,
+                                        );
+                                      },
+                                    );
 
-                            // Actions
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
+                                    if (picked != null) {
+                                      setState(() {
+                                        _selectedDate = picked;
+                                        _dateController.text =
+                                        "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                                      });
+                                    }
+                                  },
+                                  validator: (value) => value == null || value.isEmpty ? 'Select date' : null,
+                                ),
+                              ),
+
+                              const SizedBox(height: 18),
+
+                              // Actions
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 48,
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF415A77),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        onPressed: _loading
+                                            ? null
+                                            : () async {
+                                          if (!_formKey.currentState!.validate()) return;
+
+                                          setState(() => _loading = true);
+
+                                          String invoicenumber = _invoicenumberController.text.trim();
+                                          String waybillnumber = _waybillController.text.trim();
+                                          String purchasetype = _selectedPurchaseType!;
+                                          DateTime? invoicedate = _selectedDate;
+                                          final branchId = value.selectedBranch?.id ?? '';
+                                          final branchName = value.selectedBranch?.branchname ?? '';
+                                          final docid = value.normalizeAndSanitize(
+                                              "${value.companyid}${DateTime.now().millisecondsSinceEpoch}${branchId}${value.staffPosition}");
+
+                                          final headerData = {
+                                            'invoice': invoicenumber,
+                                            'invoicedate': invoicedate,
+                                            'waybill': waybillnumber,
+                                            'supplierid': value.selectedSupplier?.id ?? '',
+                                            'suppliername': value.selectedSupplier?.supplier ?? '',
+                                            'branchid': branchId,
+                                            'branchname': branchName,
+                                            'purchasetype': purchasetype,
+                                            'docid': docid,
+                                            'createdat': DateTime.now(),
+                                            'createdby': value.staff,
+                                            'companyid': value.companyid,
+                                            'company': value.company,
+                                          };
+
+                                          try {
+                                            if (widget.docId == null) {
+                                              setState(() {
+                                                _pendingHeader = headerData;
+                                                _showStockItems = true;
+                                              });
+                                              FocusScope.of(context).unfocus();
+                                            }
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                          }
+
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _loading = false;
+                                            _selectedPurchaseType = null;
+                                          });
+                                        },
+                                        icon: _loading ? const SizedBox.shrink() : const Icon(Icons.arrow_forward),
+                                        label: _loading
+                                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
+                                            : Text(
+                                          "Proceed",
+                                          style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
                                     height: 48,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF415A77),
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.white24),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       ),
-                                      onPressed: _loading
-                                          ? null
-                                          : () async {
-                                        if (!_formKey.currentState!.validate()) return;
-
-                                        setState(() => _loading = true);
-
-                                        String invoicenumber = _invoicenumberController.text.trim();
-                                        String waybillnumber = _waybillController.text.trim();
-                                        String purchasetype = _selectedPurchaseType!;
-                                        DateTime? invoicedate = _selectedDate;
-                                        final branchId = value.selectedBranch?.id ?? '';
-                                        final branchName = value.selectedBranch?.branchname ?? '';
-                                        final docid = value.normalizeAndSanitize(
-                                            "${value.companyid}${DateTime.now().millisecondsSinceEpoch}${branchId}${value.staffPosition}");
-
-                                        final headerData = {
-                                          'invoice': invoicenumber,
-                                          'invoicedate': invoicedate,
-                                          'waybill': waybillnumber,
-                                          'supplierid': value.selectedSupplier?.id ?? '',
-                                          'suppliername': value.selectedSupplier?.supplier ?? '',
-                                          'branchid': branchId,
-                                          'branchname': branchName,
-                                          'purchasetype': purchasetype,
-                                          'docid': docid,
-                                          'createdat': DateTime.now(),
-                                          'createdby': value.staff,
-                                          'companyid': value.companyid,
-                                          'company': value.company,
-                                        };
-
-                                        try {
-                                          if (widget.docId == null) {
-                                            setState(() {
-                                              _pendingHeader = headerData;
-                                              _showStockItems = true;
-                                            });
-                                            FocusScope.of(context).unfocus();
-                                          }
-                                        } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                                        }
-
-                                        if (!mounted) return;
-                                        setState(() {
-                                          _loading = false;
-                                          _selectedPurchaseType = null;
-                                        });
-                                      },
-                                      icon: _loading ? const SizedBox.shrink() : const Icon(Icons.arrow_forward),
-                                      label: _loading
-                                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
-                                          : Text(
-                                         "Proceed",
-                                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
-                                      ),
+                                      onPressed: () => Navigator.of(context).maybePop(),
+                                      child: const Text("Cancel", style: TextStyle(color: Colors.white70)),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  height: 48,
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: Colors.white24),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    onPressed: () => Navigator.of(context).maybePop(),
-                                    child: const Text("Cancel", style: TextStyle(color: Colors.white70)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                                  ),
                   ),),
               ),
             ),
@@ -672,7 +672,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
       );
       return;
     }
-
+    setState(() => _loading = true);
     final totals = _calculateTotals();
 
     final Map<String, dynamic> docData = {
@@ -698,9 +698,9 @@ class _StockItemsFormState extends State<StockItemsForm> {
           .set(docData,SetOptions(merge: true));
 
       if (!mounted) return;
-  setState(() {
-  _saved = true;
-  });
+      setState(() {
+        _saved = true;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Records saved')),
@@ -711,7 +711,9 @@ class _StockItemsFormState extends State<StockItemsForm> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Save failed: $e')),
       );
-    }
+    }finally { if (mounted) setState(() => _loading = false);
+
+      }
 
   }
 
@@ -914,516 +916,527 @@ class _StockItemsFormState extends State<StockItemsForm> {
     return Column(
       children: [
         SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 8.0,
-                top: 20,
-                right: 8,
-                bottom: 20,
-              ),
-              child: Column(
-                children: [
-                  Center(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isSmallScreen = constraints.maxWidth < 900;
-                        final double itemWidth = isSmallScreen
-                            ? constraints.maxWidth
-                            : (constraints.maxWidth / 2) - 24;
-                        return Wrap(
-                          spacing: 16,
-                          runSpacing: 16,
-                          children: [
-                            SizedBox(
-                              width: itemWidth,
-                              child: Container(
-                                color: const Color(0xFF182232),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "STOCK ENTRIES",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: 8.0,
+              top: 20,
+              right: 8,
+              bottom: 20,
+            ),
+            child: Column(
+              children: [
+                Center(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isSmallScreen = constraints.maxWidth < 900;
+                      final double itemWidth = isSmallScreen
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth / 2) - 24;
+                      return Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: [
+                          SizedBox(
+                            width: itemWidth,
+                            child: Container(
+                              color: const Color(0xFF182232),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "STOCK ENTRIES",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
-                                      const Divider(color: Colors.white24),
-                                      const SizedBox(height: 15),
-                                      Form(
-                                        key: _formkey,
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: TextFormField(
-                                                    controller: _barcodeController,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                    decoration: InputDecoration(
-                                                      labelText: 'Barcode',
-                                                      labelStyle: const TextStyle(
-                                                        color: Colors.white70,
-                                                      ),
-                                                      border: OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                      ),
-                                                      enabledBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color: Colors
-                                                              .white24,
-                                                        ),
-                                                      ),
-                                                      focusedBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color:
-                                                          Colors.blue,
-                                                        ),
-                                                      ),
-                                                      fillColor: const Color(
-                                                        0xFF22304A,
-                                                      ),
-                                                      filled: true,
-                                                    ),
-                                                    validator: (value) =>
-                                                    value == null ||
-                                                        value.isEmpty
-                                                        ? 'Barcode required'
-                                                        : null,
+                                    ),
+                                    const Divider(color: Colors.white24),
+                                    const SizedBox(height: 15),
+                                    Form(
+                                      key: _formkey,
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _barcodeController,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  height: 56,
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFF22304A),
-                                                    borderRadius:
-                                                    BorderRadius.circular(12),
-                                                    border: Border.all(
-                                                      color: Colors.white24,
-                                                    ),
-                                                  ),
-                                                  child: IconButton(
-                                                    icon: const Icon(
-                                                      Icons.qr_code_scanner,
+                                                  decoration: InputDecoration(
+                                                    labelText: 'Barcode',
+                                                    labelStyle: const TextStyle(
                                                       color: Colors.white70,
                                                     ),
-                                                    onPressed: _scanBarcode,
-                                                    tooltip: 'Scan Barcode/QR Code',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-
-                                            if (_showSuggestions)
-                                              StreamBuilder<List<Map<String, dynamic>>>(
-                                                stream:Provider.of<Datafeed>(context, listen: false).itemsStream(collectionName: 'itemsreg'),
-                                                builder: (context, snapshot) {
-                                                  if (!snapshot.hasData) {
-                                                    return Container(
-                                                      margin: const EdgeInsets.only(top: 4),
-                                                      padding: const EdgeInsets.all(16),
-                                                      child: const Center(
-                                                        child: CircularProgressIndicator(
-                                                          color: Colors.blue,
-                                                          strokeWidth: 2,
-                                                        ),
+                                                    border: OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
                                                       ),
-                                                    );
-                                                  }
-
-                                                  final allDocs = snapshot.data!;
-                                                  final filteredDocs = allDocs.where((doc) {
-                                                    final data = doc as Map<String, dynamic>;
-                                                    final name = (data['name'] ?? '').toString().toLowerCase();
-                                                    final barcode = (data['barcode'] ?? '').toString().toLowerCase();
-                                                    final query = _searchQuery.toLowerCase();
-                                                    return name.contains(query) || barcode.contains(query);
-                                                  }).take(10).toList();
-
-                                                  if (filteredDocs.isEmpty) return const SizedBox.shrink();
-
-                                                  return Container(
-                                                    margin: const EdgeInsets.only(top: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(0xFF22304A),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                                                      boxShadow: const [
-                                                        BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
-                                                      ],
                                                     ),
-                                                    constraints: const BoxConstraints(maxHeight: 250),
-                                                    child: ListView.builder(
-                                                      shrinkWrap: true,
-                                                      itemCount: filteredDocs.length,
-                                                      itemBuilder: (context, index) {
-                                                        final doc = filteredDocs[index];
-                                                        final item = doc as Map<String, dynamic>;
-                                                        item['id'] = doc['id'];
-
-                                                        return ListTile(
-                                                          dense: true,
-                                                          leading: const Icon(Icons.inventory_2, color: Colors.blue, size: 20),
-                                                          title: Text(
-                                                            item['name'] ?? '',
-                                                            style: const TextStyle(
-                                                              color: Colors.white,
-                                                              fontSize: 14,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                          subtitle: Text(
-                                                            'Barcode: ${item['barcode']} | Retail: GHS ${item['retailprice']} | Stock: ${item['openingstock']}',
-                                                            style: const TextStyle(color: Colors.white70, fontSize: 11),
-                                                          ),
-                                                          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
-                                                          onTap: () => _selectItem(item),
-                                                        );
-                                                      },
+                                                    enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color: Colors
+                                                            .white24,
+                                                      ),
                                                     ),
-                                                  );
-                                                },
-                                              ),
-                                            const SizedBox(height: 10),
-                                            TextFormField(
-                                              controller: _itemController,
-                                              style: const TextStyle(color: Colors.white),
-                                              decoration: InputDecoration(
-                                                labelText: 'Item',
-                                                labelStyle: const TextStyle(color: Colors.white70),
-                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.white24),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.blue),
-                                                ),
-                                                fillColor: const Color(0xFF22304A),
-                                                filled: true,
-                                              ),
-                                              validator: (value) => value == null || value.isEmpty ? 'Item required' : null,
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: DropdownButtonFormField<String>(
-                                                    value: _selectedStockMode,
-                                                    dropdownColor: const Color(
+                                                    focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color:
+                                                        Colors.blue,
+                                                      ),
+                                                    ),
+                                                    fillColor: const Color(
                                                       0xFF22304A,
                                                     ),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                    decoration: InputDecoration(
-                                                      labelText: 'Stocking  Mode',
-                                                      labelStyle: const TextStyle(
-                                                        color: Colors.white70,
-                                                      ),
-                                                      border: OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                      ),
-                                                      enabledBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color: Colors
-                                                              .white24,
-                                                        ),
-                                                      ),
-                                                      focusedBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color:
-                                                          Colors.blue,
-                                                        ),
-                                                      ),
-                                                      fillColor: const Color(
-                                                        0xFF22304A,
-                                                      ),
-                                                      filled: true,
-                                                    ),
-                                                    items: _stockMode.isEmpty ? null : _stockMode.map((type) {
-                                                      return DropdownMenuItem<String>(value: type, child: Text(type));
-                                                    }).toList(),
-                                                    onChanged: (value) {
-                                                      setState(() {
-                                                        _selectedStockMode = value;
-                                                        _updatePrice();
-                                                      });
-                                                    },
-                                                    validator: (value) =>
-                                                    value == null
-                                                        ? 'Please select stocking mode'
-                                                        : null,
+                                                    filled: true,
                                                   ),
+                                                  validator: (value) =>
+                                                  value == null ||
+                                                      value.isEmpty
+                                                      ? 'Barcode required'
+                                                      : null,
                                                 ),
-                                                SizedBox(width: 10),
-                                                Expanded(
-                                                  child: TextFormField(
-                                                    controller: _priceController,
-                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                    inputFormatters:
-                                                    [
-                                                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                                                    ],
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                    decoration: InputDecoration(
-                                                      labelText: 'Price',
-                                                      labelStyle: const TextStyle(
-                                                        color: Colors.white70,
-                                                      ),
-                                                      border: OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                      ),
-                                                      enabledBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color: Colors
-                                                              .white24,
-                                                        ),
-                                                      ),
-                                                      focusedBorder:
-                                                      OutlineInputBorder(
-                                                        borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                        borderSide:
-                                                        const BorderSide(
-                                                          color:
-                                                          Colors.blue,
-                                                        ),
-                                                      ),
-                                                      fillColor: const Color(
-                                                        0xFF22304A,
-                                                      ),
-                                                      filled: true,
-                                                    ),
-                                                    validator: (value) =>
-                                                    value == null ||
-                                                        value.isEmpty
-                                                        ? 'Enter amount'
-                                                        : null,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 10),
-                                            TextFormField(
-                                              controller: _quantityController,
-                                              style: const TextStyle(color: Colors.white),
-                                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters:
-                                              [
-                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                                              ],
-                                              decoration: InputDecoration(
-                                                labelText: 'Quantity',
-                                                labelStyle: const TextStyle(color: Colors.white70),
-                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.white24),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.blue),
-                                                ),
-                                                fillColor: const Color(0xFF22304A),
-                                                filled: true,
                                               ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Enter quantity';
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                height: 56,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF22304A),
+                                                  borderRadius:
+                                                  BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: Colors.white24,
+                                                  ),
+                                                ),
+                                                child: IconButton(
+                                                  icon: const Icon(
+                                                    Icons.qr_code_scanner,
+                                                    color: Colors.white70,
+                                                  ),
+                                                  onPressed: _scanBarcode,
+                                                  tooltip: 'Scan Barcode/QR Code',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          if (_showSuggestions)
+                                            StreamBuilder<List<Map<String, dynamic>>>(
+                                              stream:Provider.of<Datafeed>(context, listen: false).itemsStream(collectionName: 'itemsreg'),
+                                              builder: (context, snapshot) {
+                                                if (!snapshot.hasData) {
+                                                  return Container(
+                                                    margin: const EdgeInsets.only(top: 4),
+                                                    padding: const EdgeInsets.all(16),
+                                                    child: const Center(
+                                                      child: CircularProgressIndicator(
+                                                        color: Colors.blue,
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    ),
+                                                  );
                                                 }
-                                                final qty = double.tryParse(value);
-                                                if (qty == null) {
-                                                  return 'Quantity must be a number';
-                                                }
-                                                if (qty <= 0) {
-                                                  return 'Quantity must be greater than 0';
-                                                }
-                                                return null;
+
+                                                final allDocs = snapshot.data!;
+                                                final filteredDocs = allDocs.where((doc) {
+                                                  final data = doc as Map<String, dynamic>;
+                                                  final name = (data['name'] ?? '').toString().toLowerCase();
+                                                  final barcode = (data['barcode'] ?? '').toString().toLowerCase();
+                                                  final query = _searchQuery.toLowerCase();
+                                                  return name.contains(query) || barcode.contains(query);
+                                                }).take(10).toList();
+
+                                                if (filteredDocs.isEmpty) return const SizedBox.shrink();
+
+                                                return Container(
+                                                  margin: const EdgeInsets.only(top: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF22304A),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                                    boxShadow: const [
+                                                      BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
+                                                    ],
+                                                  ),
+                                                  constraints: const BoxConstraints(maxHeight: 250),
+                                                  child: ListView.builder(
+                                                    shrinkWrap: true,
+                                                    itemCount: filteredDocs.length,
+                                                    itemBuilder: (context, index) {
+                                                      final doc = filteredDocs[index];
+                                                      final item = doc as Map<String, dynamic>;
+                                                      item['id'] = doc['id'];
+
+                                                      return ListTile(
+                                                        dense: true,
+                                                        leading: const Icon(Icons.inventory_2, color: Colors.blue, size: 20),
+                                                        title: Text(
+                                                          item['name'] ?? '',
+                                                          style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 14,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                        subtitle: Text(
+                                                          'Barcode: ${item['barcode']} | Retail: GHS ${item['retailprice']} | Stock: ${item['openingstock']}',
+                                                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                                        ),
+                                                        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                                                        onTap: () => _selectItem(item),
+                                                      );
+                                                    },
+                                                  ),
+                                                );
                                               },
                                             ),
-                                            const SizedBox(height: 10),
-                                            DropdownButtonFormField<String>(
-                                              value: _selectedTaxType,
-                                              dropdownColor: const Color(0xFF22304A),
-                                              style: const TextStyle(color: Colors.white),
-                                              decoration: InputDecoration(
-                                                labelText: 'Tax Type',
-                                                labelStyle: const TextStyle(color: Colors.white70),
-                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.white24),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.blue),
-                                                ),
-                                                fillColor: const Color(0xFF22304A),
-                                                filled: true,
+                                          const SizedBox(height: 10),
+                                          TextFormField(
+                                            controller: _itemController,
+                                            style: const TextStyle(color: Colors.white),
+                                            decoration: InputDecoration(
+                                              labelText: 'Item',
+                                              labelStyle: const TextStyle(color: Colors.white70),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.white24),
                                               ),
-                                              items: _taxType.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                                              onChanged: (val) => setState(() => _selectedTaxType = val),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            TextFormField(
-                                              controller: _discountController,
-                                              style: const TextStyle(color: Colors.white),
-                                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters:
-                                              [
-                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                                              ],
-                                              decoration: InputDecoration(
-                                                labelText: 'Purchase Discount',
-                                                labelStyle: const TextStyle(color: Colors.white70),
-                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.white24),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(color: Colors.blue),
-                                                ),
-                                                fillColor: const Color(0xFF22304A),
-                                                filled: true,
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.blue),
                                               ),
+                                              fillColor: const Color(0xFF22304A),
+                                              filled: true,
                                             ),
-                                            const SizedBox(height: 10),
-                                            const Divider(color: Colors.white24),
-                                            Wrap(
-                                              spacing: 10,
-                                              runSpacing: 10,
-                                              children: [
-                                                if (!_saved)
-                                                  SizedBox(
-                                                    width: 150,
-                                                    child: ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor: Colors.orangeAccent,
-                                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                      ),
-                                                      onPressed: _loading ? null : _addItem,
-                                                      child: const Text(
-                                                        "Add Record",
-                                                        style: TextStyle(color: Colors.white),
+                                            validator: (value) => value == null || value.isEmpty ? 'Item required' : null,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: DropdownButtonFormField<String>(
+                                                  value: _selectedStockMode,
+                                                  dropdownColor: const Color(
+                                                    0xFF22304A,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    labelText: 'Stocking  Mode',
+                                                    labelStyle: const TextStyle(
+                                                      color: Colors.white70,
+                                                    ),
+                                                    border: OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
                                                       ),
                                                     ),
+                                                    enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color: Colors
+                                                            .white24,
+                                                      ),
+                                                    ),
+                                                    focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color:
+                                                        Colors.blue,
+                                                      ),
+                                                    ),
+                                                    fillColor: const Color(
+                                                      0xFF22304A,
+                                                    ),
+                                                    filled: true,
                                                   ),
+                                                  items: _stockMode.isEmpty ? null : _stockMode.map((type) {
+                                                    return DropdownMenuItem<String>(value: type, child: Text(type));
+                                                  }).toList(),
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _selectedStockMode = value;
+                                                      _updatePrice();
+                                                    });
+                                                  },
+                                                  validator: (value) =>
+                                                  value == null
+                                                      ? 'Please select stocking mode'
+                                                      : null,
+                                                ),
+                                              ),
+                                              SizedBox(width: 10),
+                                              Expanded(
+                                                child: TextFormField(
+                                                  controller: _priceController,
+                                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                  inputFormatters:
+                                                  [
+                                                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                                  ],
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    labelText: 'Price',
+                                                    labelStyle: const TextStyle(
+                                                      color: Colors.white70,
+                                                    ),
+                                                    border: OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                    ),
+                                                    enabledBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color: Colors
+                                                            .white24,
+                                                      ),
+                                                    ),
+                                                    focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      borderSide:
+                                                      const BorderSide(
+                                                        color:
+                                                        Colors.blue,
+                                                      ),
+                                                    ),
+                                                    fillColor: const Color(
+                                                      0xFF22304A,
+                                                    ),
+                                                    filled: true,
+                                                  ),
+                                                  validator: (value) =>
+                                                  value == null ||
+                                                      value.isEmpty
+                                                      ? 'Enter amount'
+                                                      : null,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          TextFormField(
+                                            controller: _quantityController,
+                                            style: const TextStyle(color: Colors.white),
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            inputFormatters:
+                                            [
+                                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                            ],
+                                            decoration: InputDecoration(
+                                              labelText: 'Quantity',
+                                              labelStyle: const TextStyle(color: Colors.white70),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.white24),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.blue),
+                                              ),
+                                              fillColor: const Color(0xFF22304A),
+                                              filled: true,
+                                            ),
+                                            validator: (value) {
+                                              if (value == null || value.isEmpty) {
+                                                return 'Enter quantity';
+                                              }
+                                              final qty = double.tryParse(value);
+                                              if (qty == null) {
+                                                return 'Quantity must be a number';
+                                              }
+                                              if (qty <= 0) {
+                                                return 'Quantity must be greater than 0';
+                                              }
+                                              return null;
+                                            },
+                                          ),
+                                          const SizedBox(height: 10),
+                                          DropdownButtonFormField<String>(
+                                            value: _selectedTaxType,
+                                            dropdownColor: const Color(0xFF22304A),
+                                            style: const TextStyle(color: Colors.white),
+                                            decoration: InputDecoration(
+                                              labelText: 'Tax Type',
+                                              labelStyle: const TextStyle(color: Colors.white70),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.white24),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.blue),
+                                              ),
+                                              fillColor: const Color(0xFF22304A),
+                                              filled: true,
+                                            ),
+                                            items: _taxType.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                                            onChanged: (val) => setState(() => _selectedTaxType = val),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          TextFormField(
+                                            controller: _discountController,
+                                            style: const TextStyle(color: Colors.white),
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            inputFormatters:
+                                            [
+                                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                                            ],
+                                            decoration: InputDecoration(
+                                              labelText: 'Purchase Discount',
+                                              labelStyle: const TextStyle(color: Colors.white70),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.white24),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                                borderSide: const BorderSide(color: Colors.blue),
+                                              ),
+                                              fillColor: const Color(0xFF22304A),
+                                              filled: true,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const Divider(color: Colors.white24),
+                                          Wrap(
+                                            spacing: 10,
+                                            runSpacing: 10,
+                                            children: [
+                                              if (!_saved)
                                                 SizedBox(
                                                   width: 150,
                                                   child: ElevatedButton(
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.lightBlue,
+                                                      backgroundColor: Colors.orangeAccent,
                                                       padding: const EdgeInsets.symmetric(vertical: 16),
                                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                     ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        _itemController.clear();
-                                                        _priceController.clear();
-                                                        _quantityController.clear();
-                                                        _discountController.text = '0';
-                                                        _taxValueController.text = '0';
-                                                        _barcodeController.clear();
-
-                                                      });
-                                                    },
-
-                                                    child: const Text("Reset", style: TextStyle(color: Colors.white)),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  width: 150,
-                                                 child: ElevatedButton(
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.teal,
-                                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                    onPressed: _loading ? null : _addItem,
+                                                    child: const Text(
+                                                      "Add Record",
+                                                      style: TextStyle(color: Colors.white),
                                                     ),
-                                                    onPressed: () {
-                                                      widget.onNewTransaction();
-
-                                                    },
-                                                    child: const Text("New Transaction", style: TextStyle(color: Colors.white)),
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                              SizedBox(
+                                                width: 150,
+                                                child: ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.lightBlue,
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _itemController.clear();
+                                                      _priceController.clear();
+                                                      _quantityController.clear();
+                                                      _discountController.text = '0';
+                                                      _taxValueController.text = '0';
+                                                      _barcodeController.clear();
+
+                                                    });
+                                                  },
+
+                                                  child: const Text("Reset", style: TextStyle(color: Colors.white)),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 150,
+                                                child: ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.teal,
+                                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                  onPressed: () {
+                                                    widget.onNewTransaction();
+
+                                                  },
+                                                  child: const Text("New Transaction", style: TextStyle(color: Colors.white)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                                 isSmallScreen
-                                    ? MobileSalesPreview(items:_items,)
-                                    : _buildStockTable( itemWidth),
+                          ),
+                          isSmallScreen
+                              ? MobileSalesPreview(
+                            items: _items,
+                            onPrint: _saveRecords,
+                            onNewTransaction: _printRecords,
+                            onDeleteItem: (index) {
+                              setState(() {
+                                _items.removeAt(index);
+                              });
+                            },
+                            loading: _loading,
+                          )
+
+                              : _buildStockTable( itemWidth),
 
 
-                          ],
-                        );
-                      },
-                    ),
+                        ],
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
 
       ],
 
@@ -1679,12 +1692,15 @@ class MobileSalesPreview extends StatelessWidget {
   final List<Map<String, dynamic>> items;
   final VoidCallback? onPrint;
   final VoidCallback? onNewTransaction;
-
+  final void Function(int index)? onDeleteItem;
+  final bool loading;
   const MobileSalesPreview({
     super.key,
     required this.items,
     this.onPrint,
     this.onNewTransaction,
+    this.onDeleteItem,
+    this.loading=false,
   });
 
   double get totalAmount {
@@ -1699,54 +1715,54 @@ class MobileSalesPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       color: const Color(0xFF182232),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Sales Preview",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Sales Preview",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const Divider(color: Colors.white24, height: 20),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(color: Colors.white10),
-              itemBuilder: (context, index) {
-                final item = items[index];
-        
-                return _cartItem(
-                  name: item['item'] ?? '',
-                  price: (item['price'] ?? 0.0).toDouble(),
-                  qty: double.tryParse(item['quantity'].toString()) ?? 0,
-                  mode: item['stockingmode'] ?? "",
-                  total: (item['total'] ?? 0.0).toDouble(),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const Divider(color: Colors.white24),
-            _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}",
-                bold: true),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _actionBtn("SAVE RECORDS", Colors.teal, onPrint),
-                _actionBtn("NEW TRANSACTION", Colors.lightBlue, onNewTransaction),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const Divider(color: Colors.white24, height: 20),
 
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return _cartItem(
+                name: item['item'] ?? '',
+                price: (item['price'] ?? 0.0).toDouble(),
+                qty: double.tryParse(item['quantity'].toString()) ?? 0,
+                mode: item['stockingmode'] ?? "",
+                total: (item['total'] ?? 0.0).toDouble(),
+                onDelete: () => onDeleteItem?.call(index), // use callback
+              );
+            },
+          ),
+
+          const Divider(color: Colors.white24),
+          _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}", bold: true),
+          const SizedBox(height: 18),
+
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _actionBtn("SAVE RECORDS", Colors.teal, onPrint),
+              //_actionBtn("Print", Colors.lightBlue, onNewTransaction),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1756,22 +1772,21 @@ class MobileSalesPreview extends StatelessWidget {
     required double qty,
     required String mode,
     required double total,
+    required VoidCallback onDelete,
   }) {
     return Row(
       children: [
-        const CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.white24,
-          child: Icon(Icons.inventory, size: 18, color: Colors.white),
+        IconButton(
+          icon: const Icon(Icons.delete, color: Colors.redAccent),
+          onPressed: onDelete,
         ),
         const SizedBox(width: 10),
-
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _line(name, "GHC ${price.toStringAsFixed(2)}"),
-              _line("Mode",  mode),
+              _line("Mode", mode),
               _line("Qty", "$qty"),
               _line("Total", "GHC ${total.toStringAsFixed(2)}"),
             ],
@@ -1795,33 +1810,23 @@ class MobileSalesPreview extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            )),
+        Text(value,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            )),
       ],
     );
   }
 
   Widget _actionBtn(String text, Color color, VoidCallback? onTap) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      ),
-      onPressed: onTap,
-      child: Text(text, style: const TextStyle(fontSize: 12)),
-    );
-  }
+    return ElevatedButton( style: ElevatedButton.styleFrom( backgroundColor: color, padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), ),
+      onPressed: loading ? null : onTap,
+        child: loading ? const SizedBox( height: 16, width: 16, child: CircularProgressIndicator( strokeWidth: 2, color: Colors.white, ), ) : Text(text, style: const TextStyle(fontSize: 12, color: Colors.white)), ); }
+
 }
