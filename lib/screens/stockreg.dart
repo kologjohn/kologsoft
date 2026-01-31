@@ -1,451 +1,262 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kologsoft/providers/Datafeed.dart';
+import 'package:kologsoft/providers/routes.dart';
 import 'package:pdf/pdf.dart';
-import 'package:provider/provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
+
 import 'itemreg.dart';
 
-class NewStock extends StatefulWidget {
-  final String? docId;
-  final Map<String, dynamic>? data;
-  const NewStock({super.key,this.docId, this.data});
+class Transfers extends StatefulWidget {
+  const Transfers({super.key});
 
   @override
-  State<NewStock> createState() => _NewStockState();
+  State<Transfers> createState() => _TransfersState();
 }
 
-class _NewStockState extends State<NewStock> {
+class _TransfersState extends State<Transfers> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _invoicenumberController = TextEditingController();
-  final TextEditingController _waybillController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
 
-  String? _selectedPurchaseType;
-  String? _selectedpaymentaccount;
-  bool _loading = false;
   DateTime? _selectedDate;
-  bool _showStockItems = false;
-  Map<String, dynamic>? _pendingHeader;
-  late List<String> _purchasTypes = ['Cash', 'Credit', 'Opening Stock'];
-  late List<String> paymentaccount = ['Cash Account', 'Bank Account', 'Mobile Money'];
-
-  bool get isCashPurchase => _selectedPurchaseType == 'Cash';
-
-  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<Datafeed>(context, listen: false);
       provider.fetchBranches();
-      provider.fetchSuppliers();
-      if (widget.data != null) {
-        final customadata = widget.data!;
-        final branchId = customadata['branchId'];
-        if (branchId != null && branchId.isNotEmpty) {
-          provider.selectBranch(branchId);
-        }
-      }
+      provider.fetchWarehouses();
+      // if (widget.data != null) {
+      //   final customadata = widget.data!;
+      //   final branchId = customadata['branchId'];
+      //   if (branchId != null && branchId.isNotEmpty) {
+      //     provider.selectBranch(branchId);
+      //   }
+      // }
     });
 
-    if (widget.data != null) {
-      final customadata = widget.data!;
-      _invoicenumberController.text = customadata['name'] ?? '';
-      _contactController.text = customadata['contact'] ?? '';
-      final customerType = customadata['customertype'];
-      if (_purchasTypes.contains(customerType)) {
-        _selectedPurchaseType = customerType;
-      }
-      final paymentDuration = customadata['paymentduration'];
-      if (paymentaccount.contains(paymentDuration)) {
-        _selectedpaymentaccount = paymentDuration;
-      }
-    }
-
-    if (widget.docId != null && widget.docId!.isNotEmpty) {
-      _showStockItems = true;
-      _pendingHeader = widget.data;
-    }
   }
-
-  void _resetToNewStock() {
-    setState(() {
-      _showStockItems = false;
-      _pendingHeader ={};
-      widget.docId == null;
-      _invoicenumberController.clear();
-      _waybillController.clear();
-      _contactController.clear();
-      _dateController.clear();
-      _selectedPurchaseType = null;
-      _selectedpaymentaccount = null;
-      _selectedDate = null;
-
-    });
-  }
-
-  @override
-  void dispose() {
-    _invoicenumberController.dispose();
-    _contactController.dispose();
-    _waybillController.dispose();
-    _dateController.dispose();
-    super.dispose();
-  }
-
-  InputDecoration _inputDecoration({
-    required String label,
-    IconData? prefix,
-    String? hint,
-    Widget? suffix,
-  }) {return InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: Colors.white70),
-    hintText: hint,
-    hintStyle: const TextStyle(color: Colors.white54),
-    prefixIcon: prefix != null ? Icon(prefix, color: Colors.white70) : null,
-    suffixIcon: suffix,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.white24),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.blue),
-    ),
-    fillColor: const Color(0xFF22304A),
-    filled: true,
-  );}
-
-  Widget _twoCol(Widget a, Widget b) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        SizedBox(width: 320, child: a),
-        SizedBox(width: 320, child: b),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Consumer<Datafeed>(builder: (BuildContext context, Datafeed value, Widget? child) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF101A23),
-        appBar: AppBar(
-          title: Text(widget.docId != null ? "EDIT STOCK ENTRY" : "NEW STOCK ENTRY"),
-          backgroundColor: const Color(0xFF0D1A26),
-          foregroundColor: Colors.white,
-          elevation: 2,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 100),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, animation) {
-                  final offset = Tween<Offset>(
-                    begin: const Offset(0.15, 0),
-                    end: Offset.zero,
-                  ).animate(animation);
-
-                  return SlideTransition(
-                    position: offset,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
-                child: _showStockItems
-                    ? Padding(
-                  key: const ValueKey('stock_form'),
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child:StockItemsForm(
-                    transactionId: _pendingHeader!['docid'] as String,
-                    headerData: _pendingHeader!,
-                    onNewTransaction: _resetToNewStock,
+    return Consumer<Datafeed>(
+        builder: (BuildContext context, Datafeed value, Widget? child){
+          return  Scaffold(
+            backgroundColor: const Color(0xFF101A23),
+            appBar: AppBar(
+              title: Text("TRANSFER STOCK"),
+              backgroundColor: const Color(0xFF0D1A26),
+              foregroundColor: Colors.white,
+              elevation: 2,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: 700
                   ),
+                  child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        children: [
+                          Card(
+                            color: const Color(0xFF182232),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 16.0, top: 20, right: 16, bottom: 20),
+                              child: Column(
+                                children: [
 
-
-                )
-                    : Padding(
-                  key: const ValueKey('header_card'),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Center(
-                    child: ConstrainedBox( constraints: const BoxConstraints(maxWidth: 700),
-                      child: Card(
-                        color: const Color(0xFF182232),
-                        elevation: 6,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Section title
-                              Text(
-                                "Header Details",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Provide the invoice, supplier and branch information for this stock entry.",
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
-                              ),
-                              const SizedBox(height: 16),
-
-                              _twoCol(
-                                TextFormField(
-                                  controller: _invoicenumberController,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(label: 'Invoice Number', prefix: Icons.receipt),
-                                ),
-                                TextFormField(
-                                  controller: _waybillController,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(label: 'Waybill Number', prefix: Icons.local_shipping),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Supplier full width
-                              DropdownButtonFormField<String>(
-                                value: value.selectedSupplier?.id,
-                                dropdownColor: const Color(0xFF22304A),
-                                style: const TextStyle(color: Colors.white),
-                                decoration: _inputDecoration(label: 'Supplier', prefix: Icons.business),
-                                items: value.suppliers.map((suplier) {
-                                  return DropdownMenuItem<String>(
-                                    value: suplier.id,
-                                    child: Text(suplier.supplier),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) value.selectSupplier(val);
-                                },
-                                validator: (val) => val == null ? 'Please select Supplier' : null,
-                              ),
-                              const SizedBox(height: 14),
-
-                              _twoCol(
-                                DropdownButtonFormField<String>(
-                                  value: _selectedPurchaseType,
-                                  dropdownColor: const Color(0xFF22304A),
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(label: 'Purchase Mode', prefix: Icons.payment),
-                                  items: _purchasTypes.map((type) {
-                                    return DropdownMenuItem<String>(value: type, child: Text(type));
-                                  }).toList(),
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _selectedPurchaseType = v;
-                                      if (v != 'Credit') _selectedpaymentaccount = null;
-                                    });
-                                  },
-                                  validator: (value) => value == null ? 'Please select purchase mode' : null,
-                                ),
-                                DropdownButtonFormField<String>(
-                                  value: _selectedpaymentaccount,
-                                  dropdownColor: const Color(0xFF22304A),
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(label: 'Payment Account', prefix: Icons.account_balance_wallet),
-                                  items: paymentaccount.map((type) {
-                                    return DropdownMenuItem<String>(value: type, child: Text(type));
-                                  }).toList(),
-                                  onChanged: (v) => setState(() => _selectedpaymentaccount = v),
-                                  validator: (value) {
-                                    if (!isCashPurchase) return null;
-                                    return value == null ? 'Please select payment account' : null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-
-                              _twoCol(
-                                DropdownButtonFormField<String>(
-                                  value: value.selectedBranch?.id,
-                                  dropdownColor: const Color(0xFF22304A),
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(label: 'Branch', prefix: Icons.location_city),
-                                  items: value.branches.map((branch) {
-                                    return DropdownMenuItem<String>(value: branch.id, child: Text(branch.branchname));
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) value.selectBranch(val);
-                                  },
-                                  validator: (val) => val == null ? 'Please select branch' : null,
-                                ),
-                                TextFormField(
-                                  controller: _dateController,
-                                  readOnly: true,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: _inputDecoration(
-                                    label: 'Date',
-                                    prefix: Icons.calendar_today,
-                                    hint: 'yyyy-mm-dd',
+                                  DropdownButtonFormField<String>(
+                                    value:value.selectedwarehouse?.id,
+                                    dropdownColor: const Color(0xFF22304A),
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'From Warehouse',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    items: value.warehouses.map((warehouse) {
+                                      return DropdownMenuItem<String>(
+                                        value: warehouse.id,
+                                        child: Text(warehouse.name),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) value.selectWarehouses(val);
+                                    },
+                                    validator: (val) => val == null ? 'Please select warehouse' : null,
                                   ),
-                                  onTap: () async {
-                                    DateTime? picked = await showDatePicker(
-                                      context: context,
-                                      initialDate: _selectedDate ?? DateTime.now(),
-                                      firstDate: DateTime(2020),
-                                      lastDate: DateTime(2100),
-                                      builder: (context, child) {
-                                        return Theme(
-                                          data: Theme.of(context).copyWith(
-                                            colorScheme: const ColorScheme.dark(
-                                              primary: Colors.blue,
-                                              onPrimary: Colors.white,
-                                              surface: Color(0xFF22304A),
-                                              onSurface: Colors.white,
+                                  SizedBox(height: 14),
+                                  DropdownButtonFormField<String>(
+                                    value:value.selectedBranch?.id,
+                                    dropdownColor: const Color(0xFF22304A),
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'To Branch',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    items: value.branches.map((branch) {
+                                      return DropdownMenuItem<String>(
+                                        value: branch.id,
+                                        child: Text(branch.branchname),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) value.selectBranch(val);
+                                    },
+                                    validator: (val) => val == null ? 'Please select Branch' : null,
+                                  ),
+                                  SizedBox(height: 14),
+
+                                  TextFormField(
+                                    controller: _dateController,
+                                    readOnly: true,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: 'Date',
+                                      labelStyle: const TextStyle(color: Colors.white70),
+                                      hintText: 'yyyy-mm-dd',
+                                      hintStyle: const TextStyle(color: Colors.white54),
+                                      suffixIcon: const Icon(
+                                        Icons.calendar_today,
+                                        color: Colors.white70,
+                                        size: 18,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(color: Colors.blue),
+                                      ),
+                                      fillColor: const Color(0xFF22304A),
+                                      filled: true,
+                                    ),
+                                    onTap: () async {
+                                      DateTime? picked = await showDatePicker(
+                                        context: context,
+                                        initialDate: _selectedDate ?? DateTime.now(),
+                                        firstDate: DateTime(2020),
+                                        lastDate: DateTime(2100),
+                                        builder: (context, child) {
+
+                                          return Theme(
+                                            data: Theme.of(context).copyWith(
+                                              colorScheme: const ColorScheme.dark(
+                                                primary: Colors.blue,
+                                                onPrimary: Colors.white,
+                                                surface: Color(0xFF22304A),
+                                                onSurface: Colors.white,
+                                              ),
+                                            ),
+                                            child: child!,
+                                          );
+                                        },
+                                      );
+
+                                      if (picked != null) {
+                                        setState(() {
+                                          _selectedDate = picked;
+                                          _dateController.text =
+                                          "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                                        });
+                                      }
+                                    },
+                                    validator: (value) =>
+                                    value == null || value.isEmpty ? 'Select date' : null,
+                                  ),
+
+
+                                  const SizedBox(height: 30),
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: [
+                                      // Save button
+                                      SizedBox(
+                                        width: 200,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.lightBlue,
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(14),
                                             ),
                                           ),
-                                          child: child!,
-                                        );
-                                      },
-                                    );
+                                          onPressed: () {
 
-                                    if (picked != null) {
-                                      setState(() {
-                                        _selectedDate = picked;
-                                        _dateController.text =
-                                        "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-                                      });
-                                    }
-                                  },
-                                  validator: (value) => value == null || value.isEmpty ? 'Select date' : null,
-                                ),
-                              ),
+                                            Navigator.pushNamed(context, Routes.transferpage);
+                                          },
 
-                              const SizedBox(height: 18),
-
-                              // Actions
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 48,
-                                      child: ElevatedButton.icon(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF415A77),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        ),
-                                        onPressed: _loading
-                                            ? null
-                                            : () async {
-                                          if (!_formKey.currentState!.validate()) return;
-
-                                          setState(() => _loading = true);
-
-                                          String invoicenumber = _invoicenumberController.text.trim();
-                                          String waybillnumber = _waybillController.text.trim();
-                                          String purchasetype = _selectedPurchaseType!;
-                                          DateTime? invoicedate = _selectedDate;
-                                          final branchId = value.selectedBranch?.id ?? '';
-                                          final branchName = value.selectedBranch?.branchname ?? '';
-                                          final docid = value.normalizeAndSanitize(
-                                              "${value.companyid}${DateTime.now().millisecondsSinceEpoch}${branchId}${value.staffPosition}");
-
-                                          final headerData = {
-                                            'invoice': invoicenumber,
-                                            'invoicedate': invoicedate,
-                                            'waybill': waybillnumber,
-                                            'supplierid': value.selectedSupplier?.id ?? '',
-                                            'suppliername': value.selectedSupplier?.supplier ?? '',
-                                            'branchid': branchId,
-                                            'branchname': branchName,
-                                            'purchasetype': purchasetype,
-                                            'docid': docid,
-                                            'createdat': DateTime.now(),
-                                            'createdby': value.staff,
-                                            'companyid': value.companyid,
-                                            'company': value.company,
-                                          };
-
-                                          try {
-                                            if (widget.docId == null) {
-                                              setState(() {
-                                                _pendingHeader = headerData;
-                                                _showStockItems = true;
-                                              });
-                                              FocusScope.of(context).unfocus();
-                                            }
-                                          } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                                          }
-
-                                          if (!mounted) return;
-                                          setState(() {
-                                            _loading = false;
-                                            _selectedPurchaseType = null;
-                                          });
-                                        },
-                                        icon: _loading ? const SizedBox.shrink() : const Icon(Icons.arrow_forward),
-                                        label: _loading
-                                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
-                                            : Text(
-                                          "Proceed",
-                                          style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                                          child: Text(
+                                            "Proceed",
+                                            style: TextStyle(color: Colors.white),),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  SizedBox(
-                                    height: 48,
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Colors.white24),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      onPressed: () => Navigator.of(context).maybePop(),
-                                      child: const Text("Cancel", style: TextStyle(color: Colors.white70)),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),),
+                            ),
+                          )
+                        ],
+                      )
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      );
-    });
+          );
+        }
+    );
   }
 }
 
-class StockItemsForm extends StatefulWidget {
+class WareHouseTransferForm extends StatefulWidget {
   final String transactionId;
   final Map<String, dynamic> headerData;
   final VoidCallback onNewTransaction;
-  final Function(Map<String, dynamic>)? onItemAdded;
 
-  const StockItemsForm({super.key, required this.transactionId, required this.headerData, required this.onNewTransaction, this.onItemAdded});
+  const WareHouseTransferForm({super.key, required this.transactionId, required this.headerData, required this.onNewTransaction});
 
   @override
-  State<StockItemsForm> createState() => _StockItemsFormState();
+  State<WareHouseTransferForm> createState() => _WareHouseTransferFormState();
 }
 
-class _StockItemsFormState extends State<StockItemsForm> {
+class _WareHouseTransferFormState extends State<WareHouseTransferForm> {
   final _formkey = GlobalKey<FormState>();
   final TextEditingController _barcodeController = TextEditingController();
   final TextEditingController _itemController = TextEditingController();
@@ -627,7 +438,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
           'barcode': _barcodeController.text.trim(),
           'itemid': _selectedItem != null ? _selectedItem!['id'] ?? '' : '',
         });
-        widget.onItemAdded?.call(_items as Map<String, dynamic>);
 
         // Clear item and quantity for next entry (keeping price/mode/tax if desired)
         _itemController.clear();
@@ -639,7 +449,6 @@ class _StockItemsFormState extends State<StockItemsForm> {
       });
     }
   }
-
 
   ({double gross, double discount, double tax, double net}) _calculateTotals() {
     double baseTotal = 0.0;
@@ -675,7 +484,7 @@ class _StockItemsFormState extends State<StockItemsForm> {
       );
       return;
     }
-
+    setState(() => _loading = true);
     final totals = _calculateTotals();
 
     final Map<String, dynamic> docData = {
@@ -714,6 +523,8 @@ class _StockItemsFormState extends State<StockItemsForm> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Save failed: $e')),
       );
+    }finally { if (mounted) setState(() => _loading = false);
+
     }
 
   }
@@ -1414,7 +1225,18 @@ class _StockItemsFormState extends State<StockItemsForm> {
                             ),
                           ),
                           isSmallScreen
-                              ? MobileSalesPreview(items:_items, transactionId: widget.transactionId, headerData: widget.headerData,)
+                              ? MobileSalesPreview(
+                            items: _items,
+                            onPrint: _saveRecords,
+                            onNewTransaction: _printRecords,
+                            onDeleteItem: (index) {
+                              setState(() {
+                                _items.removeAt(index);
+                              });
+                            },
+                            loading: _loading,
+                          )
+
                               : _buildStockTable( itemWidth),
 
 
@@ -1678,106 +1500,20 @@ class _StockItemsFormState extends State<StockItemsForm> {
 
 }
 
-class MobileSalesPreview extends StatefulWidget {
-  final String transactionId;
-  final Map<String, dynamic> headerData;
+class MobileSalesPreview extends StatelessWidget {
   final List<Map<String, dynamic>> items;
-
-
+  final VoidCallback? onPrint;
+  final VoidCallback? onNewTransaction;
+  final void Function(int index)? onDeleteItem;
+  final bool loading;
   const MobileSalesPreview({
     super.key,
-    required this.items, required this.transactionId, required this.headerData,
-
+    required this.items,
+    this.onPrint,
+    this.onNewTransaction,
+    this.onDeleteItem,
+    this.loading=false,
   });
-
-  @override
-  State<MobileSalesPreview> createState() => _MobileSalesPreviewState();
-}
-
-class _MobileSalesPreviewState extends State<MobileSalesPreview> {
-  List<Map<String, dynamic>> items=[];
-  bool _saved=false;
-  bool _loading=false;
-  @override
-  void initState() {
-    super.initState();
-    items = List.from(widget.items);
-  }
-  Future<void> _saveRecords() async {
-    if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No items to save')),
-      );
-      return;
-    }
-    ({double gross, double discount, double tax, double net}) _calculateTotals() {
-      double baseTotal = 0.0;
-      double discountTotal = 0.0;
-      double taxTotal = 0.0;
-
-      for (final it in items) {
-        final double price = (it['price'] as num?)?.toDouble() ?? 0.0;
-        final double qty = (it['quantity'] as double?) ?? 0;
-        final double discount = (it['discount'] as num?)?.toDouble() ?? 0.0;
-        final double taxAmt = (it['taxAmount'] as num?)?.toDouble() ?? 0.0;
-
-        baseTotal += price * qty;
-        discountTotal += discount;
-        taxTotal += taxAmt;
-      }
-
-      final double payable = baseTotal - discountTotal + taxTotal;
-
-      return (
-      gross: baseTotal,
-      discount: discountTotal,
-      tax: taxTotal,
-      net: payable,
-      );
-    }
-
-
-    final totals = _calculateTotals();
-
-    final Map<String, dynamic> docData = {
-      ...widget.headerData,
-      'transactionid': widget.transactionId,
-      'items': items,
-      'gross': totals.gross,
-      'discount': totals.discount,
-      'tax': totals.tax,
-      'netval': totals.net,
-
-    };
-    if (widget.headerData.containsKey('items'))
-    {
-      docData['editedat'] = FieldValue.serverTimestamp();
-      docData['editedby'] = widget.headerData['createdby'] ?? 'unknown';
-    }
-    try {
-
-      await FirebaseFirestore.instance
-          .collection('stock_transactions')
-          .doc(widget.transactionId)
-          .set(docData,SetOptions(merge: true));
-
-      if (!mounted) return;
-      setState(() {
-        _saved = true;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Records saved')),
-      );
-
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
-      );
-    }
-
-  }
 
   double get totalAmount {
     return items.fold(0.0, (sum, item) {
@@ -1791,80 +1527,53 @@ class _MobileSalesPreviewState extends State<MobileSalesPreview> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       color: const Color(0xFF182232),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Sales Preview",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Sales Preview",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const Divider(color: Colors.white24, height: 20),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(color: Colors.white10),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _cartItem(
-                  name: item['item'] ?? '',
-                  price: (item['price'] ?? 0.0).toDouble(),
-                  qty: double.tryParse(item['quantity'].toString()) ?? 0,
-                  mode: item['stockingmode'] ?? "",
-                  total: (item['total'] ?? 0.0).toDouble(),
-                  onDelete: () {
-                    setState(() {
-                      items.removeAt(index);
-                    });
-                  },
-                );
-              },
-            ),
-            const Divider(color: Colors.white24),
-            _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}", bold: true),
-            const SizedBox(height: 18),
-            ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightBlue,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: _loading
-                    ? null
-                    : () async {
-                  setState(() => _loading = true);
-                  await _saveRecords();
-                  if (mounted) setState(() => _loading = false);
-                },
-                child: _loading
-                    ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-                    :
-                Text(
-                  widget.headerData.containsKey('items') ? "UPDATE RECORDS" : "SAVE RECORDS",
-                  style: const TextStyle(color: Colors.white),
-                )
-            ),
+          ),
+          const Divider(color: Colors.white24, height: 20),
 
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return _cartItem(
+                name: item['item'] ?? '',
+                price: (item['price'] ?? 0.0).toDouble(),
+                qty: double.tryParse(item['quantity'].toString()) ?? 0,
+                mode: item['stockingmode'] ?? "",
+                total: (item['total'] ?? 0.0).toDouble(),
+                onDelete: () => onDeleteItem?.call(index), // use callback
+              );
+            },
+          ),
 
-          ],
-        ),
+          const Divider(color: Colors.white24),
+          _row("Payable Amount", "GHC ${totalAmount.toStringAsFixed(2)}", bold: true),
+          const SizedBox(height: 18),
+
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _actionBtn("SAVE RECORDS", Colors.teal, onPrint),
+              //_actionBtn("Print", Colors.lightBlue, onNewTransaction),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1913,22 +1622,24 @@ class _MobileSalesPreviewState extends State<MobileSalesPreview> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            )),
+        Text(value,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            )),
       ],
     );
   }
 
+  Widget _actionBtn(String text, Color color, VoidCallback? onTap) {
+    return ElevatedButton( style: ElevatedButton.styleFrom( backgroundColor: color, padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), ),
+      onPressed: loading ? null : onTap,
+      child: loading ? const SizedBox( height: 16, width: 16, child: CircularProgressIndicator( strokeWidth: 2, color: Colors.white, ), ) : Text(text, style: const TextStyle(fontSize: 12, color: Colors.white)), ); }
+
 }
+

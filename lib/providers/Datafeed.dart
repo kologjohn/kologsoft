@@ -35,6 +35,7 @@ class Datafeed extends ChangeNotifier {
   List<stockingModeModel> stockingModes = [];
   bool loadingWarehouses = false;
   BranchModel? selectedBranch;
+  WarehouseModel? selectedwarehouse;
   Supplier? selectedSupplier;
   StaffModel? currentStaff;
   CompanyModel? currentCompany;
@@ -183,7 +184,7 @@ class Datafeed extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchWarehouses() async {
+   fetchWarehouses() async {
     try {
       loadingWarehouses = true;
       notifyListeners();
@@ -191,7 +192,7 @@ class Datafeed extends ChangeNotifier {
       final snap = await db
           .collection('warehouse')
           .where('companyid', isEqualTo: companyid)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
 
       warehouses = snap.docs
           .map((e) => WarehouseModel.fromMap(e.data()))
@@ -201,6 +202,14 @@ class Datafeed extends ChangeNotifier {
     }
 
     loadingWarehouses = false;
+    notifyListeners();
+  }
+
+  selectWarehouses(String warehouseid) {
+    selectedwarehouse = warehouses.firstWhere(
+          (warehouse) => warehouse.id == warehouseid,
+      orElse: () => WarehouseModel(name: '', staff: '', id: '', date: DateTime.now(), companyid: '', company: ''),
+    );
     notifyListeners();
   }
 

@@ -82,7 +82,7 @@ final pages = {
   Routes.staffreg: (context) => RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager','super admin']),
   Routes.staffprofile: (context) => const RouteGuard(child: StaffProfile()),
   Routes.sales: (context) => const RouteGuard(child: SalesPage()),
-  Routes.transfers: (context) => const RouteGuard(child: Transfers()),
+  Routes.transfers: (context) => const RouteGuard(child: NewTransfer()),
   Routes.transferpage: (context) => const RouteGuard(child: TransferPage()),
   Routes.stocklist: (context) => const RouteGuard(child: StockListPage()),
 };
