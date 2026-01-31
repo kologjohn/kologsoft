@@ -27,7 +27,7 @@ class ItemModel extends HiveObject {
   @HiveField(10)
   final String pricingmode;
   @HiveField(11)
-  final String productcategory;
+  final String pcategory;
   @HiveField(12)
   final String warehouse;
   @HiveField(13)
@@ -72,7 +72,7 @@ class ItemModel extends HiveObject {
     required this.wholesaleprice,
     required this.producttype,
     required this.pricingmode,
-    required this.productcategory,
+    required this.pcategory,
     required this.warehouse,
     required this.openingstock,
     required this.company,
@@ -104,7 +104,7 @@ class ItemModel extends HiveObject {
       'wholesaleprice': wholesaleprice,
       'producttype': producttype,
       'pricingmode': pricingmode,
-      'pcategory': productcategory,
+      'pcategory': pcategory,
       'warehouse': warehouse,
       'openingstock': openingstock,
       'company': company,
@@ -132,7 +132,7 @@ class ItemModel extends HiveObject {
       wholesaleprice: d['wholesaleprice'] ?? '0',
       producttype: d['producttype'] ?? 'product',
       pricingmode: d['pricingmode'] ?? '',
-      productcategory: d['productcategory'] ?? '',
+      pcategory: d['pcategory'] ?? '',
       warehouse: d['warehouse'] ?? '',
       openingstock: d['openingstock'] ?? '0',
       company: d['company'] ?? '',
@@ -163,7 +163,7 @@ class ItemModel extends HiveObject {
       wholesaleprice: d['wholesaleprice'] ?? '0',
       producttype: d['producttype'] ?? 'product',
       pricingmode: d['pricingmode'] ?? '',
-      productcategory: d['productcategory'] ?? '',
+      pcategory: d['pcategory'] ?? '',
       warehouse: d['warehouse'] ?? '',
       openingstock: d['openingstock'] ?? '0',
       company: d['company'] ?? '',

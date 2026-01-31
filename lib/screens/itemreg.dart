@@ -332,7 +332,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
       _nameController.text = d.name ?? '';
       _barcodeController.text = d.barcode ?? '';
       _costController.text = d.cp ?? '';
-      _productCategory = d.productcategory;
+      _productCategory = d.pcategory;
       _productType = d.producttype;
       _costController.text = d.cp;
       _supplierMinQtyController.text = d.sminqty;
@@ -1454,7 +1454,7 @@ class _ItemRegPageState extends State<ItemRegPage> {
                                         wholesaleprice: '',
                                         producttype: _productType ?? '',
                                         pricingmode: '',
-                                        productcategory: _productCategory?? '',
+                                        pcategory: _productCategory?? '',
                                         warehouse: '',
                                         openingstock: '',
                                         company: datafeed.company,

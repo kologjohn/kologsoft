@@ -12,6 +12,7 @@ import 'package:kologsoft/screens/transfer_page.dart';
 import 'package:kologsoft/screens/transfers.dart';
 
 import '../screens/branch_view.dart';
+import '../screens/branchprice.dart';
 import '../screens/companylist.dart';
 import '../screens/companyreg.dart';
 import '../screens/customer_registration.dart';
@@ -52,6 +53,7 @@ class Routes {
   static const String transfers = '/transfers';
   static const String transferpage = '/transferpage';
   static const String stocklist = '/stocklist';
+  static const String branchprice = '/branchprice';
 }
 
 final pages = {
@@ -82,7 +84,8 @@ final pages = {
   Routes.staffreg: (context) => RouteGuard(child: Staff(), allowedAccessLevels: ['admin', 'manager','super admin']),
   Routes.staffprofile: (context) => const RouteGuard(child: StaffProfile()),
   Routes.sales: (context) => const RouteGuard(child: SalesPage()),
-  Routes.transfers: (context) => const RouteGuard(child: Transfers()),
+  Routes.transfers: (context) => const RouteGuard(child: NewTransfer()),
   Routes.transferpage: (context) => const RouteGuard(child: TransferPage()),
   Routes.stocklist: (context) => const RouteGuard(child: StockListPage()),
+  Routes.branchprice: (context) => const RouteGuard(child: BranchPricePage()),
 };

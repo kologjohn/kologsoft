@@ -26,6 +26,9 @@ class Datafeed extends ChangeNotifier {
   String companyemail = "";
   String companyphone = "";
   String staff = "";
+  String branch = "";
+  String branchid = "";
+  String accessLevel = "";
   int staffPosition = 0;
   List<WarehouseModel> warehouses = [];
   bool loadingproductcategory = false;
@@ -35,6 +38,7 @@ class Datafeed extends ChangeNotifier {
   List<stockingModeModel> stockingModes = [];
   bool loadingWarehouses = false;
   BranchModel? selectedBranch;
+  WarehouseModel? selectedwarehouse;
   Supplier? selectedSupplier;
   StaffModel? currentStaff;
   CompanyModel? currentCompany;
@@ -48,9 +52,9 @@ class Datafeed extends ChangeNotifier {
   Future<void> _initItemCache() async {
     try {
       await itemCache.init();
-      debugPrint('✅ Item cache initialized');
+      debugPrint('Item cache initialized');
     } catch (e) {
-      debugPrint('❌ Error initializing item cache: $e');
+      debugPrint('Error initializing item cache: $e');
     }
   }
 
@@ -69,9 +73,7 @@ class Datafeed extends ChangeNotifier {
 
   fetchBranches() async {
     try {
-      final snap = await db
-          .collection('branches')
-          .where("companyId", isEqualTo: companyid)
+      final snap = await db.collection('branches').where("companyId", isEqualTo: companyid)
           .get(const GetOptions(source: Source.serverAndCache));
       final fetchedBranches = snap.docs.map((doc) {
         return BranchModel.fromJson(doc.data());
@@ -183,7 +185,7 @@ class Datafeed extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchWarehouses() async {
+   fetchWarehouses() async {
     try {
       loadingWarehouses = true;
       notifyListeners();
@@ -191,7 +193,7 @@ class Datafeed extends ChangeNotifier {
       final snap = await db
           .collection('warehouse')
           .where('companyid', isEqualTo: companyid)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
 
       warehouses = snap.docs
           .map((e) => WarehouseModel.fromMap(e.data()))
@@ -201,6 +203,14 @@ class Datafeed extends ChangeNotifier {
     }
 
     loadingWarehouses = false;
+    notifyListeners();
+  }
+
+  selectWarehouses(String warehouseid) {
+    selectedwarehouse = warehouses.firstWhere(
+          (warehouse) => warehouse.id == warehouseid,
+      orElse: () => WarehouseModel(name: '', staff: '', id: '', date: DateTime.now(), companyid: '', company: ''),
+    );
     notifyListeners();
   }
 
@@ -214,8 +224,11 @@ class Datafeed extends ChangeNotifier {
     companyemail = "";
     companyphone = "";
     staff = "";
+    branch = "";
+    branchid = "";
     staffPosition = 0;
     currentStaff = null;
+    accessLevel = '';
     currentCompany = null;
     notifyListeners();
     Navigator.pushNamedAndRemoveUntil(context, Routes.login, (route) => false);
@@ -359,27 +372,27 @@ class Datafeed extends ChangeNotifier {
         password: password,
       );
       authenticated = true;
-      final userDoc = await db
-          .collection('staff')
-          .doc(auth.currentUser!.email.toString())
-          .get();
+      final userDoc = await db.collection('staff').doc(auth.currentUser!.email.toString()).get();
 
       if (userDoc.exists) {
         // Use StaffModel to parse the data
         currentStaff = StaffModel.fromMap(userDoc.data()!);
-
-        final companydoc = await db
-            .collection('companies')
-            .doc(currentStaff!.companyId.toString().toUpperCase())
-            .get();
-        print(currentStaff!.companyId);
+        final companydoc = await db.collection('companies').doc(currentStaff!.companyId.toString().toUpperCase()).get();
+        final branchdoc = await db.collection('branches').where('companyId',isEqualTo:currentStaff!.companyId.toString().toUpperCase() ).get();
+        if( branchdoc.docs.isNotEmpty)  {
+          branch = branchdoc.docs.first.data()['branchName'];
+          branchid = branchdoc.docs.first.data()['id'];
+        }
 
         if (companydoc.exists) {
           currentCompany = CompanyModel.fromMap(companydoc.data()!);
           company = currentCompany!.company;
           companyemail = currentCompany!.email;
           companyphone = currentCompany!.phone;
+          companyphone = currentCompany!.branch;
+
         }
+
         // Save to SharedPreferences
         spref.setString('email', currentStaff!.email);
         spref.setString('accessLevel', currentStaff!.accesslevel);
@@ -390,6 +403,8 @@ class Datafeed extends ChangeNotifier {
         spref.setString('company', currentCompany!.company);
         spref.setString('companyemail', currentCompany!.email);
         spref.setInt('staffPosition', currentStaff!.position);
+        spref.setString('branch', currentStaff!.branch);
+        spref.setString('branchid', currentStaff!.branchid);
 
         // Update display name
         auth.currentUser!.updateDisplayName(currentStaff!.name);
@@ -399,6 +414,7 @@ class Datafeed extends ChangeNotifier {
         companyid = currentStaff!.companyId;
         staffPosition = currentStaff!.position;
       }
+      //print("the branch is $branch and branch id is $branchid");
       await getdata();
 
       // Sync items cache after successful login
@@ -432,11 +448,14 @@ class Datafeed extends ChangeNotifier {
       final spref = await SharedPreferences.getInstance();
       company = spref.getString('company')!;
       companyid = spref.getString('companyid')!;
+      branchid = spref.getString('branchid')!;
+      branch = spref.getString('branch')!;
+      accessLevel = spref.getString('accessLevel')!;
       companyemail = spref.getString('companyemail')!;
       companyphone = spref.getString('companyphone')!;
       staff = spref.getString('staff')!;
       staffPosition = spref.getInt('staffPosition') ?? 0;
-      print(company);
+
     } catch (e) {
       print(e);
     }

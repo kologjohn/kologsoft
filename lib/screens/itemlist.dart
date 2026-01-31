@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 import '../models/itemregmodel.dart';
+import '../providers/Datafeed.dart';
 import 'itemreg.dart';
 
 class ItemListPage extends StatefulWidget {
@@ -19,7 +21,8 @@ class _ItemListPageState extends State<ItemListPage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width > 900;
-
+    final value = Provider.of<Datafeed>(context, listen: false);
+    final companyid = value.companyid;
     return Scaffold(
       backgroundColor: const Color(0xFF101624),
       appBar: AppBar(title: const Text("Registered Items")),
@@ -63,7 +66,7 @@ class _ItemListPageState extends State<ItemListPage> {
 
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: db.collection('itemsreg').orderBy('name').snapshots(),
+              stream: db.collection('itemsreg').orderBy('name').where("companyId", isEqualTo: companyid).snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -84,7 +87,7 @@ class _ItemListPageState extends State<ItemListPage> {
                   final name = item.name ?? "";
                   final barcode = item.barcode ?? "";
                   final company = item.company ?? "";
-                  final category = item.productcategory ?? "";
+                  final category = item.pcategory ?? "";
                     return name.toLowerCase().contains(searchQuery) ||
                       barcode.toLowerCase().contains(searchQuery) ||
                       company.toLowerCase().contains(searchQuery) ||
@@ -211,14 +214,14 @@ class _ItemListPageState extends State<ItemListPage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                if (item.productcategory.isNotEmpty)
+                                if (item.pcategory.isNotEmpty)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF22304A),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Text(item.productcategory, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                    child: Text(item.pcategory, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                                   ),
                                 const SizedBox(width: 8),
                                 Text("Barcode: ${item.barcode}", style: const TextStyle(color: Colors.white54, fontSize: 12)),
@@ -286,7 +289,7 @@ class _ItemListPageState extends State<ItemListPage> {
                         _line("Item No", item.no,'1'),
                         _line("Barcode", item.barcode,'2'),
                         _line("Product Type", item.producttype,'3'),
-                        _line("Category", item.productcategory,'4'),
+                        _line("Category", item.pcategory,'4'),
                         _line("Company", item.company,'5'),
                         _line("Warehouse", item.warehouse,'6'),
 
@@ -510,7 +513,7 @@ class _ItemListPageState extends State<ItemListPage> {
                   style: const TextStyle(color: Colors.white70))),
               DataCell(Text(item.company,
                   style: const TextStyle(color: Colors.white70))),
-              DataCell(Text(item.productcategory,
+              DataCell(Text(item.pcategory,
                   style: const TextStyle(color: Colors.white70))),
              // DataCell(Text(pricing,style: const TextStyle(color: Colors.white60))),
               DataCell(Row(

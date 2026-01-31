@@ -290,6 +290,16 @@ class Sidebar extends StatelessWidget {
                         Navigator.pushNamed(context, Routes.itemlist);
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.add_business, color: Colors.white),
+                    title: const Text(
+                      'Branch Price',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: (){
+                        Navigator.pushNamed(context, Routes.branchprice);
+                    },
+                  ),
 
 
 

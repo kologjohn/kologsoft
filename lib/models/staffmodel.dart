@@ -6,6 +6,8 @@ class StaffModel {
   final String email;
   final String phone;
   final String accesslevel;
+  final String branch;
+  final String branchid;
   final List<String> pricingmode;
   final Map<String, Timestamp>? readUpdates;
   final Timestamp createdAt;
@@ -22,6 +24,8 @@ class StaffModel {
     this.email = '',
     this.phone = '',
     this.accesslevel = '',
+    this.branch = '',
+    this.branchid = '',
     this.pricingmode = const [],
     this.readUpdates,
     required this.createdAt,
@@ -38,7 +42,8 @@ class StaffModel {
     'name': name,
     'email': email,
     'phone': phone,
-    'accesslevel': accesslevel,
+    'branch': branch,
+    'branchid': branchid,
     'pricingMode': pricingmode,
     'readUpdates': readUpdates,
     'createdAt': createdAt,
@@ -106,6 +111,8 @@ class StaffModel {
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
       accesslevel: map['accesslevel'] ?? '',
+      branch: map['branch'] ?? '',
+      branchid: map['branchid'] ?? '',
       pricingmode: parsePricing(map['pricingMode'] ?? map['pricingmode']),
       readUpdates: parseReadUpdates(
         map['readUpdates'] ?? map['read_updates'] ?? map['read'],
